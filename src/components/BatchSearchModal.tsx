@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, CheckCircle2, AlertTriangle, Copy, FileText, ListChecks, Download } from 'lucide-react';
+import { X, CheckCircle2, AlertTriangle, Copy, ListChecks } from 'lucide-react';
 import { PartItem } from '../types';
 
 interface BatchSearchModalProps {

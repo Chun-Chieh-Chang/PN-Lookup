@@ -2,12 +2,8 @@ import React, { useState } from 'react';
 import {
   Search,
   X,
-  Filter,
-  ChevronDown,
-  Check,
   SlidersHorizontal,
 } from 'lucide-react';
-import { PartItem } from '../types';
 
 interface SearchControlsProps {
   keyword: string;
@@ -35,7 +31,6 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
   onClearCustomerFilter,
 }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [showPrefixFilter, setShowPrefixFilter] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,48 +150,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
             </div>
           )}
 
-          {/* Prefix filter */}
-          <div className="relative">
-            <button
-              onClick={() => setShowPrefixFilter(!showPrefixFilter)}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <Filter className="w-3.5 h-3.5" />
-              <span>字頭篩選</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
 
-            {showPrefixFilter && (
-              <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-20 p-3 text-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-700">篩選品號字頭</span>
-                  <button
-                    onClick={() => setShowPrefixFilter(false)}
-                    className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  placeholder="輸入字頭 (如 C09)..."
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setShowPrefixFilter(false);
-                    }
-                  }}
-                />
-                <div className="flex items-center justify-between px-2 text-sm text-gray-500 border-b border-gray-200 pb-1.5">
-                  <span>預設字頭</span>
-                  <span>數量</span>
-                </div>
-                <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1 text-sm">
-                  {/* Prefix items would be populated dynamically */}
-                </div>
-              </div>
-            )}
-          </div>
 
         </div>
       )}

@@ -25,8 +25,4 @@ export interface FilterState {
   sortOrder?: 'asc' | 'desc';
 }
 
-export interface BatchSearchResultItem {
-  query: string;
-  matches: PartItem[];
-}
 

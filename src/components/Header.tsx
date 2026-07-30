@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Database, FileSpreadsheet, Plus, RefreshCw, ListChecks, Layers } from 'lucide-react';
+import { Search, FileSpreadsheet, Plus, ListChecks, Layers } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
