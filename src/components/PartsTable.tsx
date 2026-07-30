@@ -1,0 +1,446 @@
+import React, { useState } from 'react';
+import {
+  Copy,
+  Check,
+  Eye,
+  Edit2,
+  Trash2,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Layers,
+  Sparkles,
+  ClipboardCheck,
+  Boxes,
+  Component,
+} from 'lucide-react';
+import { PartItem } from '../types';
+import { getItemType } from '../utils/bomEngine';
+
+interface PartsTableProps {
+  items: PartItem[];
+  onViewDetail: (item: PartItem) => void;
+  onEdit: (item: PartItem) => void;
+  onDelete: (id: string) => void;
+  searchKeyword: string;
+  onCustomerClick: (customerName: string) => void;
+}
+
+type SortField = 'customer' | 'partNo' | 'name';
+type SortOrder = 'asc' | 'desc';
+
+export const PartsTable: React.FC<PartsTableProps> = ({
+  items,
+  onViewDetail,
+  onEdit,
+  onDelete,
+  searchKeyword,
+  onCustomerClick,
+}) => {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedFullId, setCopiedFullId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('partNo');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [isCompact, setIsCompact] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // Sorting
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedItems = [...items].sort((a, b) => {
+    const valA = a[sortField] || '';
+    const valB = b[sortField] || '';
+    const cmp = valA.localeCompare(valB, 'zh-Hant', { numeric: true, sensitivity: 'base' });
+    return sortOrder === 'asc' ? cmp : -cmp;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedItems.length / pageSize) || 1;
+  const validPage = Math.min(currentPage, totalPages);
+  const startIndex = (validPage - 1) * pageSize;
+  const paginatedItems = sortedItems.slice(startIndex, startIndex + pageSize);
+
+  // Copy helpers
+  const handleCopyPartNo = (id: string, partNo: string) => {
+    navigator.clipboard.writeText(partNo);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const handleCopyFullRow = (item: PartItem) => {
+    const text = `客戶: ${item.customer} | 品號: ${item.partNo} | 品名: ${item.name}`;
+    navigator.clipboard.writeText(text);
+    setCopiedFullId(item.id);
+    setTimeout(() => setCopiedFullId(null), 1800);
+  };
+
+  // Multi Select Helpers
+  const handleSelectAll = () => {
+    if (selectedIds.length === paginatedItems.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(paginatedItems.map((i) => i.id));
+    }
+  };
+
+  const handleSelectRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleCopySelected = () => {
+    const selectedItems = items.filter((item) => selectedIds.includes(item.id));
+    const lines = selectedItems.map(
+      (item) => `${item.customer}\t${item.partNo}\t${item.name}`
+    );
+    navigator.clipboard.writeText(lines.join('\n'));
+    alert(`已複製 ${selectedItems.length} 筆資料至剪貼簿！`);
+  };
+
+  // Highlight matched text
+  const highlightText = (text: string, keyword: string) => {
+    if (!keyword.trim()) return text;
+    const parts = text.split(new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === keyword.toLowerCase() ? (
+        <mark key={i} className="bg-amber-200 text-amber-900 px-0.5 rounded font-semibold">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-gray-50 text-gray-900">
+      
+      {/* Table Toolbar / Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white border-b border-gray-200 text-sm">
+        <div className="flex items-center space-x-3">
+          <span className="text-gray-500">
+            顯示 <strong className="text-gray-900">{sortedItems.length}</strong> 筆結果
+            {selectedIds.length > 0 && (
+              <span className="ml-2 text-indigo-600 font-medium">
+                (已選取 {selectedIds.length} 筆)
+              </span>
+            )}
+          </span>
+
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleCopySelected}
+              className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors cursor-pointer"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              <span>複製所選品號清單</span>
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-4">
+          {/* Density toggle */}
+          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
+            <button
+              onClick={() => setIsCompact(false)}
+              className={`px-2 py-0.5 rounded text-sm cursor-pointer ${
+                !isCompact ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              舒適
+            </button>
+            <button
+              onClick={() => setIsCompact(true)}
+              className={`px-2 py-0.5 rounded text-sm cursor-pointer ${
+                isCompact ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-500'
+              }`}
+            >
+              緊湊
+            </button>
+          </div>
+
+          {/* Page size dropdown */}
+          <div className="flex items-center space-x-1.5 text-gray-500">
+            <span>每頁顯示:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-white border border-gray-300 rounded px-2 py-1 text-gray-800 focus:outline-none focus:border-blue-500"
+            >
+              <option value={10}>10 筆</option>
+              <option value={25}>25 筆</option>
+              <option value={50}>50 筆</option>
+              <option value={100}>100 筆</option>
+              <option value={500}>全部</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table Container */}
+      <div className="overflow-x-auto flex-1">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-100 text-gray-500 border-b border-gray-200 text-sm font-semibold uppercase tracking-wider sticky top-0 z-10">
+              <th className="p-3 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={
+                    paginatedItems.length > 0 &&
+                    selectedIds.length === paginatedItems.length
+                  }
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+              </th>
+
+              <th
+                onClick={() => handleSort('customer')}
+                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>客戶名稱</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('partNo')}
+                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>品號 (Part No)</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th className="p-3">物料類別</th>
+
+              <th
+                onClick={() => handleSort('name')}
+                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>品名規格 (Part Name)</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th className="p-3 text-right pr-6">操作</th>
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-gray-200 text-sm">
+            {paginatedItems.map((item) => {
+              const isSelected = selectedIds.includes(item.id);
+              const isCopied = copiedId === item.id;
+              const isCopiedFull = copiedFullId === item.id;
+              const type = getItemType(item);
+              const isAssembly = type === 'assembly';
+
+              return (
+                <tr
+                  key={item.id}
+                  className={`group transition-colors ${
+                    isSelected
+                      ? 'bg-indigo-50 hover:bg-indigo-100'
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <td className="p-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => handleSelectRow(item.id)}
+                      className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </td>
+
+                  {/* Customer Badge */}
+                  <td className={`p-3 font-medium ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    <button
+                      onClick={() => onCustomerClick(item.customer)}
+                      className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 hover:bg-indigo-50 text-indigo-700 border border-gray-200 hover:border-indigo-300 transition-all font-mono text-sm cursor-pointer"
+                      title="點擊篩選該客戶"
+                    >
+                      <span>{highlightText(item.customer, searchKeyword)}</span>
+                    </button>
+                  </td>
+
+                  {/* Part Number */}
+                  <td className={`p-3 font-mono font-bold text-gray-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                        {highlightText(item.partNo, searchKeyword)}
+                      </span>
+                      <button
+                        onClick={() => handleCopyPartNo(item.id, item.partNo)}
+                        className={`p-1 rounded transition-colors cursor-pointer ${
+                          isCopied
+                            ? 'text-emerald-600 bg-emerald-100'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        title="複製品號"
+                      >
+                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </td>
+
+                  {/* Item Type Badge */}
+                  <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    <button
+                      onClick={() => onViewDetail(item)}
+                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-sm font-medium border transition-colors cursor-pointer ${
+                        isAssembly
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                          : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
+                      }`}
+                      title={isAssembly ? '查看組成此組件的所有零件' : '查看可組成該零件的相應組件'}
+                    >
+                      {isAssembly ? <Boxes className="w-3 h-3" /> : <Component className="w-3 h-3" />}
+                      <span>{isAssembly ? '組件 Assembly' : '零件 Part'}</span>
+                    </button>
+                  </td>
+
+                  {/* Part Name */}
+                  <td className={`p-3 text-gray-600 max-w-md ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    <div className="truncate" title={item.name}>
+                      {highlightText(item.name, searchKeyword)}
+                    </div>
+                  </td>
+
+                  {/* Actions */}
+                  <td className={`p-3 text-right pr-6 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    <div className="flex items-center justify-end space-x-1">
+                      
+                      <button
+                        onClick={() => handleCopyFullRow(item)}
+                        className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
+                          isCopiedFull
+                            ? 'text-emerald-600 bg-emerald-100'
+                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                        }`}
+                        title="複製完整列資訊"
+                      >
+                        {isCopiedFull ? (
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => onViewDetail(item)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer flex items-center space-x-1"
+                        title="檢視 BOM 與詳細資料"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => onEdit(item)}
+                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                        title="編輯此項"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                        title="刪除此項"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {paginatedItems.length === 0 && (
+              <tr>
+                <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <div className="max-w-xs mx-auto space-y-2">
+                    <Layers className="w-10 h-10 mx-auto text-gray-300" />
+                    <p className="text-sm font-medium text-gray-500">查無符合條件的品號</p>
+                    <p className="text-sm text-gray-400">請嘗試調整搜尋關鍵字、切換搜尋欄位或清除過濾條件。</p>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-gray-200 text-sm">
+          <span className="text-gray-500">
+            第 {validPage} / {totalPages} 頁 (共 {sortedItems.length} 筆)
+          </span>
+
+          <div className="flex items-center space-x-2">
+            <button
+              disabled={validPage <= 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center space-x-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pNum = i + 1;
+                if (totalPages > 5 && validPage > 3) {
+                  pNum = validPage - 3 + i;
+                  if (pNum > totalPages) pNum = totalPages - (4 - i);
+                }
+                if (pNum <= 0) return null;
+                return (
+                  <button
+                    key={pNum}
+                    onClick={() => setCurrentPage(pNum)}
+                    className={`px-3 py-1 rounded-lg text-sm font-mono font-medium transition-colors cursor-pointer ${
+                      validPage === pNum
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-600 hover:text-gray-800 border border-gray-200'
+                    }`}
+                  >
+                    {pNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              disabled={validPage >= totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};
