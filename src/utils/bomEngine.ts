@@ -10,7 +10,7 @@ let assemblySet: Set<string> = new Set<string>();
 // Attempt to load static local data if available (dev environment only).
 (async () => {
   try {
-    const m = await import('../data/bomData');
+    const m = await import(/* @vite-ignore */ '../data/bomData');
     childrenMap = m.BOM_CHILDREN ?? {};
     parentsMap = m.BOM_PARENTS ?? {};
     assemblySet = m.ASSEMBLY_PART_NOS ?? new Set();
