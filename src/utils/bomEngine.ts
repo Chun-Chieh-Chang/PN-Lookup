@@ -8,6 +8,15 @@ let assemblySet: Set<string> = STATIC_ASSEMBLIES;
 
 let initPromise: Promise<void> | null = null;
 
+// 字首規則：以這些開頭的品號一律視為組件（不需在 BOM 階層登記）
+const ASSEMBLY_PART_NO_PREFIXES = ['MDXE'];
+
+export function isAssemblyPartNo(partNo: string): boolean {
+  const upper = partNo.toUpperCase();
+  if (assemblySet.has(upper) || assemblySet.has(partNo)) return true;
+  return ASSEMBLY_PART_NO_PREFIXES.some((p) => upper.startsWith(p));
+}
+
 export function initBOM(): Promise<void> {
   if (initPromise) return initPromise;
   initPromise = loadBOM().then((data) => {
@@ -28,7 +37,7 @@ export function updateBOMData(children: Record<string, string[]>, parents: Recor
 
 export function enrichParts(parts: PartItem[]): PartItem[] {
   return parts.map((p) => {
-    const isAssembly = assemblySet.has(p.partNo) || assemblySet.has(p.partNo.toUpperCase());
+    const isAssembly = isAssemblyPartNo(p.partNo);
     const children = childrenMap[p.partNo] || childrenMap[p.partNo.toUpperCase()];
     const parents = parentsMap[p.partNo] || parentsMap[p.partNo.toUpperCase()];
     return {
@@ -86,9 +95,7 @@ export interface BOMRelation {
 }
 
 export function getItemType(item: PartItem): ItemType {
-  const upperPartNo = item.partNo.toUpperCase();
-  if (assemblySet.has(upperPartNo) || assemblySet.has(item.partNo)) return 'assembly';
-  return 'part';
+  return isAssemblyPartNo(item.partNo) ? 'assembly' : 'part';
 }
 
 export function getBOMChildren(): Record<string, string[]> {
@@ -125,7 +132,7 @@ function resolveChildrenRecursive(
         note: `構成組件 (${childNo})`,
       });
     }
-    if (assemblySet.has(childNo)) {
+    if (isAssemblyPartNo(childNo)) {
       const subComponents = resolveChildrenRecursive(childNo, allParts, visited, depth + 1);
       for (const sub of subComponents) {
         if (!results.some((r) => r.relatedItem.id === sub.relatedItem.id)) {
@@ -193,7 +200,7 @@ function resolveParentsRecursive(
         note: `可組成 ${parent.name}`,
       });
     }
-    if (assemblySet.has(parentNo)) {
+    if (isAssemblyPartNo(parentNo)) {
       const grandParents = resolveParentsRecursive(parentNo, allParts, visited, depth + 1);
       for (const gp of grandParents) {
         if (!results.some((r) => r.relatedItem.id === gp.relatedItem.id)) {
