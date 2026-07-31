@@ -14,7 +14,7 @@ interface ExportImportModalProps {
   onResetData: () => void;
 }
 
-const CSV_HEADERS = 'id,customer,partNo,name,notes,alternates,itemType,components,usedInAssemblies,createdAt';
+const CSV_HEADERS = 'id,customer,partNo,name,category,color,material,notes,alternates,itemType,components,usedInAssemblies,createdAt';
 
 function csvEscape(val: unknown): string {
   const s = val == null ? '' : String(val);
@@ -29,6 +29,9 @@ function generateCSVString(parts: PartItem[]): string {
       csvEscape(p.customer),
       csvEscape(p.partNo),
       csvEscape(p.name),
+      csvEscape(p.category ?? ''),
+      csvEscape(p.color ?? ''),
+      csvEscape(p.material ?? ''),
       csvEscape(p.notes ?? ''),
       csvEscape(p.alternates ? p.alternates.join('、') : ''),
       csvEscape(p.itemType ?? ''),
@@ -83,14 +86,17 @@ function parseImportedCSV(text: string): PartItem[] {
         partNo: parts[2]?.trim() || '',
         name: parts[3]?.trim() || parts[2]?.trim() || '',
       };
-      if (parts[4]?.trim()) item.notes = parts[4].trim();
-      if (parts[5]?.trim()) {
-        item.alternates = parts[5].trim().split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+      if (parts[4]?.trim()) item.category = parts[4].trim();
+      if (parts[5]?.trim()) item.color = parts[5].trim();
+      if (parts[6]?.trim()) item.material = parts[6].trim();
+      if (parts[7]?.trim()) item.notes = parts[7].trim();
+      if (parts[8]?.trim()) {
+        item.alternates = parts[8].trim().split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
       }
-      if (parts[6]?.trim() === 'part' || parts[6]?.trim() === 'assembly') item.itemType = parts[6].trim() as 'part' | 'assembly';
-      if (parts[7]?.trim()) try { item.components = JSON.parse(parts[7].trim()); } catch { /* ignore */ }
-      if (parts[8]?.trim()) try { item.usedInAssemblies = JSON.parse(parts[8].trim()); } catch { /* ignore */ }
-      if (parts[9]?.trim()) item.createdAt = parts[9].trim();
+      if (parts[9]?.trim() === 'part' || parts[9]?.trim() === 'assembly') item.itemType = parts[9].trim() as 'part' | 'assembly';
+      if (parts[10]?.trim()) try { item.components = JSON.parse(parts[10].trim()); } catch { /* ignore */ }
+      if (parts[11]?.trim()) try { item.usedInAssemblies = JSON.parse(parts[11].trim()); } catch { /* ignore */ }
+      if (parts[12]?.trim()) item.createdAt = parts[12].trim();
       if (item.customer && item.partNo) parsed.push(item);
     } else {
       const cust = parts[0]?.replace(/^"|"$/g, '').trim() || '';
@@ -300,73 +306,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         {/* Body */}
         <div className="p-6 space-y-6 text-sm">
 
-          {/* Export Section */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Download className="w-4 h-4 text-emerald-500" />
-              <span>匯出目前資料庫 ({parts.length} 筆)</span>
-            </h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <label className="flex items-center space-x-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="exportFormat"
-                  checked={exportFormat === 'xlsx'}
-                  onChange={() => setExportFormat('xlsx')}
-                  className="text-emerald-600 focus:ring-emerald-500"
-                />
-                <Table2 className="w-3.5 h-3.5 text-green-600" />
-                <span className="text-gray-700">Excel (.xlsx)</span>
-              </label>
-              <label className="flex items-center space-x-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="exportFormat"
-                  checked={exportFormat === 'csv'}
-                  onChange={() => setExportFormat('csv')}
-                  className="text-emerald-600 focus:ring-emerald-500"
-                />
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-gray-700">CSV</span>
-              </label>
-              <label className="flex items-center space-x-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="exportFormat"
-                  checked={exportFormat === 'json'}
-                  onChange={() => setExportFormat('json')}
-                  className="text-emerald-600 focus:ring-emerald-500"
-                />
-                <FileJson className="w-3.5 h-3.5 text-blue-500" />
-                <span className="text-gray-700">JSON</span>
-              </label>
-            </div>
-            <p className="text-gray-500 text-sm">
-              {exportFormat === 'xlsx'
-                ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
-                : exportFormat === 'csv'
-                ? '匯出包含所有欄位（id, customer, partNo, name, notes, itemType, components, usedInAssemblies, createdAt）。'
-                : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
-            </p>
-            <div className="flex items-center space-x-3 pt-1">
-              <button
-                onClick={handleDownload}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>下載 {exportFormat.toUpperCase()} 檔</span>
-              </button>
-              <button
-                onClick={handleCopyData}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer border border-gray-200"
-              >
-                {copiedData ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : getIcon()}
-                <span>{copiedData ? '已複製內容！' : `複製 ${exportFormat.toUpperCase()} 內文`}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Import Section */}
+          {/* Import Section (placed above Export per user request) */}
           <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
             <h3 className="font-bold text-gray-700 flex items-center space-x-2">
               <Upload className="w-4 h-4 text-blue-500" />
@@ -428,6 +368,72 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 onChange={handleCustomerSheetUpload}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
               />
+            </div>
+          </div>
+
+          {/* Export Section */}
+          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
+            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
+              <Download className="w-4 h-4 text-emerald-500" />
+              <span>匯出目前資料庫 ({parts.length} 筆)</span>
+            </h3>
+            <div className="flex items-center space-x-4 text-sm">
+              <label className="flex items-center space-x-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  checked={exportFormat === 'xlsx'}
+                  onChange={() => setExportFormat('xlsx')}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <Table2 className="w-3.5 h-3.5 text-green-600" />
+                <span className="text-gray-700">Excel (.xlsx)</span>
+              </label>
+              <label className="flex items-center space-x-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  checked={exportFormat === 'csv'}
+                  onChange={() => setExportFormat('csv')}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-gray-700">CSV</span>
+              </label>
+              <label className="flex items-center space-x-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  checked={exportFormat === 'json'}
+                  onChange={() => setExportFormat('json')}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <FileJson className="w-3.5 h-3.5 text-blue-500" />
+                <span className="text-gray-700">JSON</span>
+              </label>
+            </div>
+            <p className="text-gray-500 text-sm">
+              {exportFormat === 'xlsx'
+                ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
+                : exportFormat === 'csv'
+                ? '匯出包含所有欄位（id, customer, partNo, name, category, color, material, notes, alternates, itemType 等）。'
+                : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
+            </p>
+            <div className="flex items-center space-x-3 pt-1">
+              <button
+                onClick={handleDownload}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>下載 {exportFormat.toUpperCase()} 檔</span>
+              </button>
+              <button
+                onClick={handleCopyData}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer border border-gray-200"
+              >
+                {copiedData ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : getIcon()}
+                <span>{copiedData ? '已複製內容！' : `複製 ${exportFormat.toUpperCase()} 內文`}</span>
+              </button>
             </div>
           </div>
 

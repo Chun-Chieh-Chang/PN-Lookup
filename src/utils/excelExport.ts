@@ -49,7 +49,7 @@ function buildAssemblySheet(
   return ws;
 }
 
-const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
+const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
 
 export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
@@ -99,6 +99,9 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     'customer': p.customer,
     'partNo': p.partNo,
     'name': p.name,
+    'category': p.category ?? '',
+    'color': p.color ?? '',
+    'material': p.material ?? '',
     'notes': p.notes ?? '',
     'alternates': (p.alternates ?? []).join('、'),
     'itemType': p.itemType ?? '',
@@ -132,6 +135,9 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
           name: String(r['name'] || r['partNo']).trim(),
         };
         if (r['notes']) item.notes = r['notes'];
+        if (r['category']) item.category = String(r['category']).trim();
+        if (r['color']) item.color = String(r['color']).trim();
+        if (r['material']) item.material = String(r['material']).trim();
         if (r['alternates']) {
           item.alternates = String(r['alternates']).split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
         }
