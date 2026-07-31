@@ -61,16 +61,21 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   }
 
   // Sheet 1: 客戶產品對照表
-  const sheet1Data = parts.map(p => ({
-    '客戶': p.customer,
-    '品號': p.partNo,
-    '品名': p.name,
-  }));
-  const ws1 = XLSX.utils.json_to_sheet(sheet1Data);
+  const MAIN_HEADERS = ['客戶', '品號', '品名', '物料類別', '備註'];
+  const sheet1Data = [MAIN_HEADERS, ...parts.map(p => [
+    p.customer,
+    p.partNo,
+    p.name,
+    p.itemType === 'assembly' ? '組件' : p.itemType === 'part' ? '零件' : '',
+    p.notes ?? '',
+  ])];
+  const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
   ws1['!cols'] = [
     { wch: Math.max(4, ...parts.map(p => p.customer.length)) + 3 },
     { wch: Math.max(4, ...parts.map(p => p.partNo.length)) + 3 },
     { wch: Math.max(4, ...parts.map(p => p.name.length)) + 3 },
+    { wch: 12 },
+    { wch: 24 },
   ];
   XLSX.utils.book_append_sheet(wb, ws1, '客戶產品對照表');
 
@@ -145,15 +150,20 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
   for (const r of rows) {
     const customer = (r['客戶'] || '').toString().trim();
     const partNo = (r['品號'] || '').toString().trim();
+    if (!customer || !partNo) continue;
     const name = (r['品名'] || partNo).toString().trim();
-    if (customer && partNo) {
-      parsed.push({
-        id: `xls-${Date.now()}-${parsed.length}`,
-        customer,
-        partNo,
-        name,
-      });
-    }
+    const item: PartItem = {
+      id: `xls-${Date.now()}-${parsed.length}`,
+      customer,
+      partNo,
+      name,
+    };
+    const rawItemType = (r['物料類別'] || '').toString().trim();
+    if (rawItemType === '組件') item.itemType = 'assembly';
+    else if (rawItemType === '零件') item.itemType = 'part';
+    const notes = (r['備註'] || '').toString().trim();
+    if (notes) item.notes = notes;
+    parsed.push(item);
   }
   return enrichParts(parsed);
 }

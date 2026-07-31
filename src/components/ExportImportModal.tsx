@@ -290,7 +290,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </div>
             <p className="text-gray-500 text-sm">
               {exportFormat === 'xlsx'
-                ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
+                ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
                 : exportFormat === 'csv'
                 ? '匯出包含所有欄位（id, customer, partNo, name, notes, itemType, components, usedInAssemblies, createdAt）。'
                 : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
