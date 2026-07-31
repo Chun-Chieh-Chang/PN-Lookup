@@ -12,6 +12,10 @@
 ### gitignore 修正
 - 將 `data/`、`ref/` 範圍收斂為 `/data/`、`/ref/`（加前綴斜線），避免誤排除 `src/data/` 目錄
 
+### MECE 重組（v2.8.1）
+- **消除重複 `computeParents` 邏輯**：`AdminPanel.tsx:772` 的私有函式 `computeParents` 與 `bomEngine.ts:62` 的 `computeParentsMap` 邏輯完全一致；將 `computeParentsMap` 匯出並移除 AdminPanel.tsx 的副本（20 行刪除）
+- **移除未使用的匯出**：`ServerStatus`（serverStatus.ts）、`BOMRelation`（bomEngine.ts）、`OcrEntry`（ocr.ts）、`CustomerRow`（customerPartImport.ts）、`setImageFolderDismissed`（imageLibrary.ts）均為匯出但不被任何外部檔案匯入的 dead export，已移除 `export` 關鍵字或刪除匯出
+
 ### 架構說明（當前）
 - **靜態模式**（GitHub Pages）：`VITE_STATIC_ONLY=true` 注入，完全跳過 API；品號走 localStorage，BOM 走空殼 fallback
 - **本機伺服器模式**：`npm run start`（build + serve），品號與 BOM 從 `data/master.json` 讀寫
