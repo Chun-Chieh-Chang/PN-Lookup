@@ -249,6 +249,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                 </div>
               </th>
 
+              <th className="p-3">圖檔</th>
+
               <th className="p-3 text-right pr-6">操作</th>
             </tr>
           </thead>
@@ -350,6 +352,27 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     </div>
                   </td>
 
+                  {/* 圖檔連結 */}
+                  <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                    {imageUrl ? (
+                      <button
+                        onClick={() => openImage(imageUrl)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
+                        title={`開啟圖檔：${item.partNo}`}
+                      >
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>開啟圖檔</span>
+                      </button>
+                    ) : (
+                      <span
+                        className="text-sm text-gray-300"
+                        title={imageLib ? '資料夾內找不到對應的圖檔' : '未指定圖檔資料夾'}
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+
                   {/* Actions */}
                   <td className={`p-3 text-right pr-6 ${isCompact ? 'py-2' : 'py-3.5'}`}>
                     <div className="flex items-center justify-end space-x-1">
@@ -394,7 +417,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
             {paginatedItems.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-16 text-center text-gray-400">
+                <td colSpan={7} className="py-16 text-center text-gray-400">
                   <div className="max-w-xs mx-auto space-y-2">
                     <Layers className="w-10 h-10 mx-auto text-gray-300" />
                     <p className="text-sm font-medium text-gray-500">查無符合條件的品號</p>
