@@ -1,5 +1,23 @@
 # PN-Lookup 開發日誌
 
+## v2.6.0 — 品號圖檔超連結（圖檔資料夾）
+
+### 新增功能
+- **品號可直接點選開啟圖檔**：檢索表格中，圖檔資料夾內找得到對應圖檔的品號會變成可點按（新分頁開啟），並顯示圖示按鈕
+- **圖檔資料夾由用戶指定**：首次開啟頁面時出現系統提示（可略過）；右上角「圖檔」按鈕可隨時指定/更換資料夾（顯示資料夾名稱與圖檔數量）
+- **自動遍歷子資料夾**：選擇資料夾後遞迴掃描所有子資料夾內的圖檔（JPG/PNG/GIF/WEBP/BMP/SVG/TIFF）
+- **檔名比對規則**：檔名與品號完全一致（不分大小寫）優先；其次接受「品號 + `_`/`-`/空格 + 後綴」（如 `3M41459-1.jpg`）
+- **位置持久化**：資料夾 handle 存於 IndexedDB，下次開啟自動恢復權限並載入；完全在本機瀏覽器執行，圖檔絕不上傳
+- **瀏覽器相容**：Chromium（Chrome/Edge）用 File System Access API；Firefox/Safari 自動降級為「資料夾上傳」選取模式
+
+### 技術
+- 新增 `src/utils/imageLibrary.ts`（IndexedDB handle 持久化、遞迴掃描、品號→圖檔配對、object URL 快取）
+- 新增 `src/components/ImageFolderModal.tsx`（首次開啟的圖檔資料夾提示）
+- 新增 `src/types/file-system-access.d.ts`（File System Access API 環境型別宣告）
+- 未指定資料夾時表格工具列顯示小型提示文字
+
+---
+
 ## v2.5.0 — 唯一真源完全鎖定（衍生欄位不落檔）
 
 ### 資料架構

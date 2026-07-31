@@ -8,12 +8,20 @@ import { CustomerStatsModal } from './components/CustomerStatsModal';
 import { AddEditModal } from './components/AddEditModal';
 import { PartDetailModal } from './components/PartDetailModal';
 import { ExportImportModal } from './components/ExportImportModal';
+import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { INITIAL_PARTS_DATA } from './data/partsData';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
 import { getServerStatus } from './utils/serverStatus';
+import {
+  ImageLibrary,
+  pickImageFolder,
+  restoreImageFolder,
+  isImageFolderDismissed,
+  clearImageFolderDismissed,
+} from './utils/imageLibrary';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -90,6 +98,38 @@ export default function App() {
       setIsExportImportOpen(true);
     }
   }, [hasHydrated, parts.length]);
+
+  // 圖檔資料夾：自動恢復上次選擇；未曾指定時首次開啟提示
+  const [imageLib, setImageLib] = useState<ImageLibrary | null>(null);
+  const [isImagePromptOpen, setIsImagePromptOpen] = useState(false);
+  const [isPickingImages, setIsPickingImages] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    restoreImageFolder().then((lib) => {
+      if (cancelled) return;
+      if (lib) {
+        setImageLib(lib);
+      } else if (!isImageFolderDismissed()) {
+        setIsImagePromptOpen(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handlePickImageFolder = useCallback(async () => {
+    setIsPickingImages(true);
+    try {
+      const lib = await pickImageFolder();
+      setImageLib(lib);
+      clearImageFolderDismissed();
+      setIsImagePromptOpen(false);
+    } catch {
+      // 用戶取消或資料夾無圖檔時保持原狀
+    } finally {
+      setIsPickingImages(false);
+    }
+  }, []);
 
   // Filter state
   const [filterState, setFilterState] = useState<FilterState>({
@@ -289,6 +329,9 @@ export default function App() {
         onOpenExportImport={() => setIsExportImportOpen(true)}
         onResetData={handleResetData}
         onEnterAdmin={() => { window.location.hash = 'admin'; }}
+        imageFolderName={imageLib?.folderName ?? null}
+        imageCount={imageLib?.count ?? 0}
+        onPickImageFolder={handlePickImageFolder}
       />
 
       {/* Stats Summary Bar */}
@@ -323,6 +366,7 @@ export default function App() {
             setIsAddEditOpen(true);
           }}
           searchKeyword={filterState.keyword}
+          imageLib={imageLib}
           onCustomerClick={(customerName) => {
             setFilterState({
               ...filterState,
@@ -376,6 +420,13 @@ export default function App() {
         parts={parts}
         onImportData={handleImportData}
         onResetData={handleResetData}
+      />
+
+      <ImageFolderModal
+        isOpen={isImagePromptOpen}
+        isPicking={isPickingImages}
+        onClose={() => setIsImagePromptOpen(false)}
+        onConfirm={handlePickImageFolder}
       />
 
     </div>

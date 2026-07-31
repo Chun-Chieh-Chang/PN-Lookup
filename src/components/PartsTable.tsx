@@ -11,15 +11,18 @@ import {
   ClipboardCheck,
   Boxes,
   Component,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType } from '../utils/bomEngine';
+import { ImageLibrary } from '../utils/imageLibrary';
 
 interface PartsTableProps {
   items: PartItem[];
   onViewDetail: (item: PartItem) => void;
   onEdit: (item: PartItem) => void;
   searchKeyword: string;
+  imageLib?: ImageLibrary | null;
   onCustomerClick: (customerName: string) => void;
 }
 
@@ -31,6 +34,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   onViewDetail,
   onEdit,
   searchKeyword,
+  imageLib,
   onCustomerClick,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -66,6 +70,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const paginatedItems = sortedItems.slice(startIndex, startIndex + pageSize);
 
   // Copy helpers
+  const openImage = (url: string) => {
+    window.open(url, '_blank', 'noopener');
+  };
+
   const handleCopyPartNo = (id: string, partNo: string) => {
     navigator.clipboard.writeText(partNo);
     setCopiedId(id);
@@ -141,6 +149,12 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               <ClipboardCheck className="w-3.5 h-3.5" />
               <span>複製所選品號清單</span>
             </button>
+          )}
+
+          {!imageLib && (
+            <span className="ml-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 text-xs">
+              未指定圖檔資料夾 — 點右上角「圖檔」按鈕可讓品號直接開啟圖檔
+            </span>
           )}
         </div>
 
@@ -246,6 +260,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               const isCopiedFull = copiedFullId === item.id;
               const type = getItemType(item);
               const isAssembly = type === 'assembly';
+              const imageUrl = imageLib ? imageLib.urlFor(item.partNo) : null;
 
               return (
                 <tr
@@ -280,7 +295,13 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   {/* Part Number */}
                   <td className={`p-3 font-mono font-bold text-gray-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
                     <div className="flex items-center space-x-2">
-                      <span className="text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      <span
+                        onClick={imageUrl ? () => openImage(imageUrl) : undefined}
+                        className={`text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 ${
+                          imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:underline' : ''
+                        }`}
+                        title={imageUrl ? '點擊開啟圖檔' : undefined}
+                      >
                         {highlightText(item.partNo, searchKeyword)}
                       </span>
                       <button
@@ -294,6 +315,15 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       >
                         {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                       </button>
+                      {imageUrl && (
+                        <button
+                          onClick={() => openImage(imageUrl)}
+                          className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                          title="開啟圖檔"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
 

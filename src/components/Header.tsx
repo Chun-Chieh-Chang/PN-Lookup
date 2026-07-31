@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Layers } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
@@ -9,6 +9,9 @@ interface HeaderProps {
   onOpenExportImport: () => void;
   onResetData: () => void;
   onEnterAdmin?: () => void;
+  imageFolderName?: string | null;
+  imageCount?: number;
+  onPickImageFolder?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +22,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExportImport,
   onResetData,
   onEnterAdmin,
+  imageFolderName,
+  imageCount,
+  onPickImageFolder,
 }) => {
   const versionClickCount = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -78,6 +84,25 @@ export const Header: React.FC<HeaderProps> = ({
               <Layers className="w-3.5 h-3.5 text-indigo-500" />
               <span>客戶統計</span>
             </button>
+
+            {onPickImageFolder && (
+              <button
+                onClick={onPickImageFolder}
+                className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors gap-1.5 cursor-pointer ${
+                  imageFolderName
+                    ? 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                }`}
+                title={
+                  imageFolderName
+                    ? `圖檔資料夾：${imageFolderName}（${imageCount} 張圖）— 點擊可更換`
+                    : '指定圖檔資料夾（品號可直接點選開啟圖檔）'
+                }
+              >
+                <ImageIcon className={`w-3.5 h-3.5 ${imageFolderName ? 'text-teal-600' : 'text-gray-500'}`} />
+                <span>{imageFolderName ? imageFolderName : '圖檔'}</span>
+              </button>
+            )}
 
             <button
               onClick={onOpenExportImport}
