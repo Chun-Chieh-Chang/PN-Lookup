@@ -1,5 +1,21 @@
 # PN-Lookup 開發日誌
 
+## v2.5.0 — 唯一真源完全鎖定（衍生欄位不落檔）
+
+### 資料架構
+- **衍生欄位（itemType/components/usedInAssemblies）不再落檔**：`stripDerivedFields()` 於 localStorage、伺服器（master.json）、完整備份匯出時移除；顯示與 Excel 匯出時由 `enrichParts()` 即時從 BOM 推導
+- **itemType 純推導**：一律由 assemblySet 決定（儲存值不再被信任，杜絕過期）
+- **刪除客戶連動清理 BOM**：該客戶所有品號的組立定義與零件連結一併移除（確認框告知）
+- **品號改名連動 BOM**：前台編輯品號時同步更新 BOM join key（children/parents/assemblySet），避免孤兒連結
+- **BOM 更新後即時 re-enrich**：後台任何 BOM 變更（編輯/備份還原）觸發 `onBOMUpdated`，品號衍生欄位立即與 BOM 一致
+- **Excel 匯入忽略衍生欄位**：完整資料 sheet 僅取主檔欄位（id/customer/partNo/name/notes/createdAt），BOM 連結一律以後台階層為準
+- **孤兒可視化**：後台彙總列顯示「BOM 中有 N 個零件編號不在品號表中」（原料/通用件屬正常，僅提示）
+
+### 捨棄
+- 自訂物料單（Direct BOM Link）功能：Excel 手動編輯帶入的 components/usedInAssemblies 不再生效
+
+---
+
 ## v2.4.0 — 後台介面全面檢討
 
 - **標題修正**：「後台管理 — BOM 階層維護」→「後台管理」

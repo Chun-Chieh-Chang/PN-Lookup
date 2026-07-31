@@ -113,7 +113,7 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
 export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
   const wb = XLSX.read(new Uint8Array(data), { type: 'array' });
 
-  // 1. Try "完整資料" sheet first for full round-trip
+  // 1. Try "完整資料" sheet first for full round-trip (derived columns ignored — BOM 為唯一真源)
   const fullSheet = wb.SheetNames.find(n => n.includes('完整'));
   if (fullSheet) {
     const ws = wb.Sheets[fullSheet];
@@ -129,10 +129,6 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
           name: String(r['name'] || r['partNo']).trim(),
         };
         if (r['notes']) item.notes = r['notes'];
-        const it = r['itemType'];
-        if (it === 'part' || it === 'assembly') item.itemType = it;
-        if (r['components']) try { item.components = JSON.parse(r['components']); } catch { /* ignore */ }
-        if (r['usedInAssemblies']) try { item.usedInAssemblies = JSON.parse(r['usedInAssemblies']); } catch { /* ignore */ }
         if (r['createdAt']) item.createdAt = r['createdAt'];
         parsed.push(item);
       }
@@ -158,9 +154,6 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
       partNo,
       name,
     };
-    const rawItemType = (r['物料類別'] || '').toString().trim();
-    if (rawItemType === '組件') item.itemType = 'assembly';
-    else if (rawItemType === '零件') item.itemType = 'part';
     const notes = (r['備註'] || '').toString().trim();
     if (notes) item.notes = notes;
     parsed.push(item);

@@ -33,11 +33,50 @@ export function enrichParts(parts: PartItem[]): PartItem[] {
     const parents = parentsMap[p.partNo] || parentsMap[p.partNo.toUpperCase()];
     return {
       ...p,
-      itemType: p.itemType || (isAssembly ? 'assembly' as const : 'part' as const),
-      components: p.components && p.components.length > 0 ? p.components : (children ? [...children] : undefined),
-      usedInAssemblies: p.usedInAssemblies && p.usedInAssemblies.length > 0 ? p.usedInAssemblies : (parents ? [...parents] : undefined),
+      // 唯一真源 = BOM 階層：衍生欄位一律即時推導，不信任任何儲存值
+      itemType: isAssembly ? 'assembly' as const : 'part' as const,
+      components: children ? [...children] : undefined,
+      usedInAssemblies: parents ? [...parents] : undefined,
     };
   });
+}
+
+// 落檔/傳輸前移除衍生欄位，確保 master.json 與 localStorage 只存純主檔
+export function stripDerivedFields(parts: PartItem[]): PartItem[] {
+  return parts.map((p) => {
+    const { itemType, components, usedInAssemblies, ...rest } = p;
+    void itemType; void components; void usedInAssemblies;
+    return rest as PartItem;
+  });
+}
+
+function computeParentsMap(children: Record<string, string[]>): Record<string, string[]> {
+  const parents: Record<string, string[]> = {};
+  for (const [parent, comps] of Object.entries(children)) {
+    for (const child of comps) {
+      if (!parents[child]) parents[child] = [];
+      if (!parents[child].includes(parent)) parents[child].push(parent);
+    }
+  }
+  return parents;
+}
+
+// 品號改名時同步更新 BOM join key（children/parents/assemblySet）
+export function renamePartNo(oldNo: string, newNo: string): void {
+  if (!oldNo || oldNo === newNo) return;
+  const nextChildren: Record<string, string[]> = {};
+  for (const [key, comps] of Object.entries(childrenMap)) {
+    const newKey = key === oldNo ? newNo : key;
+    const nextComps = comps.map(c => c === oldNo ? newNo : c);
+    if (nextChildren[newKey]) {
+      nextChildren[newKey] = Array.from(new Set([...nextChildren[newKey], ...nextComps]));
+    } else {
+      nextChildren[newKey] = nextComps;
+    }
+  }
+  childrenMap = nextChildren;
+  parentsMap = computeParentsMap(nextChildren);
+  assemblySet = new Set(Object.keys(nextChildren));
 }
 
 export interface BOMRelation {
@@ -47,7 +86,6 @@ export interface BOMRelation {
 }
 
 export function getItemType(item: PartItem): ItemType {
-  if (item.itemType) return item.itemType;
   const upperPartNo = item.partNo.toUpperCase();
   if (assemblySet.has(upperPartNo) || assemblySet.has(item.partNo)) return 'assembly';
   return 'part';

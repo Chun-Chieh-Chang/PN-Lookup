@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup, Layers } from 'lucide-react';
 import { PartItem } from '../types';
-import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
+import { getBOMChildren, getBOMParents, updateBOMData, stripDerivedFields } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
 
 interface AdminPanelProps {
@@ -13,9 +13,10 @@ interface AdminPanelProps {
   onRenameCustomer: (oldName: string, newName: string) => void;
   onDeleteCustomer: (customerName: string) => void;
   onImportParts: (items: PartItem[], replace: boolean) => void;
+  onBOMUpdated: () => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer, onImportParts }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer, onImportParts, onBOMUpdated }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
   const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +37,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const fullBackupFileRef = useRef<HTMLInputElement>(null);
 
   const existingCustomers: string[] = Array.from(new Set<string>(parts.map(p => p.customer))).sort();
+
+  const handleDeleteCustomer = (c: { name: string; count: number }) => {
+    const partNos = new Set(parts.filter(p => p.customer === c.name).map(p => p.partNo));
+    const bomHit = partNos.size > 0 && (
+      Object.keys(children).some(k => partNos.has(k)) ||
+      Object.values(children).some((comps: string[]) => comps.some(no => partNos.has(no)))
+    );
+    const suffix = bomHit ? '若這些品號存在於 BOM 階層中，相關連結也會一併移除。' : '';
+    if (!confirm(`確定要刪除客戶「${c.name}」及其 ${c.count} 筆品號嗎？${suffix}此操作無法還原。`)) return;
+    if (bomHit) {
+      const next: Record<string, string[]> = {};
+      for (const [key, comps] of Object.entries(children)) {
+        if (partNos.has(key)) continue;
+        const filtered = (comps as string[]).filter(no => !partNos.has(no));
+        if (filtered.length > 0) next[key] = filtered;
+      }
+      setChildren(next);
+      setParents(computeParents(next));
+      onBOMUpdated();
+    }
+    onDeleteCustomer(c.name);
+  };
+
+  const bomPartNos = Array.from(new Set(Object.values(children).flat()));
+  const orphanPartNos = bomPartNos.filter(no => !parts.some(p => p.partNo === no));
 
   const partSearchResults = partSearch.length >= 1
     ? parts.filter(p => p.partNo.toLowerCase().includes(partSearch.toLowerCase()) || p.name.toLowerCase().includes(partSearch.toLowerCase())).slice(0, 20)
@@ -180,6 +206,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         updateBOMData(childrenRef.current, newParents);
         setParents(newParents);
         setSyncState('saved');
+        onBOMUpdated();
       }).catch(() => setSyncState('error'));
     }, 800);
     return () => clearTimeout(timer);
@@ -191,7 +218,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       type: 'pn-lookup-backup',
       version: 2,
       exportedAt: new Date().toISOString(),
-      parts,
+      parts: stripDerivedFields(parts),
       bom: { children, parents: computeParents(children) },
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
@@ -226,19 +253,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         setChildren(newChildren);
         setParents(newParents);
         if (!isFull) {
+          onBOMUpdated();
           setMessage(`已從舊版 BOM 備份還原：${Object.keys(newChildren).length} 個組立（品號未變動，已自動同步）`);
           return;
         }
         if (serverOnline) {
           saveBOM(newChildren, newParents).then(() => {
             updateBOMData(newChildren, newParents);
+            onBOMUpdated();
             setMessage(`完整備份已還原並同步至伺服器：${data.parts.length} 筆品號、${Object.keys(newChildren).length} 個組立`);
           }).catch(() => {
             updateBOMData(newChildren, newParents);
+            onBOMUpdated();
             setMessage('完整備份已還原至本機（伺服器同步失敗，請稍後手動儲存 BOM）');
           });
         } else {
           updateBOMData(newChildren, newParents);
+          onBOMUpdated();
           setMessage(`完整備份已還原至本機：${data.parts.length} 筆品號、${Object.keys(newChildren).length} 個組立（離線模式，未同步伺服器）`);
         }
       } catch {
@@ -529,11 +560,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                         <PenLine className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm(`確定要刪除客戶「${c.name}」及其 ${c.count} 筆品號嗎？此操作無法還原。`)) {
-                            onDeleteCustomer(c.name);
-                          }
-                        }}
+                        onClick={() => handleDeleteCustomer(c)}
                         className="p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                         title="刪除客戶（含所有品號）"
                       >
@@ -715,6 +742,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         {/* Summary */}
         <div className="text-sm text-gray-400 text-center py-2 space-y-1">
           <p>共 {parts.length} 筆品號、{existingCustomers.length} 家客戶、{assemblyKeys.length} 個組立編號、{Object.values(children).flat().length} 個零件對應</p>
+          {orphanPartNos.length > 0 && (
+            <p>BOM 中有 {orphanPartNos.length} 個零件編號不在品號表中（原料/通用件屬正常）</p>
+          )}
           <p>所有異動會自動同步至伺服器（data/master.json），無需手動儲存</p>
         </div>
       </div>

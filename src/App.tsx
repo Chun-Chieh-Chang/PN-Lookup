@@ -11,7 +11,7 @@ import { ExportImportModal } from './components/ExportImportModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { INITIAL_PARTS_DATA } from './data/partsData';
-import { getItemType, enrichParts, initBOM } from './utils/bomEngine';
+import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
 import { getServerStatus } from './utils/serverStatus';
 
@@ -72,7 +72,7 @@ export default function App() {
       if (serverParts.length > 0) {
         setParts(enrichParts(serverParts));
       } else if (partsRef.current.length > 0) {
-        saveParts(partsRef.current).catch(() => {});
+        saveParts(stripDerivedFields(partsRef.current)).catch(() => {});
       }
     }).catch(() => {
       serverDownRef.current = true;
@@ -108,18 +108,19 @@ export default function App() {
   const [isCustomerStatsOpen, setIsCustomerStatsOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
 
-  // Save to localStorage on change, debounce-save to server
+  // Save to localStorage on change, debounce-save to server (derived fields stripped)
   const lastSavedRef = useRef('');
   useEffect(() => {
+    const clean = stripDerivedFields(parts);
     try {
-      localStorage.setItem(STORAGE_KEY_PARTS, JSON.stringify(parts));
+      localStorage.setItem(STORAGE_KEY_PARTS, JSON.stringify(clean));
     } catch (e) {
       console.error('Failed to save parts data:', e);
     }
-    const serialized = JSON.stringify(parts);
+    const serialized = JSON.stringify(clean);
     if (serverDownRef.current || lastSavedRef.current === serialized) return;
     const timer = setTimeout(() => {
-      saveParts(parts).then(() => {
+      saveParts(clean).then(() => {
         lastSavedRef.current = serialized;
       }).catch(() => {});
     }, 800);
@@ -145,14 +146,23 @@ export default function App() {
     return prefixes.size;
   }, [parts]);
 
+  // BOM 更新後，重新以 BOM 階層補齊品號衍生欄位
+  const handleBOMUpdated = useCallback(() => {
+    setParts((prev) => enrichParts(prev));
+  }, []);
+
   // Add or Edit Part Item
   const handleSaveItem = (itemData: Omit<PartItem, 'id'> & { id?: string }) => {
     if (itemData.id) {
-      // Edit existing
+      // Edit existing — 品號變更時同步更新 BOM join key
+      const existing = parts.find((p) => p.id === itemData.id);
+      if (existing && itemData.partNo && existing.partNo !== itemData.partNo) {
+        renamePartNo(existing.partNo, itemData.partNo);
+      }
       setParts((prev) =>
-        prev.map((p) =>
+        enrichParts(prev.map((p) =>
           p.id === itemData.id ? ({ ...p, ...itemData } as PartItem) : p
-        )
+        ))
       );
     } else {
       // Add new
@@ -262,6 +272,7 @@ export default function App() {
           setParts((prev) => prev.filter((p) => p.customer !== customerName));
         }}
         onImportParts={handleImportData}
+        onBOMUpdated={handleBOMUpdated}
       />
     );
   }
