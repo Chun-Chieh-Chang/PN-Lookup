@@ -4,7 +4,6 @@ import {
   Check,
   Eye,
   Edit2,
-  Trash2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -20,7 +19,6 @@ interface PartsTableProps {
   items: PartItem[];
   onViewDetail: (item: PartItem) => void;
   onEdit: (item: PartItem) => void;
-  onDelete: (id: string) => void;
   searchKeyword: string;
   onCustomerClick: (customerName: string) => void;
 }
@@ -32,7 +30,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   items,
   onViewDetail,
   onEdit,
-  onDelete,
   searchKeyword,
   onCustomerClick,
 }) => {
@@ -357,14 +354,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         title="編輯此項"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => onDelete(item.id)}
-                        className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                        title="刪除此項"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
 
                     </div>

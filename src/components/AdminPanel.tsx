@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus } from 'lucide-react';
+import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -8,9 +8,12 @@ interface AdminPanelProps {
   parts: PartItem[];
   onClose: () => void;
   onAddPart: (itemData: Omit<PartItem, 'id'>) => void;
+  onDeletePart: (id: string) => void;
+  onRenameCustomer: (oldName: string, newName: string) => void;
+  onDeleteCustomer: (customerName: string) => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPart }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
   const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,8 +23,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
   const [message, setMessage] = useState('');
   const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addPartMsg, setAddPartMsg] = useState('');
+  const [partSearch, setPartSearch] = useState('');
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
 
-  const existingCustomers = Array.from(new Set(parts.map(p => p.customer))).sort();
+  const existingCustomers: string[] = Array.from(new Set<string>(parts.map(p => p.customer))).sort();
+
+  const partSearchResults = partSearch.length >= 1
+    ? parts.filter(p => p.partNo.toLowerCase().includes(partSearch.toLowerCase()) || p.name.toLowerCase().includes(partSearch.toLowerCase())).slice(0, 20)
+    : [];
+
+  const customerGroups = existingCustomers
+    .filter(c => c.toLowerCase().includes(customerFilter.toLowerCase()))
+    .map(c => ({
+      name: c,
+      count: parts.filter(p => p.customer === c).length,
+      samples: parts.filter(p => p.customer === c).slice(0, 3).map(p => p.partNo),
+    }));
 
   const handleAddPartSubmit = () => {
     if (!newPart.customer.trim() || !newPart.partNo.trim() || !newPart.name.trim()) {
@@ -320,6 +339,135 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
             )}
           </div>
         ))}
+
+        {/* Part Management — Search & Delete */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+            <Trash2 className="w-4 h-4 text-rose-500" />
+            <span>品號管理（搜尋刪除）</span>
+          </h2>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={partSearch}
+              onChange={e => setPartSearch(e.target.value)}
+              placeholder="搜尋品號或品名..."
+              className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          {partSearch && (
+            <div className="mt-3 space-y-1">
+              {partSearchResults.length === 0 && (
+                <p className="text-sm text-gray-400 py-2">查無符合條件的品號</p>
+              )}
+              {partSearchResults.map(p => (
+                <div key={p.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-100 group">
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <span className="font-mono text-blue-700">{p.partNo}</span>
+                    <span className="text-gray-500 truncate">{p.name}</span>
+                    <span className="text-gray-400 text-xs truncate">{p.customer}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm(`確定要刪除品號 ${p.partNo} (${p.name}) 嗎？`)) {
+                        onDeletePart(p.id);
+                      }
+                    }}
+                    className="p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                    title="刪除品號"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Customer Management */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+            <Users className="w-4 h-4 text-indigo-500" />
+            <span>客戶管理（{existingCustomers.length} 家客戶）</span>
+          </h2>
+          <div className="relative mb-3">
+            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={customerFilter}
+              onChange={e => setCustomerFilter(e.target.value)}
+              placeholder="篩選客戶名稱..."
+              className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+          <div className="space-y-1.5">
+            {customerGroups.map(c => (
+              <div key={c.name} className="py-2 px-2 rounded hover:bg-gray-100">
+                {renamingCustomer === c.name ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={renameValue}
+                      onChange={e => setRenameValue(e.target.value)}
+                      placeholder="新客戶名稱"
+                      className="flex-1 px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                      autoFocus
+                    />
+                    <button
+                      onClick={() => {
+                        if (renameValue.trim() && renameValue.trim() !== c.name) {
+                          onRenameCustomer(c.name, renameValue.trim());
+                        }
+                        setRenamingCustomer(null);
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md cursor-pointer"
+                    >
+                      確認
+                    </button>
+                    <button
+                      onClick={() => setRenamingCustomer(null)}
+                      className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md border border-gray-200 cursor-pointer"
+                    >
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <span className="font-medium text-gray-800">{c.name}</span>
+                      <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full border border-gray-200">{c.count} 筆</span>
+                      <span className="text-gray-400 text-xs font-mono truncate hidden sm:inline">{c.samples.join(', ')}</span>
+                    </div>
+                    <div className="flex items-center space-x-1 shrink-0">
+                      <button
+                        onClick={() => { setRenamingCustomer(c.name); setRenameValue(c.name); }}
+                        className="p-1 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer"
+                        title="改名（套用至該客戶所有品號）"
+                      >
+                        <PenLine className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`確定要刪除客戶「${c.name}」及其 ${c.count} 筆品號嗎？此操作無法還原。`)) {
+                            onDeleteCustomer(c.name);
+                          }
+                        }}
+                        className="p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                        title="刪除客戶（含所有品號）"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {customerGroups.length === 0 && (
+              <p className="text-sm text-gray-400 py-2">查無符合條件的客戶</p>
+            )}
+          </div>
+        </div>
 
         {/* Summary */}
         <div className="text-sm text-gray-400 text-center py-2">

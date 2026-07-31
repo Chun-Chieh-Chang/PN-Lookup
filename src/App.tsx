@@ -127,13 +127,6 @@ export default function App() {
     }
   };
 
-  // Delete Item
-  const handleDeleteItem = (id: string) => {
-    if (confirm('確定要刪除該筆品號資料嗎？')) {
-      setParts((prev) => prev.filter((p) => p.id !== id));
-    }
-  };
-
   // Reset Data — clear and open export/import to reload
   const handleResetData = () => {
     setParts([]);
@@ -219,6 +212,17 @@ export default function App() {
           };
           setParts((prev) => [newItem, ...prev]);
         }}
+        onDeletePart={(id) => {
+          setParts((prev) => prev.filter((p) => p.id !== id));
+        }}
+        onRenameCustomer={(oldName, newName) => {
+          setParts((prev) => prev.map((p) =>
+            p.customer === oldName ? { ...p, customer: newName } : p
+          ));
+        }}
+        onDeleteCustomer={(customerName) => {
+          setParts((prev) => prev.filter((p) => p.customer !== customerName));
+        }}
       />
     );
   }
@@ -268,7 +272,6 @@ export default function App() {
             setEditingItem(item);
             setIsAddEditOpen(true);
           }}
-          onDelete={handleDeleteItem}
           searchKeyword={filterState.keyword}
           onCustomerClick={(customerName) => {
             setFilterState({
