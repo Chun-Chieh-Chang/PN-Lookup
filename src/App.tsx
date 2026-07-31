@@ -12,8 +12,7 @@ import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
-import { loadParts, saveParts } from './utils/partsService';
-import { getServerStatus } from './utils/serverStatus';
+import { saveParts } from './utils/partsService';
 import { dedupeAlternates } from './utils/alternates';
 import {
   ImageLibrary,
@@ -50,48 +49,15 @@ export default function App() {
       window.removeEventListener('keydown', onKey);
     };
   }, [onHashChange]);
-  // Load parts from LocalStorage or default
-  const [parts, setParts] = useState<PartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_PARTS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return enrichParts(parsed);
-      }
-    } catch {
-      // ignore
-    }
-    return enrichParts([]);
-  });
+
+  // 預設不載入任何資料，等待用戶明確匯入
+  const [parts, setParts] = useState<PartItem[]>(() => enrichParts([]));
   const partsRef = useRef(parts);
   partsRef.current = parts;
 
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [hasHydrated, setHasHydrated] = useState(true);
   const serverDownRef = useRef(false);
   const [serverOnline, setServerOnline] = useState(false);
-
-  // Hydrate from server (authoritative) — fall back to local storage
-  useEffect(() => {
-    let cancelled = false;
-    getServerStatus().then(s => {
-      if (cancelled) return;
-      serverDownRef.current = s !== 'online';
-      setServerOnline(s === 'online');
-    });
-    loadParts().then((serverParts) => {
-      if (cancelled) return;
-      if (serverParts.length > 0) {
-        setParts(enrichParts(serverParts));
-      } else if (partsRef.current.length > 0) {
-        saveParts(stripDerivedFields(partsRef.current)).catch(() => {});
-      }
-    }).catch(() => {
-      serverDownRef.current = true;
-    }).finally(() => {
-      if (!cancelled) setHasHydrated(true);
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   // Auto-open export/import when no data exists
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
