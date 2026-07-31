@@ -6,6 +6,7 @@ import { saveBOM } from '../utils/bomService';
 
 interface AdminPanelProps {
   parts: PartItem[];
+  serverOnline: boolean;
   onClose: () => void;
   onAddPart: (itemData: Omit<PartItem, 'id'>) => void;
   onDeletePart: (id: string) => void;
@@ -13,7 +14,7 @@ interface AdminPanelProps {
   onDeleteCustomer: (customerName: string) => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
   const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +153,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
     setSaving(true);
     setMessage('');
     try {
+      if (!serverOnline) {
+        handleExportBOM();
+        setMessage('無法連線伺服器，已改為下載 BOM 備份檔（回到本機伺服器後可「匯入」還原）');
+        setSaving(false);
+        return;
+      }
       const newParents = computeParents(children);
       await saveBOM(children, newParents);
       updateBOMData(children, newParents);
@@ -232,6 +239,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
       </div>
 
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+        {!serverOnline && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-sm leading-relaxed">
+            目前無法連接後端伺服器（靜態託管如 GitHub Pages，或伺服器未啟動）：BOM 與品號變更不會寫入伺服器，
+            品號資料僅保存在此瀏覽器（localStorage）。請使用「匯出 BOM 備份檔」保存資料；
+            完整功能請於本機執行 <code className="font-mono bg-amber-100 px-1 rounded">npm run serve</code>。
+          </div>
+        )}
+
         {/* Add New Assembly */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-sm font-bold text-gray-700 mb-3">新增組立編號</h2>

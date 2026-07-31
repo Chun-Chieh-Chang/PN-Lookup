@@ -13,6 +13,7 @@ import { PartItem, FilterState } from './types';
 import { INITIAL_PARTS_DATA } from './data/partsData';
 import { getItemType, enrichParts, initBOM } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
+import { getServerStatus } from './utils/serverStatus';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -56,10 +57,16 @@ export default function App() {
 
   const [hasHydrated, setHasHydrated] = useState(false);
   const serverDownRef = useRef(false);
+  const [serverOnline, setServerOnline] = useState(false);
 
   // Hydrate from server (authoritative) — fall back to local storage
   useEffect(() => {
     let cancelled = false;
+    getServerStatus().then(s => {
+      if (cancelled) return;
+      serverDownRef.current = s !== 'online';
+      setServerOnline(s === 'online');
+    });
     loadParts().then((serverParts) => {
       if (cancelled) return;
       if (serverParts.length > 0) {
@@ -234,6 +241,7 @@ export default function App() {
     return (
       <AdminPanel
         parts={parts}
+        serverOnline={serverOnline}
         onClose={() => { window.location.hash = ''; }}
         onAddPart={(itemData) => {
           const newItem: PartItem = {
