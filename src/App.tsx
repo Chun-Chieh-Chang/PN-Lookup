@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
@@ -12,6 +12,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { INITIAL_PARTS_DATA } from './data/partsData';
 import { getItemType, enrichParts, initBOM } from './utils/bomEngine';
+import { loadParts, saveParts } from './utils/partsService';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -50,18 +51,38 @@ export default function App() {
     }
     return enrichParts(INITIAL_PARTS_DATA);
   });
+  const partsRef = useRef(parts);
+  partsRef.current = parts;
+
+  const [hasHydrated, setHasHydrated] = useState(false);
+  const serverDownRef = useRef(false);
+
+  // Hydrate from server (authoritative) — fall back to local storage
+  useEffect(() => {
+    let cancelled = false;
+    loadParts().then((serverParts) => {
+      if (cancelled) return;
+      if (serverParts.length > 0) {
+        setParts(enrichParts(serverParts));
+      } else if (partsRef.current.length > 0) {
+        saveParts(partsRef.current).catch(() => {});
+      }
+    }).catch(() => {
+      serverDownRef.current = true;
+    }).finally(() => {
+      if (!cancelled) setHasHydrated(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Auto-open export/import when no data exists
-  const [isExportImportOpen, setIsExportImportOpen] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_PARTS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return !(Array.isArray(parsed) && parsed.length > 0);
-      }
-    } catch {}
-    return true;
-  });
+  const [isExportImportOpen, setIsExportImportOpen] = useState(false);
+
+  useEffect(() => {
+    if (hasHydrated && parts.length === 0) {
+      setIsExportImportOpen(true);
+    }
+  }, [hasHydrated, parts.length]);
 
   // Filter state
   const [filterState, setFilterState] = useState<FilterState>({
@@ -80,13 +101,22 @@ export default function App() {
   const [isCustomerStatsOpen, setIsCustomerStatsOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
 
-  // Save to localStorage on change
+  // Save to localStorage on change, debounce-save to server
+  const lastSavedRef = useRef('');
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_PARTS, JSON.stringify(parts));
     } catch (e) {
       console.error('Failed to save parts data:', e);
     }
+    const serialized = JSON.stringify(parts);
+    if (serverDownRef.current || lastSavedRef.current === serialized) return;
+    const timer = setTimeout(() => {
+      saveParts(parts).then(() => {
+        lastSavedRef.current = serialized;
+      }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(timer);
   }, [parts]);
 
   // Unique customer list for options

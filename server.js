@@ -1,26 +1,28 @@
 import express from 'express';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const BOM_PATH = join(__dirname, 'data', 'bom.json');
+const DATA_DIR = join(__dirname, 'data');
+const BOM_PATH = join(DATA_DIR, 'bom.json');
+const PARTS_PATH = join(DATA_DIR, 'parts.json');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-function loadBOM() {
-  return JSON.parse(readFileSync(BOM_PATH, 'utf-8'));
+function loadJSON(path) {
+  return JSON.parse(readFileSync(path, 'utf-8'));
 }
 
-function saveBOM(data) {
-  writeFileSync(BOM_PATH, JSON.stringify(data, null, 2), 'utf-8');
+function saveJSON(path, data) {
+  writeFileSync(path, JSON.stringify(data, null, 2), 'utf-8');
 }
 
 // BOM API
 app.get('/api/bom', (_req, res) => {
   try {
-    res.json(loadBOM());
+    res.json(loadJSON(BOM_PATH));
   } catch {
     res.status(500).json({ error: 'Failed to load BOM data' });
   }
@@ -32,10 +34,32 @@ app.put('/api/bom', (req, res) => {
     if (!children || !parents) {
       return res.status(400).json({ error: 'children and parents are required' });
     }
-    saveBOM({ children, parents });
+    saveJSON(BOM_PATH, { children, parents });
     res.json({ ok: true, count: Object.keys(children).length });
   } catch {
     res.status(500).json({ error: 'Failed to save BOM data' });
+  }
+});
+
+// Parts API
+app.get('/api/parts', (_req, res) => {
+  try {
+    res.json(loadJSON(PARTS_PATH));
+  } catch {
+    res.json([]);
+  }
+});
+
+app.put('/api/parts', (req, res) => {
+  try {
+    const parts = req.body;
+    if (!Array.isArray(parts)) {
+      return res.status(400).json({ error: 'parts must be an array' });
+    }
+    saveJSON(PARTS_PATH, parts);
+    res.json({ ok: true, count: parts.length });
+  } catch {
+    res.status(500).json({ error: 'Failed to save parts data' });
   }
 });
 

@@ -1,5 +1,24 @@
 # PN-Lookup 開發日誌
 
+## v2.2.0 — 品號資料上雲與 BOM 備份
+
+### 新增功能
+- **品號資料伺服器化**：新增 `GET /api/parts` / `PUT /api/parts` API，品號資料持久化於 `data/parts.json`
+- **雙層儲存策略**：前端開機時以伺服器資料為準（authoritative）覆寫載入；伺服器不可用時自動降級使用 localStorage
+- **自動同步**：品號/客戶任何異動（新增、編輯、刪除、改名）於 800ms 防抖後自動 PUT 至伺服器，後台無需手動儲存品號資料
+- **BOM 備份**：後台新增「BOM 資料備份」區塊，可匯出 JSON 備份檔（含 children/parents/exportedAt），亦可匯入備份檔，匯入後先載入於頁面供確認，點「儲存至伺服器」才正式寫入
+- 新增 `src/utils/partsService.ts`（Parts API 客戶端 + cache）
+
+### 檔案結構（新增）
+```
+├── data/
+│   └── parts.json              ← 品號資料持久化儲存（JSON，伺服器啟動後產生）
+└── src/utils/
+    └── partsService.ts         ← Parts API 客戶端（fetch + cache）
+```
+
+---
+
 ## v2.1.0 — 後端伺服器與 BOM 維護管理
 
 ### 新增功能

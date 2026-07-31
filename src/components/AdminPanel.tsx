@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -27,6 +27,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
   const [customerFilter, setCustomerFilter] = useState('');
   const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const bomFileRef = useRef<HTMLInputElement>(null);
 
   const existingCustomers: string[] = Array.from(new Set<string>(parts.map(p => p.customer))).sort();
 
@@ -124,6 +125,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
     setSaving(false);
   };
 
+  const handleExportBOM = () => {
+    const payload = {
+      children,
+      parents: computeParents(children),
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BOM_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportBOMFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        const raw = data?.children ?? data;
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid');
+        const newChildren: Record<string, string[]> = {};
+        for (const [key, val] of Object.entries(raw)) {
+          if (!Array.isArray(val)) throw new Error('invalid');
+          newChildren[key] = val.map(String);
+        }
+        const newParents = computeParents(newChildren);
+        setChildren(newChildren);
+        setParents(newParents);
+        setMessage(`匯入成功：${Object.keys(newChildren).length} 個組立，請確認後再儲存至伺服器`);
+      } catch {
+        setMessage('匯入失敗：檔案格式不正確（需為 BOM 備份 JSON）');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const prefixGroups = ['SA', 'SB', 'SC', 'SD'];
   const groupedKeys = prefixGroups.map(p => ({
     prefix: p,
@@ -175,6 +214,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
               <Plus className="w-4 h-4" />
               <span>新增</span>
             </button>
+          </div>
+        </div>
+
+        {/* BOM Backup — Export / Import */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3">BOM 資料備份（JSON 檔）</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportBOM}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 border border-gray-200 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>匯出 BOM 備份檔</span>
+            </button>
+            <input
+              ref={bomFileRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) handleImportBOMFile(f);
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => bomFileRef.current?.click()}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 border border-gray-200 cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>匯入 BOM 備份檔</span>
+            </button>
+            <span className="text-xs text-gray-400">
+              匯入後先載入於頁面供確認，點「儲存至伺服器」才會正式寫入
+            </span>
           </div>
         </div>
 
@@ -470,8 +544,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
         </div>
 
         {/* Summary */}
-        <div className="text-sm text-gray-400 text-center py-2">
-          共 {assemblyKeys.length} 個組立編號，{Object.values(children).flat().length} 個零件對應
+        <div className="text-sm text-gray-400 text-center py-2 space-y-1">
+          <p>共 {assemblyKeys.length} 個組立編號，{Object.values(children).flat().length} 個零件對應</p>
+          <p>品號與客戶異動會自動同步至伺服器（data/parts.json），無需手動儲存</p>
         </div>
       </div>
     </div>
