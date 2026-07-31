@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -21,7 +21,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const [searchQuery, setSearchQuery] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [addKey, setAddKey] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [syncState, setSyncState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addPartMsg, setAddPartMsg] = useState('');
@@ -40,7 +40,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const [customerFilter, setCustomerFilter] = useState('');
   const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const bomFileRef = useRef<HTMLInputElement>(null);
   const fullBackupFileRef = useRef<HTMLInputElement>(null);
 
   const existingCustomers: string[] = Array.from(new Set<string>(parts.map(p => p.customer))).sort();
@@ -151,64 +150,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     });
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    setMessage('');
-    try {
-      if (!serverOnline) {
-        handleExportBOM();
-        setMessage('無法連線伺服器，已改為下載 BOM 備份檔（回到本機伺服器後可「匯入」還原）');
-        setSaving(false);
-        return;
-      }
-      const newParents = computeParents(children);
-      await saveBOM(children, newParents);
-      updateBOMData(children, newParents);
-      setParents(newParents);
-      setMessage('BOM 資料已儲存至伺服器');
-    } catch {
-      setMessage('儲存失敗，請確認伺服器執行中');
+  const childrenRef = useRef(children);
+  childrenRef.current = children;
+  const skipFirstSyncRef = useRef(true);
+
+  // Auto-sync BOM edits to server (debounced) — same behavior as parts
+  useEffect(() => {
+    if (skipFirstSyncRef.current) {
+      skipFirstSyncRef.current = false;
+      return;
     }
-    setSaving(false);
-  };
-
-  const handleExportBOM = () => {
-    const payload = {
-      children,
-      parents: computeParents(children),
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `BOM_backup_${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportBOMFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const data = JSON.parse(String(reader.result));
-        const raw = data?.children ?? data;
-        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('invalid');
-        const newChildren: Record<string, string[]> = {};
-        for (const [key, val] of Object.entries(raw)) {
-          if (!Array.isArray(val)) throw new Error('invalid');
-          newChildren[key] = val.map(String);
-        }
-        const newParents = computeParents(newChildren);
-        setChildren(newChildren);
+    if (!serverOnline) return;
+    setSyncState('saving');
+    const timer = setTimeout(() => {
+      const newParents = computeParents(childrenRef.current);
+      saveBOM(childrenRef.current, newParents).then(() => {
+        updateBOMData(childrenRef.current, newParents);
         setParents(newParents);
-        setMessage(`匯入成功：${Object.keys(newChildren).length} 個組立，請確認後再儲存至伺服器`);
-      } catch {
-        setMessage('匯入失敗：檔案格式不正確（需為 BOM 備份 JSON）');
-      }
-    };
-    reader.readAsText(file);
-  };
+        setSyncState('saved');
+      }).catch(() => setSyncState('error'));
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [children, serverOnline]);
 
   const handleExportFullBackup = () => {
     const payload = {
@@ -232,10 +195,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     reader.onload = () => {
       try {
         const data = JSON.parse(String(reader.result));
-        if (data?.type !== 'pn-lookup-backup' || !Array.isArray(data.parts)) {
-          throw new Error('invalid');
-        }
-        const rawChildren = data.bom?.children ?? {};
+        const isFull = data?.type === 'pn-lookup-backup' && Array.isArray(data.parts);
+        // 相容舊版 BOM-only 備份（無 type/parts 標記）
+        const rawChildren = isFull ? (data.bom?.children ?? {}) : (data?.children ?? data);
         if (!rawChildren || typeof rawChildren !== 'object' || Array.isArray(rawChildren)) {
           throw new Error('invalid');
         }
@@ -244,10 +206,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
           if (!Array.isArray(val)) throw new Error('invalid');
           newChildren[key] = val.map(String);
         }
-        onImportParts(data.parts, true);
+        if (isFull) {
+          onImportParts(data.parts, true);
+        }
         const newParents = computeParents(newChildren);
         setChildren(newChildren);
         setParents(newParents);
+        if (!isFull) {
+          setMessage(`已從舊版 BOM 備份還原：${Object.keys(newChildren).length} 個組立（品號未變動，已自動同步）`);
+          return;
+        }
         if (serverOnline) {
           saveBOM(newChildren, newParents).then(() => {
             updateBOMData(newChildren, newParents);
@@ -282,18 +250,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
           </button>
           <h1 className="text-lg font-bold text-gray-900">後台管理 — BOM 階層維護</h1>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           {message && (
             <span className={`text-sm ${message.includes('失敗') ? 'text-red-600' : 'text-emerald-600'}`}>{message}</span>
           )}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-300 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
-          >
-            <Save className="w-4 h-4" />
-            <span>{saving ? '儲存中...' : '儲存至伺服器'}</span>
-          </button>
+          {syncState === 'saving' && <span className="text-sm text-gray-500">同步中...</span>}
+          {syncState === 'saved' && <span className="text-sm text-emerald-600">已自動同步至伺服器</span>}
+          {syncState === 'error' && <span className="text-sm text-red-600">同步失敗，請確認伺服器執行中</span>}
+          {!serverOnline && <span className="text-sm text-amber-600">離線模式（變更僅存本機）</span>}
         </div>
       </div>
 
@@ -301,7 +265,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         {!serverOnline && (
           <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-sm leading-relaxed">
             目前無法連接後端伺服器（靜態託管如 GitHub Pages，或伺服器未啟動）：BOM 與品號變更不會寫入伺服器，
-            品號資料僅保存在此瀏覽器（localStorage）。請使用「匯出 BOM 備份檔」保存資料；
+            品號資料僅保存在此瀏覽器（localStorage）。請使用「匯出完整備份」保存資料；
             完整功能請於本機執行 <code className="font-mono bg-amber-100 px-1 rounded">npm run serve</code>。
           </div>
         )}
@@ -326,41 +290,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               <Plus className="w-4 h-4" />
               <span>新增</span>
             </button>
-          </div>
-        </div>
-
-        {/* BOM Backup — Export / Import */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-bold text-gray-700 mb-3">BOM 資料備份（JSON 檔）</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleExportBOM}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 border border-gray-200 cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>匯出 BOM 備份檔</span>
-            </button>
-            <input
-              ref={bomFileRef}
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) handleImportBOMFile(f);
-                e.target.value = '';
-              }}
-            />
-            <button
-              onClick={() => bomFileRef.current?.click()}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 border border-gray-200 cursor-pointer"
-            >
-              <Upload className="w-4 h-4" />
-              <span>匯入 BOM 備份檔</span>
-            </button>
-            <span className="text-xs text-gray-400">
-              匯入後先載入於頁面供確認，點「儲存至伺服器」才會正式寫入
-            </span>
           </div>
         </div>
 
