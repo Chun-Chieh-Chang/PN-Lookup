@@ -262,13 +262,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       </div>
 
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
-        {!serverOnline && (
-          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 text-sm leading-relaxed">
-            目前無法連接後端伺服器（靜態託管如 GitHub Pages，或伺服器未啟動）：BOM 與品號變更不會寫入伺服器，
-            品號資料僅保存在此瀏覽器（localStorage）。請使用「匯出完整備份」保存資料；
-            完整功能請於本機執行 <code className="font-mono bg-amber-100 px-1 rounded">npm run serve</code>。
-          </div>
-        )}
 
         {/* Add New Assembly */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
