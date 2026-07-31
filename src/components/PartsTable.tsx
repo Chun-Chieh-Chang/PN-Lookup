@@ -156,6 +156,16 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               未指定圖檔資料夾 — 點右上角「圖檔」按鈕可讓品號直接開啟圖檔
             </span>
           )}
+
+          {imageLib && (
+            <span className="ml-2 text-gray-500 text-xs">
+              圖檔 {imageLib.count} 張 · 品號對應{' '}
+              <strong className="text-gray-700">
+                {paginatedItems.filter((i) => imageLib.urlFor(i.partNo)).length}
+              </strong>{' '}
+              筆
+            </span>
+          )}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -366,7 +376,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     ) : (
                       <span
                         className="text-sm text-gray-300"
-                        title={imageLib ? '資料夾內找不到對應的圖檔' : '未指定圖檔資料夾'}
+                        title={imageLib ? `找不到「${item.partNo}」對應的圖檔` : '未指定圖檔資料夾'}
                       >
                         —
                       </span>

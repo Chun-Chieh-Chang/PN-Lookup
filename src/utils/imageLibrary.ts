@@ -55,15 +55,29 @@ async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[]): Prom
   }
 }
 
-// ---------- 品號 → 圖檔配對（檔名完全一致優先，其次「品號_/-/ 後綴」） ----------
-function matchFile(files: File[], partNo: string, exact: boolean): File | null {
+// ---------- 品號 → 圖檔配對（優先序：完全一致 → 忽略符號比對 → 品號開頭） ----------
+const NORM_RE = /[-_\s.]+/g;
+
+function normalize(s: string): string {
+  return s.replace(NORM_RE, '').toUpperCase();
+}
+
+function matchFile(files: File[], partNo: string): File | null {
   const pn = partNo.toUpperCase();
+  const pnNorm = normalize(pn);
+
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
-    if (exact) {
-      if (base === pn) return f;
-    } else if (base.startsWith(pn + '_') || base.startsWith(pn + '-') || base.startsWith(pn + ' ')) {
-      return f;
+    if (base === pn) return f;
+  }
+  for (const f of files) {
+    const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
+    if (normalize(base) === pnNorm) return f;
+  }
+  if (pnNorm.length >= 4) {
+    for (const f of files) {
+      const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
+      if (normalize(base).startsWith(pnNorm)) return f;
     }
   }
   return null;
@@ -76,7 +90,7 @@ function buildLibrary(files: File[], folderName: string): ImageLibrary {
     count: files.length,
     urlFor(partNo: string): string | null {
       if (urlCache.has(partNo)) return urlCache.get(partNo) ?? null;
-      const hit = matchFile(files, partNo, true) || matchFile(files, partNo, false);
+      const hit = matchFile(files, partNo);
       if (!hit) {
         urlCache.set(partNo, null);
         return null;
