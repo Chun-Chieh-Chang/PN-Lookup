@@ -107,7 +107,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   const handleCopyFullRow = (item: PartItem) => {
-    const text = `客戶: ${item.customer} | 品號: ${item.partNo} | 品名: ${item.name}`;
+    const alts = item.alternates && item.alternates.length > 0 ? ` (${item.alternates.join(' / ')})` : '';
+    const text = `客戶: ${item.customer} | 品號: ${item.partNo}${alts} | 品名: ${item.name}`;
     navigator.clipboard.writeText(text);
     setCopiedFullId(item.id);
     setTimeout(() => setCopiedFullId(null), 1800);
@@ -346,35 +347,53 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                   {/* Part Number */}
                   <td className={`p-3 font-mono font-bold text-gray-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
-                    <div className="flex items-center space-x-2">
-                      <span
-                        onClick={imageUrl ? () => openImage(imageUrl) : undefined}
-                        className={`text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 ${
-                          imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:underline' : ''
-                        }`}
-                        title={imageUrl ? '點擊開啟圖檔' : undefined}
-                      >
-                        {highlightText(item.partNo, searchKeyword)}
-                      </span>
-                      <button
-                        onClick={() => handleCopyPartNo(item.id, item.partNo)}
-                        className={`p-1 rounded transition-colors cursor-pointer ${
-                          isCopied
-                            ? 'text-emerald-600 bg-emerald-100'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                        }`}
-                        title="複製品號"
-                      >
-                        {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                      {imageUrl && (
-                        <button
-                          onClick={() => openImage(imageUrl)}
-                          className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors cursor-pointer"
-                          title="開啟圖檔"
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          onClick={imageUrl ? () => openImage(imageUrl) : undefined}
+                          className={`text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 ${
+                            imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:underline' : ''
+                          }`}
+                          title={imageUrl ? '點擊開啟圖檔' : undefined}
                         >
-                          <ImageIcon className="w-3.5 h-3.5" />
+                          {highlightText(item.partNo, searchKeyword)}
+                        </span>
+                        <button
+                          onClick={() => handleCopyPartNo(item.id, item.partNo)}
+                          className={`p-1 rounded transition-colors cursor-pointer ${
+                            isCopied
+                              ? 'text-emerald-600 bg-emerald-100'
+                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                          }`}
+                          title="複製品號"
+                        >
+                          {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
+                        {imageUrl && (
+                          <button
+                            onClick={() => openImage(imageUrl)}
+                            className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                            title="開啟圖檔"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {item.alternates && item.alternates.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">別名</span>
+                          {item.alternates.map((alt) => (
+                            <button
+                              key={alt}
+                              onClick={() => handleCopyPartNo(item.id, alt)}
+                              className="text-[11px] font-normal text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-px hover:bg-gray-200 hover:text-gray-700 font-mono cursor-pointer"
+                              title={`別名：${alt}（點擊複製）`}
+                            >
+                              {highlightText(alt, searchKeyword)}
+                            </button>
+                          ))}
+                        </div>
                       )}
                     </div>
                   </td>

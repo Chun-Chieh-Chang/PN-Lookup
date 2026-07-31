@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { X, Download, Upload, FileSpreadsheet, Check, RefreshCw, FileJson, Table2 } from 'lucide-react';
+import { X, Download, Upload, FileSpreadsheet, Check, RefreshCw, FileJson, Table2, Tags } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
 import { generateExcelWorkbook, parseExcelToParts } from '../utils/excelExport';
+import { parseCustomerSheet, applyCustomerRows, CustomerImportReport } from '../utils/customerPartImport';
 
 interface ExportImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   parts: PartItem[];
   onImportData: (newParts: PartItem[], replace: boolean) => void;
+  onApplyParts: (parts: PartItem[]) => void;
   onResetData: () => void;
 }
 
@@ -107,6 +109,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   onClose,
   parts,
   onImportData,
+  onApplyParts,
   onResetData,
 }) => {
   const [importText, setImportText] = useState('');
@@ -224,6 +227,38 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     } else {
       alert('匯入失敗：請確認檔案格式正確。支援 CSV (id,customer,partNo,name,...) 或 JSON 格式。');
     }
+  };
+
+  const formatReport = (rep: CustomerImportReport): string => {
+    let msg = `客戶料號工作表匯入完成：\n\n新增 ${rep.created} 筆、合併 ${rep.merged} 筆`;
+    if (rep.renamed.length > 0) {
+      msg += `\n主品號調整為圖面編號（${rep.renamed.length} 筆）：\n  ` + rep.renamed.join('\n  ');
+    }
+    if (rep.skipped.length > 0) {
+      msg += `\n\n略過 ${rep.skipped.length} 列：\n  ` + rep.skipped.map((s) => `第 ${s.row} 列：${s.reason}`).join('\n  ');
+    }
+    return msg;
+  };
+
+  const handleCustomerSheetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const buf = evt.target?.result as ArrayBuffer;
+      if (!buf) return;
+      const rows = parseCustomerSheet(buf);
+      if (rows.length === 0) {
+        alert('匯入失敗：找不到「客戶料號」工作表（需含 圖面編號 / 產品編號 / 零件編號 欄位）。');
+        return;
+      }
+      const { parts: nextParts, report } = applyCustomerRows(parts, rows);
+      onApplyParts(nextParts);
+      alert(formatReport(report));
+      onClose();
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = '';
   };
 
   return (
@@ -358,6 +393,27 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 accept=".csv,.txt,.json,.xlsx"
                 onChange={handleFileUpload}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          {/* 客戶料號工作表匯入 */}
+          <div className="p-4 bg-gray-50 rounded-xl border border-indigo-200 space-y-3">
+            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
+              <Tags className="w-4 h-4 text-indigo-500" />
+              <span>客戶料號工作表匯入（三碼互換）</span>
+            </h3>
+            <p className="text-gray-500 text-sm">
+              從「產品一覽表.xlsm」的「客戶料號」工作表匯入：圖面編號、產品編號、零件編號(客) 三欄互為可替代品號。
+              主品號以 <strong className="text-gray-700">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
+              既有資料任一碼命中即自動合併（不重複建檔），全資料庫代碼唯一性檢查。
+            </p>
+            <div className="pt-1">
+              <input
+                type="file"
+                accept=".xlsx"
+                onChange={handleCustomerSheetUpload}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
               />
             </div>
           </div>

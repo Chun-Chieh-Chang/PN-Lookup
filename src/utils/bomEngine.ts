@@ -107,7 +107,12 @@ export function getBOMParents(): Record<string, string[]> {
 }
 
 function findPartByNo(partNo: string, allParts: PartItem[]): PartItem | undefined {
-  return allParts.find((p) => p.partNo === partNo || p.id === partNo);
+  return allParts.find(
+    (p) =>
+      p.partNo === partNo ||
+      p.id === partNo ||
+      (p.alternates ?? []).some((a) => a === partNo)
+  );
 }
 
 function resolveChildrenRecursive(
@@ -154,7 +159,11 @@ export function getComponentsForAssembly(
   if (assembly.components && assembly.components.length > 0) {
     for (const cRef of assembly.components) {
       const match = allParts.find(
-        (p) => p.partNo === cRef || p.name === cRef || p.id === cRef
+        (p) =>
+          p.partNo === cRef ||
+          p.name === cRef ||
+          p.id === cRef ||
+          (p.alternates ?? []).some((a) => a === cRef)
       );
       if (match && !addedIds.has(match.id)) {
         addedIds.add(match.id);
@@ -222,7 +231,11 @@ export function getAssembliesForPart(
   if (part.usedInAssemblies && part.usedInAssemblies.length > 0) {
     for (const aRef of part.usedInAssemblies) {
       const match = allParts.find(
-        (p) => p.partNo === aRef || p.name === aRef || p.id === aRef
+        (p) =>
+          p.partNo === aRef ||
+          p.name === aRef ||
+          p.id === aRef ||
+          (p.alternates ?? []).some((a) => a === aRef)
       );
       if (match && !addedIds.has(match.id)) {
         addedIds.add(match.id);

@@ -500,6 +500,7 @@ export default function App() {
         onClose={() => setIsExportImportOpen(false)}
         parts={parts}
         onImportData={handleImportData}
+        onApplyParts={(next) => setParts(enrichParts(next))}
         onResetData={handleResetData}
       />
 
