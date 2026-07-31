@@ -1,13 +1,11 @@
 import express from 'express';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
 const MASTER_PATH = join(DATA_DIR, 'master.json');
-const LEGACY_PARTS_PATH = join(DATA_DIR, 'parts.json');
-const LEGACY_BOM_PATH = join(DATA_DIR, 'bom.json');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -23,11 +21,7 @@ function defaultMaster() {
 
 function loadMaster() {
   if (!existsSync(MASTER_PATH)) {
-    let parts = [];
-    let bom = { children: {}, parents: {} };
-    try { parts = JSON.parse(readFileSync(LEGACY_PARTS_PATH, 'utf-8')); } catch {}
-    try { bom = JSON.parse(readFileSync(LEGACY_BOM_PATH, 'utf-8')); } catch {}
-    saveMaster({ parts, bom });
+    return defaultMaster();
   }
   return JSON.parse(readFileSync(MASTER_PATH, 'utf-8'));
 }
@@ -38,6 +32,7 @@ function saveMaster(data) {
   if (!next.bom || typeof next.bom !== 'object') next.bom = { children: {}, parents: {} };
   if (!next.bom.children) next.bom.children = {};
   if (!next.bom.parents) next.bom.parents = {};
+  mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(MASTER_PATH, JSON.stringify(next, null, 2), 'utf-8');
 }
 

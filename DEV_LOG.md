@@ -1,5 +1,24 @@
 # PN-Lookup 開發日誌
 
+## v2.8.0 — 程式碼清理與專案優化
+
+### 清理項目
+- **移除死碼匯出**：刪除從未被呼叫的 `clearBOMCache()`（bomService.ts）、`clearPartsCache()`（partsService.ts）、`getServerStatusSync()`（serverStatus.ts）
+- **建立 `src/data/partsData.ts`**：補齊 App.tsx 靜態 import 所需的空殼檔案（`INITIAL_PARTS_DATA = []`），確保 build 不因缺少模組而失敗
+- **建立 `src/data/bomData.ts`**：補齊 bomEngine.ts 靜態 import 所需的空殼檔案（`BOM_CHILDREN / BOM_PARENTS / ASSEMBLY_PART_NOS` 均為空），真實資料由 `initBOM()` 在 runtime 從 API 載入
+- **server.js 清理**：移除 v2.2/v2.3 遺留的 legacy migration 邏輯（`parts.json` / `bom.json` 合併遷移，已完成歷史使命）；新增 `mkdirSync(DATA_DIR, { recursive: true })` 確保 data/ 目錄不存在時自動建立
+- **git 歷史清除**：以 `git-filter-repo` 完整移除所有歷史 commit 中的原始資料（`/data/`、`/ref/` PDF 圖檔、xlsm、CSV），保護公司資料安全
+
+### gitignore 修正
+- 將 `data/`、`ref/` 範圍收斂為 `/data/`、`/ref/`（加前綴斜線），避免誤排除 `src/data/` 目錄
+
+### 架構說明（當前）
+- **靜態模式**（GitHub Pages）：`VITE_STATIC_ONLY=true` 注入，完全跳過 API；品號走 localStorage，BOM 走空殼 fallback
+- **本機伺服器模式**：`npm run start`（build + serve），品號與 BOM 從 `data/master.json` 讀寫
+- **bomData.ts / partsData.ts**：兩者均為空殼，存在只為讓 Vite/Rollup build-time 模組解析不報錯；實際資料透過 runtime API 載入
+
+---
+
 ## v2.7.0 — 替代品號 + 掃描檔內容識別（OCR + 手動綁定）
 
 ### 替代品號（可互相替代的品號）
@@ -160,35 +179,42 @@
 - tsconfig.json 中 legacy flags（experimentalDecorators、useDefineForClassFields、allowJs、paths）
 - 原始資料 CSV 移至 ref/ 目錄
 
-### 檔案結構
+### 檔案結構（v2.8.0 當前）
 ```
 pn-lookup/
 ├── index.html
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── server.js                         ← Express 後端 (API + 靜態服務)
 ├── .env.example
 ├── .gitignore
 ├── DEV_LOG.md
 ├── README.md
 ├── metadata.json
-├── ref/
-│   ├── 產品一覽表.xlsm
-│   ├── 原始資料_產品一覽表.csv
-│   └── 圖檔/...
-├── assets/
-├── dist/
+├── .github/workflows/deploy.yml      ← GitHub Pages 自動部署
 └── src/
     ├── main.tsx
-    ├── App.tsx
+    ├── App.tsx                        ← 根元件（路由/狀態/BOM初始化）
     ├── index.css
     ├── types.ts
     ├── data/
-    │   ├── partsData.ts
-    │   └── bomData.ts
+    │   ├── partsData.ts               ← 空殼（INITIAL_PARTS_DATA = []）
+    │   └── bomData.ts                 ← 空殼（BOM fallback，runtime 覆蓋）
+    ├── types/
+    │   └── file-system-access.d.ts   ← File System Access API 型別宣告
     ├── utils/
-    │   ├── bomEngine.ts
-    │   └── excelExport.ts
+    │   ├── bomEngine.ts               ← BOM 唯一真源（enrichParts / stripDerived）
+    │   ├── bomService.ts              ← BOM API 客戶端
+    │   ├── partsService.ts            ← Parts API 客戶端
+    │   ├── serverStatus.ts            ← 伺服器狀態 + 靜態模式旗標
+    │   ├── excelExport.ts             ← Excel 匯出匯入
+    │   ├── customerPartImport.ts      ← 客戶料號三碼互換匯入
+    │   ├── imageLibrary.ts            ← 圖檔資料夾管理 + 檔名比對
+    │   ├── imageResolver.ts           ← 圖檔解析順序（檔名→綁定→OCR）
+    │   ├── ocr.ts                     ← OCR 引擎（tesseract.js + pdf.js）
+    │   ├── idb.ts                     ← IndexedDB 封裝
+    │   └── alternates.ts              ← 替代品號解析與去重
     └── components/
         ├── Header.tsx
         ├── StatsBar.tsx
@@ -198,12 +224,15 @@ pn-lookup/
         ├── AddEditModal.tsx
         ├── BatchSearchModal.tsx
         ├── CustomerStatsModal.tsx
-        └── ExportImportModal.tsx
+        ├── ExportImportModal.tsx
+        ├── ImageFolderModal.tsx
+        ├── ImageBindModal.tsx
+        └── AdminPanel.tsx
 ```
 
 ---
 
-## v1.x — 初始版本（歷史記錄遺失）
+## v2.0.0 — 全面清理、Excel 匯出匯入、Light Theme 遷移
 
 原始開發基於 Google AI Studio 範本，逐步建立品號檢索、BOM 階層瀏覽、客戶統計等功能。
 

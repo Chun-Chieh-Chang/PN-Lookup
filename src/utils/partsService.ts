@@ -27,10 +27,6 @@ export async function loadParts(): Promise<PartItem[]> {
   return loading;
 }
 
-export function clearPartsCache() {
-  cache = null;
-}
-
 export async function saveParts(parts: PartItem[]) {
   if (IS_STATIC_MODE) throw new Error('static mode');
   const res = await fetch('/api/parts', {

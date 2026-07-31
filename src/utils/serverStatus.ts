@@ -23,7 +23,3 @@ export function getServerStatus(): Promise<ServerStatus> {
   });
   return promise;
 }
-
-export function getServerStatusSync(): ServerStatus {
-  return status;
-}

@@ -29,10 +29,6 @@ export async function loadBOM(): Promise<BOMData> {
   return loading;
 }
 
-export function clearBOMCache() {
-  cache = null;
-}
-
 export async function saveBOM(children: Record<string, string[]>, parents: Record<string, string[]>) {
   if (IS_STATIC_MODE) throw new Error('static mode');
   const res = await fetch('/api/bom', {

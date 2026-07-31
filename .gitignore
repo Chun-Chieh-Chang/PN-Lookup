@@ -8,5 +8,5 @@ coverage/
 !.env.example
 
 # Local data and reference files — do not push to GitHub
-data/
-ref/
+/data/
+/ref/
