@@ -1,9 +1,11 @@
 import { PartItem } from '../types';
+import { IS_STATIC_MODE } from './serverStatus';
 
 let cache: PartItem[] | null = null;
 let loading: Promise<PartItem[]> | null = null;
 
 async function fetchParts(): Promise<PartItem[]> {
+  if (IS_STATIC_MODE) throw new Error('static mode');
   const res = await fetch('/api/parts');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -30,6 +32,7 @@ export function clearPartsCache() {
 }
 
 export async function saveParts(parts: PartItem[]) {
+  if (IS_STATIC_MODE) throw new Error('static mode');
   const res = await fetch('/api/parts', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
