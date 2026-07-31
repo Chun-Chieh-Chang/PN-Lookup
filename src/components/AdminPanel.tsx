@@ -397,7 +397,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               <span>匯入完整備份</span>
             </button>
             <span className="text-xs text-gray-400">
-              匯入會以備份內容覆蓋目前的品號與 BOM 資料（品號僅還原於此瀏覽器，伺服器連線正常時同步）
+              此格式即為伺服器唯一真源 <code className="font-mono bg-gray-100 px-1 rounded">data/master.json</code>；
+              匯出檔可直接作為 master 檔使用，匯入會以備份內容覆蓋目前的品號與 BOM（品號僅還原於此瀏覽器，伺服器連線正常時同步）
             </span>
           </div>
         </div>
@@ -790,7 +791,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         {/* Summary */}
         <div className="text-sm text-gray-400 text-center py-2 space-y-1">
           <p>共 {assemblyKeys.length} 個組立編號，{Object.values(children).flat().length} 個零件對應</p>
-          <p>品號與客戶異動會自動同步至伺服器（data/parts.json），無需手動儲存</p>
+          <p>品號與客戶異動會自動同步至伺服器（data/master.json），無需手動儲存</p>
         </div>
       </div>
     </div>

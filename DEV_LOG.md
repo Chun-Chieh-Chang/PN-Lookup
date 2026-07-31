@@ -1,5 +1,17 @@
 # PN-Lookup 開發日誌
 
+## v2.3.0 — 單一 Master 檔架構（唯一真源）
+
+### 架構變更
+- **`data/master.json` 成為唯一真源**：品號（parts）與 BOM 階層（bom）全部收斂於單一檔案，取代原本分開的 `parts.json` / `bom.json`
+- **Master 檔格式 = 完整備份檔格式**（`{ type: 'pn-lookup-backup', version: 2, parts, bom }`）：後台「匯出完整備份」產出的檔案可直接作為 master.json 使用，維護人員只需維護這一份檔案
+- **API 相容**：`/api/bom`、`/api/parts` 維持原路徑，改由 master.json 讀寫；新增 `GET/PUT /api/master` 供整包讀寫
+- **寫入序列化**：伺服器以 write queue 串行化所有寫入，避免 parts/bom 並行更新時的讀改寫競態
+- **舊檔遷移**：伺服器啟動時若無 master.json，自動從舊版 parts.json/bom.json 合併產生（若存在）
+- 已移除 `data/bom.json`（資料已遷入 master.json）
+
+---
+
 ## v2.2.0 — 品號資料上雲與 BOM 備份
 
 ### 新增功能
