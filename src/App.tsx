@@ -13,6 +13,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
+import { IS_STATIC_MODE } from './utils/serverStatus';
 import { dedupeAlternates } from './utils/alternates';
 import {
   ImageLibrary,
@@ -35,6 +36,11 @@ export default function App() {
   }, []);
 
   const [parts, setParts] = useState<PartItem[]>(() => {
+    if (IS_STATIC_MODE) {
+      // GitHub Pages: purge any residual private data from previous deployments
+      try { localStorage.removeItem(STORAGE_KEY_PARTS); } catch { /* ignore */ }
+      return [];
+    }
     const saved = localStorage.getItem(STORAGE_KEY_PARTS);
     if (saved) {
       try {
@@ -199,6 +205,7 @@ export default function App() {
   // Save to localStorage on change, debounce-save to server (derived fields stripped)
   const lastSavedRef = useRef('');
   useEffect(() => {
+    if (IS_STATIC_MODE) return; // GitHub Pages: never persist private data
     const clean = stripDerivedFields(parts);
     try {
       localStorage.setItem(STORAGE_KEY_PARTS, JSON.stringify(clean));
@@ -274,7 +281,7 @@ export default function App() {
   // Reset Data — clear and open export/import to reload
   const handleResetData = () => {
     setParts([]);
-    localStorage.removeItem(STORAGE_KEY_PARTS);
+    if (!IS_STATIC_MODE) localStorage.removeItem(STORAGE_KEY_PARTS);
     setIsExportImportOpen(true);
   };
 
