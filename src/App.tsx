@@ -13,7 +13,6 @@ import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
-import masterData from '../data/master.json';
 import { dedupeAlternates } from './utils/alternates';
 import {
   ImageLibrary,
@@ -43,8 +42,7 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) return enrichParts(parsed);
       } catch { /* ignore */ }
     }
-    const defaultParts = (masterData && Array.isArray(masterData.parts)) ? masterData.parts as unknown as PartItem[] : [];
-    return enrichParts(defaultParts);
+    return [];
   });
   const partsRef = useRef(parts);
   partsRef.current = parts;

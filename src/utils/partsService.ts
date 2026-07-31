@@ -1,10 +1,7 @@
 import { PartItem } from '../types';
 import { IS_STATIC_MODE } from './serverStatus';
-import masterData from '../../data/master.json';
 
-const defaultParts: PartItem[] = (masterData && Array.isArray(masterData.parts))
-  ? (masterData.parts as unknown as PartItem[])
-  : [];
+const defaultParts: PartItem[] = [];
 
 let cache: PartItem[] | null = null;
 let loading: Promise<PartItem[]> | null = null;

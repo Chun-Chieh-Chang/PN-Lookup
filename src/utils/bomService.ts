@@ -1,14 +1,11 @@
 import { IS_STATIC_MODE } from './serverStatus';
-import masterData from '../../data/master.json';
 
 interface BOMData {
   children: Record<string, string[]>;
   parents: Record<string, string[]>;
 }
 
-const defaultBOM: BOMData = (masterData && masterData.bom)
-  ? (masterData.bom as unknown as BOMData)
-  : { children: {}, parents: {} };
+const defaultBOM: BOMData = { children: {}, parents: {} };
 
 let cache: BOMData | null = null;
 let loading: Promise<BOMData> | null = null;
