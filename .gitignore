@@ -6,3 +6,7 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local data and reference files — do not push to GitHub
+data/
+ref/
