@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload } from 'lucide-react';
+import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2 } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -23,6 +23,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
   const [message, setMessage] = useState('');
   const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addPartMsg, setAddPartMsg] = useState('');
+  const [newCustomer, setNewCustomer] = useState({ customer: '', partNo: '', name: '', notes: '' });
+  const [addCustMsg, setAddCustMsg] = useState('');
   const [partSearch, setPartSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
@@ -56,6 +58,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
     });
     setAddPartMsg('品號已新增成功');
     setNewPart({ customer: '', partNo: '', name: '', notes: '' });
+  };
+
+  const handleAddCustomerSubmit = () => {
+    const customer = newCustomer.customer.trim();
+    const partNo = newCustomer.partNo.trim();
+    const name = newCustomer.name.trim();
+    if (!customer || !partNo || !name) {
+      setAddCustMsg('客戶名稱、品號、品名皆為必填欄位');
+      return;
+    }
+    if (existingCustomers.includes(customer)) {
+      setAddCustMsg(`客戶「${customer}」已存在，請直接使用「新增品號」`);
+      return;
+    }
+    onAddPart({
+      customer,
+      partNo,
+      name,
+      notes: newCustomer.notes.trim() || undefined,
+    });
+    setAddCustMsg(`客戶「${customer}」與首筆品號已新增成功`);
+    setNewCustomer({ customer: '', partNo: '', name: '', notes: '' });
   };
 
   const searchResults = searchQuery.length >= 2
@@ -249,6 +273,68 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
             <span className="text-xs text-gray-400">
               匯入後先載入於頁面供確認，點「儲存至伺服器」才會正式寫入
             </span>
+          </div>
+        </div>
+
+        {/* Add New Customer (with first part) */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+            <Building2 className="w-4 h-4 text-indigo-500" />
+            <span>新增客戶（含首筆品號）</span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">客戶名稱 *</label>
+              <input
+                type="text"
+                value={newCustomer.customer}
+                onChange={e => setNewCustomer(prev => ({ ...prev, customer: e.target.value }))}
+                placeholder="客戶名稱"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">品號 *</label>
+              <input
+                type="text"
+                value={newCustomer.partNo}
+                onChange={e => setNewCustomer(prev => ({ ...prev, partNo: e.target.value }))}
+                placeholder="品號 (如 A02-410-111)"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">品名 *</label>
+              <input
+                type="text"
+                value={newCustomer.name}
+                onChange={e => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="品名規格"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">備註</label>
+              <input
+                type="text"
+                value={newCustomer.notes}
+                onChange={e => setNewCustomer(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="備註（選填）"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 mt-3">
+            <button
+              onClick={handleAddCustomerSubmit}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>新增客戶與首筆品號</span>
+            </button>
+            {addCustMsg && (
+              <span className={`text-sm ${addCustMsg.includes('成功') ? 'text-emerald-600' : 'text-red-600'}`}>{addCustMsg}</span>
+            )}
           </div>
         </div>
 
