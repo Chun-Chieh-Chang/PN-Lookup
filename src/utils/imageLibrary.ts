@@ -1,4 +1,4 @@
-const IS_IMAGE = /\.(jpe?g|png|gif|webp|bmp|svg|tiff?)$/i;
+const IS_MEDIA = /\.(jpe?g|png|gif|webp|bmp|svg|tiff?|pdf)$/i;
 const FLAG_SET = 'pn_lookup_image_folder_set';
 const FLAG_DISMISSED = 'pn_lookup_image_folder_dismissed';
 
@@ -54,7 +54,7 @@ async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[], stats
       await collectFromDir(handle as FileSystemDirectoryHandle, out, stats);
     } else {
       stats.totalFiles += 1;
-      if (IS_IMAGE.test(handle.name)) {
+      if (IS_MEDIA.test(handle.name)) {
         try {
           out.push(await (handle as FileSystemFileHandle).getFile());
         } catch { /* 檔案無法讀取時略過 */ }
@@ -136,11 +136,11 @@ function pickWithInput(): Promise<ImageLibrary> {
   return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    input.accept = 'image/*,.pdf';
     input.multiple = true;
     (input as HTMLInputElement & { webkitdirectory: boolean }).webkitdirectory = true;
     input.onchange = () => {
-      const files = Array.from(input.files || []).filter(f => IS_IMAGE.test(f.name));
+      const files = Array.from(input.files || []).filter(f => IS_MEDIA.test(f.name));
       if (files.length === 0) {
         reject(new Error('cancelled'));
         return;

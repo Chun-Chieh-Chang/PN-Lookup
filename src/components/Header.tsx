@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
                 title={
                   imageFolderName
-                    ? `圖檔資料夾：${imageFolderName}（${imageCount} 張圖）— 點擊可更換`
+                    ? `圖檔資料夾：${imageFolderName}（${imageCount} 個檔案）— 點擊可更換`
                     : '指定圖檔資料夾（品號可直接點選開啟圖檔）'
                 }
               >
