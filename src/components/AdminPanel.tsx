@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Search, RefreshCw, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -7,9 +7,10 @@ import { saveBOM } from '../utils/bomService';
 interface AdminPanelProps {
   parts: PartItem[];
   onClose: () => void;
+  onAddPart: (itemData: Omit<PartItem, 'id'>) => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPart }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
   const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,8 +18,25 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose }) => {
   const [addKey, setAddKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '' });
+  const [addPartMsg, setAddPartMsg] = useState('');
 
-  const partNoSet = new Set(parts.map(p => p.partNo));
+  const existingCustomers = Array.from(new Set(parts.map(p => p.customer))).sort();
+
+  const handleAddPartSubmit = () => {
+    if (!newPart.customer.trim() || !newPart.partNo.trim() || !newPart.name.trim()) {
+      setAddPartMsg('客戶、品號、品名皆為必填欄位');
+      return;
+    }
+    onAddPart({
+      customer: newPart.customer.trim(),
+      partNo: newPart.partNo.trim(),
+      name: newPart.name.trim(),
+      notes: newPart.notes.trim() || undefined,
+    });
+    setAddPartMsg('品號已新增成功');
+    setNewPart({ customer: '', partNo: '', name: '', notes: '' });
+  };
 
   const searchResults = searchQuery.length >= 2
     ? parts.filter(p => p.partNo.toLowerCase().includes(searchQuery.toLowerCase())).slice(0, 10)
@@ -138,6 +156,72 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose }) => {
               <Plus className="w-4 h-4" />
               <span>新增</span>
             </button>
+          </div>
+        </div>
+
+        {/* Add New Part */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+            <PackagePlus className="w-4 h-4 text-blue-500" />
+            <span>新增品號</span>
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">客戶 *</label>
+              <input
+                type="text"
+                list="admin-customers"
+                value={newPart.customer}
+                onChange={e => setNewPart(prev => ({ ...prev, customer: e.target.value }))}
+                placeholder="客戶名稱"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+              <datalist id="admin-customers">
+                {existingCustomers.map(c => <option key={c} value={c} />)}
+              </datalist>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">品號 *</label>
+              <input
+                type="text"
+                value={newPart.partNo}
+                onChange={e => setNewPart(prev => ({ ...prev, partNo: e.target.value }))}
+                placeholder="品號 (如 A02-410-111)"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">品名 *</label>
+              <input
+                type="text"
+                value={newPart.name}
+                onChange={e => setNewPart(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="品名規格"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500 mb-1">備註</label>
+              <input
+                type="text"
+                value={newPart.notes}
+                onChange={e => setNewPart(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="備註（選填）"
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 mt-3">
+            <button
+              onClick={handleAddPartSubmit}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>新增品號</span>
+            </button>
+            {addPartMsg && (
+              <span className={`text-sm ${addPartMsg.includes('成功') ? 'text-emerald-600' : 'text-red-600'}`}>{addPartMsg}</span>
+            )}
           </div>
         </div>
 

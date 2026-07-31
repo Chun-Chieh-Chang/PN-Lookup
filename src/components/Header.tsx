@@ -1,10 +1,9 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, Plus, ListChecks, Layers } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Layers } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
   customerCount: number;
-  onOpenAdd: () => void;
   onOpenBatchSearch: () => void;
   onOpenCustomerStats: () => void;
   onOpenExportImport: () => void;
@@ -15,7 +14,6 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   totalCount,
   customerCount,
-  onOpenAdd,
   onOpenBatchSearch,
   onOpenCustomerStats,
   onOpenExportImport,
@@ -87,14 +85,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
               <span>匯出匯入</span>
-            </button>
-
-            <button
-              onClick={onOpenAdd}
-              className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 transition-colors gap-1.5 cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>新增品號</span>
             </button>
 
           </div>

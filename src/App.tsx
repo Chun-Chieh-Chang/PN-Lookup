@@ -208,7 +208,19 @@ export default function App() {
 
 
   if (route === 'admin') {
-    return <AdminPanel parts={parts} onClose={() => { window.location.hash = ''; }} />;
+    return (
+      <AdminPanel
+        parts={parts}
+        onClose={() => { window.location.hash = ''; }}
+        onAddPart={(itemData) => {
+          const newItem: PartItem = {
+            ...itemData,
+            id: `custom-${Date.now()}`,
+          };
+          setParts((prev) => [newItem, ...prev]);
+        }}
+      />
+    );
   }
 
   return (
@@ -218,10 +230,6 @@ export default function App() {
       <Header
         totalCount={parts.length}
         customerCount={allCustomers.length}
-        onOpenAdd={() => {
-          setEditingItem(null);
-          setIsAddEditOpen(true);
-        }}
         onOpenBatchSearch={() => setIsBatchSearchOpen(true)}
         onOpenCustomerStats={() => setIsCustomerStatsOpen(true)}
         onOpenExportImport={() => setIsExportImportOpen(true)}
