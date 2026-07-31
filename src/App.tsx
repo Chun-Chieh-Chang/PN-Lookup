@@ -23,6 +23,9 @@ import {
   isImageFolderDismissed,
   clearImageFolderDismissed,
 } from './utils/imageLibrary';
+import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils/ocr';
+import { loadBindings, saveBindings } from './utils/imageResolver';
+import { ImageBindModal } from './components/ImageBindModal';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -130,6 +133,65 @@ export default function App() {
     } finally {
       setIsPickingImages(false);
     }
+  }, []);
+
+  // OCR 背景掃描：檔名比對不到的檔案，自動辨識內容找品號（結果存 IndexedDB）
+  const [ocrIndex, setOcrIndex] = useState<Map<string, string>>(new Map());
+  const [ocrProgress, setOcrProgress] = useState<{ done: number; total: number } | null>(null);
+
+  useEffect(() => {
+    if (!imageLib) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cache = await loadOcrCache();
+        if (cancelled) return;
+        setOcrIndex(new Map(cache));
+        const queued = imageLib.fileNames.filter((f) => !cache.has(ocrKeyForFile(imageLib.fileFor(f) as File)));
+        if (queued.length === 0) return;
+        setOcrProgress({ done: 0, total: queued.length });
+        for (let i = 0; i < queued.length; i++) {
+          if (cancelled) return;
+          const fname = queued[i];
+          const file = imageLib.fileFor(fname);
+          if (file) {
+            try {
+              const text = await recognizeFile(file);
+              if (cancelled) return;
+              await saveOcrText(ocrKeyForFile(file), text);
+              setOcrIndex((prev) => new Map(prev).set(fname, text));
+            } catch { /* 單檔失敗略過 */ }
+          }
+          setOcrProgress({ done: i + 1, total: queued.length });
+          await new Promise((r) => setTimeout(r, 0));
+        }
+        setOcrProgress(null);
+      } catch {
+        setOcrProgress(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [imageLib]);
+
+  // 手動綁定（本機限定）
+  const [bindings, setBindings] = useState<Record<string, string>>(() => loadBindings());
+  const [bindPartNo, setBindPartNo] = useState<{ partNo: string; alternates?: string[] } | null>(null);
+
+  const handleBind = useCallback((partNo: string, fileName: string) => {
+    setBindings((prev) => {
+      const next = { ...prev, [partNo]: fileName };
+      saveBindings(next);
+      return next;
+    });
+  }, []);
+
+  const handleUnbind = useCallback((partNo: string) => {
+    setBindings((prev) => {
+      const next = { ...prev };
+      delete next[partNo];
+      saveBindings(next);
+      return next;
+    });
   }, []);
 
   // Filter state
@@ -382,6 +444,10 @@ export default function App() {
           }}
           searchKeyword={filterState.keyword}
           imageLib={imageLib}
+          bindings={bindings}
+          ocrIndex={ocrIndex}
+          ocrProgress={ocrProgress}
+          onBindClick={(item) => setBindPartNo({ partNo: item.partNo, alternates: item.alternates })}
           onCustomerClick={(customerName) => {
             setFilterState({
               ...filterState,
@@ -442,6 +508,17 @@ export default function App() {
         isPicking={isPickingImages}
         onClose={() => setIsImagePromptOpen(false)}
         onConfirm={handlePickImageFolder}
+      />
+
+      <ImageBindModal
+        isOpen={!!bindPartNo}
+        partNo={bindPartNo?.partNo ?? null}
+        alternates={bindPartNo?.alternates}
+        lib={imageLib}
+        bindings={bindings}
+        onBind={handleBind}
+        onUnbind={handleUnbind}
+        onClose={() => setBindPartNo(null)}
       />
 
     </div>

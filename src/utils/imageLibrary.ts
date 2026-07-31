@@ -5,45 +5,29 @@ const FLAG_DISMISSED = 'pn_lookup_image_folder_dismissed';
 export interface ImageLibrary {
   folderName: string;
   count: number;
-  urlFor(partNo: string): string | null;
-  nameFor(partNo: string): string | null;
+  fileNames: string[];
+  fileFor(fileName: string): File | null;
+  /** 檔名比對：回傳命中的檔名 */
+  match(partNo: string, aliases?: string[]): string | null;
+  /** 依檔名取得 object URL（快取） */
+  urlForFile(fileName: string): string | null;
+  urlFor(partNo: string, aliases?: string[]): string | null;
+  nameFor(partNo: string, aliases?: string[]): string | null;
   debug: {
     totalFiles: number;
     sampleNames: string[];
   };
 }
 
-// ---------- IndexedDB（保存資料夾 handle，下次開啟自動恢復） ----------
-const DB_NAME = 'pn-lookup';
-const DB_STORE = 'handles';
+// ---------- 資料夾 handle 持久化（IndexedDB） ----------
+import { idbGet, idbSet } from './idb';
 
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+async function idbSaveHandle(handle: unknown): Promise<void> {
+  await idbSet('handles', 'image-folder', handle);
 }
 
-async function idbSet(key: string, value: unknown): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(DB_STORE, 'readwrite');
-    tx.objectStore(DB_STORE).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function idbGet(key: string): Promise<unknown> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(DB_STORE, 'readonly');
-    const req = tx.objectStore(DB_STORE).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
+async function idbLoadHandle(): Promise<unknown> {
+  return idbGet('handles', 'image-folder');
 }
 
 // ---------- 遍歷子資料夾收集圖檔 ----------
@@ -68,7 +52,7 @@ async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[], stats
 // 策略：整個檔名先比對，再拆成片段比對（任一片段等於品號即命中），符號一律忽略
 const NORM_RE = /[-_\s.]+/g;
 
-function normalize(s: string): string {
+export function normalize(s: string): string {
   return s.replace(NORM_RE, '').toUpperCase();
 }
 
@@ -103,12 +87,30 @@ function matchFile(files: File[], partNo: string, aliases?: string[]): File | nu
 function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
   const urlCache = new Map<string, string | null>();
   const nameCache = new Map<string, string | null>();
+  const fileByName = new Map<string, File>();
+  for (const f of files) fileByName.set(f.name, f);
+  const fileNames = files.map((f) => f.name);
   return {
     folderName,
     count: files.length,
-    debug: {
-      totalFiles,
-      sampleNames: files.slice(0, 10).map((f) => f.name),
+    fileNames,
+    fileFor(fileName: string): File | null {
+      return fileByName.get(fileName) ?? null;
+    },
+    match(partNo: string, aliases?: string[]): string | null {
+      const hit = matchFile(files, partNo, aliases);
+      return hit ? hit.name : null;
+    },
+    urlForFile(fileName: string): string | null {
+      if (urlCache.has(fileName)) return urlCache.get(fileName) ?? null;
+      const hit = fileByName.get(fileName) ?? null;
+      if (!hit) {
+        urlCache.set(fileName, null);
+        return null;
+      }
+      const url = URL.createObjectURL(hit);
+      urlCache.set(fileName, url);
+      return url;
     },
   urlFor(partNo: string, aliases?: string[]): string | null {
     const key = `${partNo}\u0000${(aliases ?? []).join('\u0000')}`;
@@ -129,6 +131,10 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
     nameCache.set(key, hit ? hit.name : null);
     return nameCache.get(key) ?? null;
   },
+  debug: {
+    totalFiles,
+    sampleNames: files.slice(0, 10).map((f) => f.name),
+  },
   };
 }
 
@@ -139,7 +145,7 @@ async function pickWithDirectoryPicker(): Promise<ImageLibrary> {
   const stats = { totalFiles: 0 };
   await collectFromDir(handle, files, stats);
   if (files.length === 0) throw new Error('empty');
-  try { await idbSet('image-folder', handle); } catch { /* 無法持久化時不影響本次使用 */ }
+  try { await idbSaveHandle(handle); } catch { /* 無法持久化時不影響本次使用 */ }
   localStorage.setItem(FLAG_SET, '1');
   return buildLibrary(files, handle.name, stats.totalFiles);
 }
@@ -177,7 +183,7 @@ export async function pickImageFolder(): Promise<ImageLibrary> {
 // ---------- 恢復上次選擇的資料夾 ----------
 export async function restoreImageFolder(): Promise<ImageLibrary | null> {
   try {
-    const handle = await idbGet('image-folder') as FileSystemDirectoryHandle | null;
+    const handle = await idbLoadHandle() as FileSystemDirectoryHandle | null;
     if (!handle || typeof handle.queryPermission !== 'function') return null;
     const perm = await handle.queryPermission({ mode: 'read' });
     if (perm !== 'granted') {

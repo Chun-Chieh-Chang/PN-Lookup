@@ -1,5 +1,26 @@
 # PN-Lookup 開發日誌
 
+## v2.7.0 — 替代品號 + 掃描檔內容識別（OCR + 手動綁定）
+
+### 替代品號（可互相替代的品號）
+- **PartItem 新增 `alternates` 欄位**：前台編輯品號與後台新增品號皆可填（逗號/空格分隔），詳細資料視窗顯示替代品號標籤
+- **圖檔比對一併查詢替代品號**：例 `3M55567` 的圖以 `D09-410-111-1` 命名也能找到
+- **搜尋一併查詢**：輸入替代品號可找到對應品號（品號欄位搜尋）
+- 品號改名連動更新其他品號的替代清單；Excel/CSV 匯出匯入 round-trip 支援
+
+### 掃描檔內容識別（OCR，瀏覽器內執行、檔案不上傳）
+- **tesseract.js（eng）+ pdf.js 動態載入**：選取資料夾後，檔名比對不到的檔案自動背景 OCR（PDF 先轉頁面影像），結果存 IndexedDB 只辨識一次；工具列顯示「OCR 內容辨識中 n/m」
+- **比對順序**：檔名 → 手動綁定 → OCR 內容（內容含品號/替代品號即命中）
+- 首次需下載 eng 語言包與 wasm（約 10 MB）；圖面 OCR 準確率有極限，誤判時可用手動綁定補救
+- **手動綁定**：找不到圖檔的品號可點「綁定」從檔案清單手動指定（本機限定，存 localStorage）
+
+### 技術
+- 新增 `src/utils/ocr.ts`（OCR 引擎 + IndexedDB 快取）、`src/utils/idb.ts`（共用 IndexedDB）、`src/utils/imageResolver.ts`（解析順序 + 綁定持久化）、`src/components/ImageBindModal.tsx`
+- pdfjs-dist v5 API（`render({canvas})`、`loadingTask.destroy()`）
+- 依賴：tesseract.js、pdfjs-dist（動態 import 拆包，不影響主 bundle 載入）
+
+---
+
 ## v2.6.0 — 品號圖檔超連結（圖檔資料夾）
 
 ### 新增功能

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Copy,
   Check,
@@ -16,6 +16,7 @@ import {
 import { PartItem } from '../types';
 import { getItemType } from '../utils/bomEngine';
 import { ImageLibrary } from '../utils/imageLibrary';
+import { resolveImage, ImageResolution } from '../utils/imageResolver';
 
 interface PartsTableProps {
   items: PartItem[];
@@ -23,6 +24,10 @@ interface PartsTableProps {
   onEdit: (item: PartItem) => void;
   searchKeyword: string;
   imageLib?: ImageLibrary | null;
+  bindings?: Record<string, string>;
+  ocrIndex?: Map<string, string>;
+  ocrProgress?: { done: number; total: number } | null;
+  onBindClick?: (item: PartItem) => void;
   onCustomerClick: (customerName: string) => void;
 }
 
@@ -35,6 +40,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   onEdit,
   searchKeyword,
   imageLib,
+  bindings = {},
+  ocrIndex = new Map(),
+  ocrProgress,
+  onBindClick,
   onCustomerClick,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -45,6 +54,22 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const [pageSize, setPageSize] = useState(25);
   const [isCompact, setIsCompact] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // 每列圖檔解析快取（imageLib/bindings/ocrIndex 變動時清除）
+  const resolveCache = useRef(new Map<string, ImageResolution | null>());
+  const resolveCacheKey = useRef('');
+  const currentCacheKey = `${imageLib?.folderName ?? ''}|${JSON.stringify(bindings)}|${ocrIndex.size}`;
+  if (resolveCacheKey.current !== currentCacheKey) {
+    resolveCache.current.clear();
+    resolveCacheKey.current = currentCacheKey;
+  }
+  const resolveRow = (item: PartItem): ImageResolution | null => {
+    const key = `${item.partNo}\u0000${(item.alternates ?? []).join('\u0000')}`;
+    if (resolveCache.current.has(key)) return resolveCache.current.get(key) ?? null;
+    const res = resolveImage(item.partNo, item.alternates, imageLib ?? null, bindings, ocrIndex);
+    resolveCache.current.set(key, res);
+    return res;
+  };
 
   // Sorting
   const handleSort = (field: SortField) => {
@@ -68,6 +93,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const validPage = Math.min(currentPage, totalPages);
   const startIndex = (validPage - 1) * pageSize;
   const paginatedItems = sortedItems.slice(startIndex, startIndex + pageSize);
+  const resolvedCount = paginatedItems.filter((i) => resolveRow(i)).length;
 
   // Copy helpers
   const openImage = (url: string) => {
@@ -165,14 +191,18 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                 `掃描檔案：${imageLib.debug.totalFiles} 個（副檔名不支援的會被略過）\n` +
                 `收錄圖檔：${imageLib.count} 個（含 PDF）\n` +
                 `檔名範例：\n${imageLib.debug.sampleNames.map((n) => '  · ' + n).join('\n')}\n` +
-                `本頁品號對應：${paginatedItems.filter((i) => imageLib.urlFor(i.partNo)).length} 筆`
+                `本頁品號對應：${resolvedCount} 筆`
               }
             >
               圖檔 {imageLib.count} 個 · 品號對應{' '}
-              <strong className="text-gray-700">
-                {paginatedItems.filter((i) => imageLib.urlFor(i.partNo)).length}
-              </strong>{' '}
+              <strong className="text-gray-700">{resolvedCount}</strong>{' '}
               筆
+            </span>
+          )}
+
+          {ocrProgress && ocrProgress.total > 0 && (
+            <span className="ml-2 text-violet-600 bg-violet-50 border border-violet-200 rounded-md px-2 py-1 text-xs">
+              OCR 內容辨識中 {ocrProgress.done}/{ocrProgress.total}…
             </span>
           )}
         </div>
@@ -281,7 +311,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               const isCopiedFull = copiedFullId === item.id;
               const type = getItemType(item);
               const isAssembly = type === 'assembly';
-              const imageUrl = imageLib ? imageLib.urlFor(item.partNo, item.alternates) : null;
+              const imageRes = resolveRow(item);
+              const imageUrl = imageRes ? imageRes.url : null;
 
               return (
                 <tr
@@ -373,26 +404,40 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                   {/* 圖檔連結 */}
                   <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
-                    {imageUrl ? (
+                    {imageRes ? (
                       <button
-                        onClick={() => openImage(imageUrl)}
+                        onClick={() => openImage(imageUrl as string)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
                         title={
-                          imageLib
-                            ? `開啟圖檔：${item.partNo} → ${imageLib.nameFor(item.partNo, item.alternates)}`
-                            : `開啟圖檔：${item.partNo}`
+                          `開啟圖檔：${item.partNo} → ${imageRes.name}\n` +
+                          (imageRes.via === 'file'
+                            ? '（檔名比對命中）'
+                            : imageRes.via === 'binding'
+                            ? '（手動綁定）'
+                            : '（OCR 內容辨識命中）')
                         }
                       >
                         <ImageIcon className="w-3.5 h-3.5" />
                         <span>開啟圖檔</span>
                       </button>
                     ) : (
-                      <span
-                        className="text-sm text-gray-300"
-                        title={imageLib ? `找不到「${item.partNo}」對應的圖檔` : '未指定圖檔資料夾'}
-                      >
-                        —
-                      </span>
+                      <div className="flex items-center space-x-1.5">
+                        <span
+                          className="text-sm text-gray-300"
+                          title={imageLib ? `找不到「${item.partNo}」的圖檔，可點「綁定」手動指定` : '未指定圖檔資料夾'}
+                        >
+                          —
+                        </span>
+                        {imageLib && onBindClick && (
+                          <button
+                            onClick={() => onBindClick(item)}
+                            className="text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+                            title="手動指定此品號對應的圖檔"
+                          >
+                            綁定
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
 
