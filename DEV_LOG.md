@@ -1,5 +1,30 @@
 # PN-Lookup 開發日誌
 
+## v3.0.5 — GitHub Pages 靜態模式 localStorage 快取徹底清除與禁寫防護
+
+### 需求內容與作業
+- **快取隔離防護**：於 GitHub Pages 靜態模式（`IS_STATIC_MODE === true`）下，初始化時自動執行 `localStorage.removeItem(STORAGE_KEY_PARTS)`，徹底清除瀏覽器歷史快取中殘留的舊版 master 數據。
+- **禁寫與禁讀保護**：在靜態部署環境中完全停用 `localStorage` 之讀寫邏輯，確保所有人訪問 GitHub Pages 時均為 100% 空白預設狀態，無任何隱私洩漏隱患。
+
+---
+
+## v3.0.4 — 數據匯出/匯入 Round-Trip 欄位完整性補齊與介面卡片佈局優化
+
+### 需求內容與作業
+- **Round-Trip 全欄位維護**：修復 CSV 與 Excel (.xlsx) 匯出/匯入時 `category`（物料類別）、`color`（顏色）、`material`（原料）三個欄位遺失的問題。現 JSON、CSV、Excel 三種格式皆達成 100% 欄位對齊與無損轉換。
+- **介面卡片對調**：於「資料匯出與匯入」彈窗 (`ExportImportModal.tsx`) 中，將 **「匯入自訂資料」** 卡片置於 **「匯出目前資料庫」** 卡片上方，優先引導使用者進行資料匯入。
+
+---
+
+## v3.0.3 — GitHub Pages 靜態編譯包 0 隱私數據物理隔離 (Zero Private Data Security Patch)
+
+### 需求內容與作業
+- **資安物理隔離**：完全移除前端原始碼（`App.tsx`、`partsService.ts`、`bomService.ts`）中對 `data/master.json` 的靜態 `import` 引用，徹底防止 Vite 打包將私有 master 數據編譯進 `dist/assets/index-XXXX.js`。
+- **產物檢驗與掃描**：前端打包體積減少約 138 kB，經 Python 全域字串掃描確認 `dist/` 靜態檔案內 100% 零任何隱私客戶名稱、零品號數據與 BOM 結構。
+- **本機伺服器動態供給**：本機端（`node server.js`）維持讀取 `data/master.json` 並透過 REST API (`/api/parts` 與 `/api/bom`) 動態提供完備之 656 筆數據。
+
+---
+
 ## v3.0.2 — 後台管理系統 (Admin Panel) 完整功能盤點與新屬性對接補強
 
 ### 需求內容與作業
