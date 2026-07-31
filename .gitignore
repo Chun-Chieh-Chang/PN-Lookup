@@ -10,4 +10,4 @@ coverage/
 # Local data and reference files — do not push to GitHub
 data/
 ref/
-src/data/bomData.ts
+src/data/bomData.local.ts
