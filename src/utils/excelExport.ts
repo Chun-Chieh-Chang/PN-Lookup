@@ -135,6 +135,9 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
         if (r['alternates']) {
           item.alternates = String(r['alternates']).split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
         }
+        if (r['itemType'] === 'part' || r['itemType'] === 'assembly') item.itemType = r['itemType'];
+        if (r['components']) try { item.components = JSON.parse(String(r['components'])); } catch { /* ignore */ }
+        if (r['usedInAssemblies']) try { item.usedInAssemblies = JSON.parse(String(r['usedInAssemblies'])); } catch { /* ignore */ }
         if (r['createdAt']) item.createdAt = r['createdAt'];
         parsed.push(item);
       }
