@@ -261,6 +261,7 @@ export default function App() {
         onDeleteCustomer={(customerName) => {
           setParts((prev) => prev.filter((p) => p.customer !== customerName));
         }}
+        onImportParts={handleImportData}
       />
     );
   }

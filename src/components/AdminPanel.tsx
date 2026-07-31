@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
@@ -12,9 +12,10 @@ interface AdminPanelProps {
   onDeletePart: (id: string) => void;
   onRenameCustomer: (oldName: string, newName: string) => void;
   onDeleteCustomer: (customerName: string) => void;
+  onImportParts: (items: PartItem[], replace: boolean) => void;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer, onImportParts }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
   const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +41,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const bomFileRef = useRef<HTMLInputElement>(null);
+  const fullBackupFileRef = useRef<HTMLInputElement>(null);
 
   const existingCustomers: string[] = Array.from(new Set<string>(parts.map(p => p.customer))).sort();
 
@@ -208,6 +210,63 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     reader.readAsText(file);
   };
 
+  const handleExportFullBackup = () => {
+    const payload = {
+      type: 'pn-lookup-backup',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      parts,
+      bom: { children, parents: computeParents(children) },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `完整備份_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFullBackup = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        if (data?.type !== 'pn-lookup-backup' || !Array.isArray(data.parts)) {
+          throw new Error('invalid');
+        }
+        const rawChildren = data.bom?.children ?? {};
+        if (!rawChildren || typeof rawChildren !== 'object' || Array.isArray(rawChildren)) {
+          throw new Error('invalid');
+        }
+        const newChildren: Record<string, string[]> = {};
+        for (const [key, val] of Object.entries(rawChildren)) {
+          if (!Array.isArray(val)) throw new Error('invalid');
+          newChildren[key] = val.map(String);
+        }
+        onImportParts(data.parts, true);
+        const newParents = computeParents(newChildren);
+        setChildren(newChildren);
+        setParents(newParents);
+        if (serverOnline) {
+          saveBOM(newChildren, newParents).then(() => {
+            updateBOMData(newChildren, newParents);
+            setMessage(`完整備份已還原並同步至伺服器：${data.parts.length} 筆品號、${Object.keys(newChildren).length} 個組立`);
+          }).catch(() => {
+            updateBOMData(newChildren, newParents);
+            setMessage('完整備份已還原至本機（伺服器同步失敗，請稍後手動儲存 BOM）');
+          });
+        } else {
+          updateBOMData(newChildren, newParents);
+          setMessage(`完整備份已還原至本機：${data.parts.length} 筆品號、${Object.keys(newChildren).length} 個組立（離線模式，未同步伺服器）`);
+        }
+      } catch {
+        setMessage('匯入失敗：檔案格式不正確（需為完整備份 JSON）');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const prefixGroups = ['SA', 'SB', 'SC', 'SD'];
   const groupedKeys = prefixGroups.map(p => ({
     prefix: p,
@@ -301,6 +360,44 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
             </button>
             <span className="text-xs text-gray-400">
               匯入後先載入於頁面供確認，點「儲存至伺服器」才會正式寫入
+            </span>
+          </div>
+        </div>
+
+        {/* Full Backup — Parts + BOM */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+            <DatabaseBackup className="w-4 h-4 text-emerald-500" />
+            <span>完整資料備份（品號 + BOM 一次打包）</span>
+          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportFullBackup}
+              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium rounded-lg flex items-center space-x-1.5 border border-emerald-200 cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>匯出完整備份</span>
+            </button>
+            <input
+              ref={fullBackupFileRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) handleImportFullBackup(f);
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => fullBackupFileRef.current?.click()}
+              className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium rounded-lg flex items-center space-x-1.5 border border-emerald-200 cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>匯入完整備份</span>
+            </button>
+            <span className="text-xs text-gray-400">
+              匯入會以備份內容覆蓋目前的品號與 BOM 資料（品號僅還原於此瀏覽器，伺服器連線正常時同步）
             </span>
           </div>
         </div>
