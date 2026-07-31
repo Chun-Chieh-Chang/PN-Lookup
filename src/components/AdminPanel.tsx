@@ -25,6 +25,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
   const [addPartMsg, setAddPartMsg] = useState('');
   const [newCustomer, setNewCustomer] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addCustMsg, setAddCustMsg] = useState('');
+  const [customerPartQuery, setCustomerPartQuery] = useState('');
+  const [showCustomerPartSuggestions, setShowCustomerPartSuggestions] = useState(false);
+
+  const customerPartSuggestions = customerPartQuery.length >= 1
+    ? parts.filter(p =>
+        p.partNo.toLowerCase().includes(customerPartQuery.toLowerCase()) ||
+        p.name.toLowerCase().includes(customerPartQuery.toLowerCase())
+      ).slice(0, 10)
+    : [];
   const [partSearch, setPartSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
   const [renamingCustomer, setRenamingCustomer] = useState<string | null>(null);
@@ -63,13 +72,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
   const handleAddCustomerSubmit = () => {
     const customer = newCustomer.customer.trim();
     const partNo = newCustomer.partNo.trim();
-    const name = newCustomer.name.trim();
-    if (!customer || !partNo || !name) {
-      setAddCustMsg('客戶名稱、品號、品名皆為必填欄位');
+    if (!customer || !partNo) {
+      setAddCustMsg('客戶名稱與品號皆為必填欄位');
       return;
     }
     if (existingCustomers.includes(customer)) {
       setAddCustMsg(`客戶「${customer}」已存在，請直接使用「新增品號」`);
+      return;
+    }
+    const existingPart = parts.find(p => p.partNo === partNo);
+    const name = newCustomer.name.trim() || existingPart?.name || '';
+    if (!name) {
+      setAddCustMsg('品名為必填欄位（或請從既有品號清單選取，品名會自動帶入）');
       return;
     }
     onAddPart({
@@ -78,7 +92,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
       name,
       notes: newCustomer.notes.trim() || undefined,
     });
-    setAddCustMsg(`客戶「${customer}」與首筆品號已新增成功`);
+    setAddCustMsg(`客戶「${customer}」已新增，品號 ${partNo}（${name}）歸屬於該客戶`);
     setNewCustomer({ customer: '', partNo: '', name: '', notes: '' });
   };
 
@@ -276,11 +290,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
           </div>
         </div>
 
-        {/* Add New Customer (with first part) */}
+        {/* Add New Customer (existing or new part) */}
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
             <Building2 className="w-4 h-4 text-indigo-500" />
-            <span>新增客戶（含首筆品號）</span>
+            <span>新增客戶（既有產品賣給新客戶）</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -293,15 +307,41 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm text-gray-500 mb-1">品號 *</label>
+            <div className="relative">
+              <label className="block text-sm text-gray-500 mb-1">品號 *（可搜尋既有品號）</label>
+              <Search className="w-3.5 h-3.5 text-gray-400 absolute right-3 top-[34px]" />
               <input
                 type="text"
                 value={newCustomer.partNo}
-                onChange={e => setNewCustomer(prev => ({ ...prev, partNo: e.target.value }))}
-                placeholder="品號 (如 A02-410-111)"
+                onChange={e => {
+                  setNewCustomer(prev => ({ ...prev, partNo: e.target.value.toUpperCase() }));
+                  setCustomerPartQuery(e.target.value);
+                  setShowCustomerPartSuggestions(true);
+                }}
+                onFocus={() => setShowCustomerPartSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowCustomerPartSuggestions(false), 150)}
+                placeholder="輸入或搜尋既有品號"
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
+              {showCustomerPartSuggestions && customerPartSuggestions.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
+                  {customerPartSuggestions.map(p => (
+                    <button
+                      key={p.id}
+                      onMouseDown={() => {
+                        setNewCustomer(prev => ({ ...prev, partNo: p.partNo, name: p.name }));
+                        setCustomerPartQuery('');
+                        setShowCustomerPartSuggestions(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between space-x-2 cursor-pointer"
+                    >
+                      <span className="font-mono text-blue-700 shrink-0">{p.partNo}</span>
+                      <span className="text-gray-500 truncate">{p.name}</span>
+                      <span className="text-gray-400 text-xs shrink-0">{p.customer}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm text-gray-500 mb-1">品名 *</label>
@@ -309,7 +349,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
                 type="text"
                 value={newCustomer.name}
                 onChange={e => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="品名規格"
+                onBlur={() => {
+                  const match = parts.find(p => p.partNo === newCustomer.partNo.trim());
+                  if (match && !newCustomer.name.trim()) {
+                    setNewCustomer(prev => ({ ...prev, name: match.name }));
+                  }
+                }}
+                placeholder="品名規格（選取既有品號自動帶入）"
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
               />
             </div>
@@ -330,10 +376,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, onClose, onAddPar
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>新增客戶與首筆品號</span>
+              <span>新增客戶</span>
             </button>
             {addCustMsg && (
-              <span className={`text-sm ${addCustMsg.includes('成功') ? 'text-emerald-600' : 'text-red-600'}`}>{addCustMsg}</span>
+              <span className={`text-sm ${addCustMsg.includes('成功') || addCustMsg.includes('已新增') ? 'text-emerald-600' : 'text-red-600'}`}>{addCustMsg}</span>
             )}
           </div>
         </div>
