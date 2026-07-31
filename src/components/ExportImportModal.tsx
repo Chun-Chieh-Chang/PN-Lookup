@@ -165,7 +165,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const isXlsx = file.name.endsWith('.xlsx');
+    const isXlsx = file.name.endsWith('.xlsx') || file.name.endsWith('.xlsm');
     const reader = new FileReader();
     reader.onload = (evt) => {
       if (isXlsx) {
@@ -390,7 +390,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             <div className="pt-2">
               <input
                 type="file"
-                accept=".csv,.txt,.json,.xlsx"
+                accept=".csv,.txt,.json,.xlsx,.xlsm"
                 onChange={handleFileUpload}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
               />
@@ -411,7 +411,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             <div className="pt-1">
               <input
                 type="file"
-                accept=".xlsx"
+                accept=".xlsx,.xlsm"
                 onChange={handleCustomerSheetUpload}
                 className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
               />
