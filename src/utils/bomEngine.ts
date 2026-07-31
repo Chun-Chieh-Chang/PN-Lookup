@@ -1,10 +1,23 @@
 import { PartItem, ItemType } from '../types';
-import { BOM_CHILDREN as STATIC_CHILDREN, BOM_PARENTS as STATIC_PARENTS, ASSEMBLY_PART_NOS as STATIC_ASSEMBLIES } from '../data/bomData';
 import { loadBOM } from './bomService';
 
-let childrenMap: Record<string, string[]> = STATIC_CHILDREN;
-let parentsMap: Record<string, string[]> = STATIC_PARENTS;
-let assemblySet: Set<string> = STATIC_ASSEMBLIES;
+// bomData.ts is a local-only file excluded from git (contains raw product data).
+// We start with empty fallbacks and load real data via initBOM() / loadBOM() at runtime.
+let childrenMap: Record<string, string[]> = {};
+let parentsMap: Record<string, string[]> = {};
+let assemblySet: Set<string> = new Set<string>();
+
+// Attempt to load static local data if available (dev environment only).
+(async () => {
+  try {
+    const m = await import('../data/bomData');
+    childrenMap = m.BOM_CHILDREN ?? {};
+    parentsMap = m.BOM_PARENTS ?? {};
+    assemblySet = m.ASSEMBLY_PART_NOS ?? new Set();
+  } catch {
+    // Not available in production / CI — fallback to empty maps until initBOM() runs.
+  }
+})();
 
 let initPromise: Promise<void> | null = null;
 
