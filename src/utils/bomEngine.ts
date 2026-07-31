@@ -1,11 +1,36 @@
 import { PartItem, ItemType } from '../types';
-import { BOM_CHILDREN, BOM_PARENTS, ASSEMBLY_PART_NOS } from '../data/bomData';
+import { BOM_CHILDREN as STATIC_CHILDREN, BOM_PARENTS as STATIC_PARENTS, ASSEMBLY_PART_NOS as STATIC_ASSEMBLIES } from '../data/bomData';
+import { loadBOM } from './bomService';
+
+let childrenMap: Record<string, string[]> = STATIC_CHILDREN;
+let parentsMap: Record<string, string[]> = STATIC_PARENTS;
+let assemblySet: Set<string> = STATIC_ASSEMBLIES;
+
+let initPromise: Promise<void> | null = null;
+
+export function initBOM(): Promise<void> {
+  if (initPromise) return initPromise;
+  initPromise = loadBOM().then((data) => {
+    childrenMap = data.children;
+    parentsMap = data.parents;
+    assemblySet = new Set(Object.keys(data.children));
+  }).catch(() => {
+    // keep static fallback
+  });
+  return initPromise;
+}
+
+export function updateBOMData(children: Record<string, string[]>, parents: Record<string, string[]>) {
+  childrenMap = children;
+  parentsMap = parents;
+  assemblySet = new Set(Object.keys(children));
+}
 
 export function enrichParts(parts: PartItem[]): PartItem[] {
   return parts.map((p) => {
-    const isAssembly = ASSEMBLY_PART_NOS.has(p.partNo) || ASSEMBLY_PART_NOS.has(p.partNo.toUpperCase());
-    const children = BOM_CHILDREN[p.partNo] || BOM_CHILDREN[p.partNo.toUpperCase()];
-    const parents = BOM_PARENTS[p.partNo] || BOM_PARENTS[p.partNo.toUpperCase()];
+    const isAssembly = assemblySet.has(p.partNo) || assemblySet.has(p.partNo.toUpperCase());
+    const children = childrenMap[p.partNo] || childrenMap[p.partNo.toUpperCase()];
+    const parents = parentsMap[p.partNo] || parentsMap[p.partNo.toUpperCase()];
     return {
       ...p,
       itemType: p.itemType || (isAssembly ? 'assembly' as const : 'part' as const),
@@ -23,15 +48,17 @@ export interface BOMRelation {
 
 export function getItemType(item: PartItem): ItemType {
   if (item.itemType) return item.itemType;
-
   const upperPartNo = item.partNo.toUpperCase();
-
-  // Known assembly part numbers from SA/SB/SC/SD sheets
-  if (ASSEMBLY_PART_NOS.has(upperPartNo) || ASSEMBLY_PART_NOS.has(item.partNo)) {
-    return 'assembly';
-  }
-
+  if (assemblySet.has(upperPartNo) || assemblySet.has(item.partNo)) return 'assembly';
   return 'part';
+}
+
+export function getBOMChildren(): Record<string, string[]> {
+  return childrenMap;
+}
+
+export function getBOMParents(): Record<string, string[]> {
+  return parentsMap;
 }
 
 function findPartByNo(partNo: string, allParts: PartItem[]): PartItem | undefined {
@@ -48,7 +75,7 @@ function resolveChildrenRecursive(
   if (depth > 5 || visited.has(assemblyPartNo)) return results;
   visited.add(assemblyPartNo);
 
-  const children = BOM_CHILDREN[assemblyPartNo];
+  const children = childrenMap[assemblyPartNo];
   if (!children) return results;
 
   for (const childNo of children) {
@@ -60,8 +87,7 @@ function resolveChildrenRecursive(
         note: `構成組件 (${childNo})`,
       });
     }
-    // Recurse if child is also an assembly
-    if (ASSEMBLY_PART_NOS.has(childNo)) {
+    if (assemblySet.has(childNo)) {
       const subComponents = resolveChildrenRecursive(childNo, allParts, visited, depth + 1);
       for (const sub of subComponents) {
         if (!results.some((r) => r.relatedItem.id === sub.relatedItem.id)) {
@@ -70,7 +96,6 @@ function resolveChildrenRecursive(
       }
     }
   }
-
   return results;
 }
 
@@ -81,7 +106,6 @@ export function getComponentsForAssembly(
   const results: BOMRelation[] = [];
   const addedIds = new Set<string>();
 
-  // 1. If explicit components array exists (user-defined)
   if (assembly.components && assembly.components.length > 0) {
     for (const cRef of assembly.components) {
       const match = allParts.find(
@@ -98,7 +122,6 @@ export function getComponentsForAssembly(
     }
   }
 
-  // 2. Data-driven BOM hierarchy from Excel sheets
   const visited = new Set<string>();
   const bomComponents = resolveChildrenRecursive(assembly.partNo, allParts, visited, 0);
   for (const comp of bomComponents) {
@@ -107,7 +130,6 @@ export function getComponentsForAssembly(
       results.push(comp);
     }
   }
-
   return results;
 }
 
@@ -121,7 +143,7 @@ function resolveParentsRecursive(
   if (depth > 5 || visited.has(partNo)) return results;
   visited.add(partNo);
 
-  const parents = BOM_PARENTS[partNo];
+  const parents = parentsMap[partNo];
   if (!parents) return results;
 
   for (const parentNo of parents) {
@@ -133,8 +155,7 @@ function resolveParentsRecursive(
         note: `可組成 ${parent.name}`,
       });
     }
-    // Recursively find higher-level assemblies
-    if (ASSEMBLY_PART_NOS.has(parentNo)) {
+    if (assemblySet.has(parentNo)) {
       const grandParents = resolveParentsRecursive(parentNo, allParts, visited, depth + 1);
       for (const gp of grandParents) {
         if (!results.some((r) => r.relatedItem.id === gp.relatedItem.id)) {
@@ -143,7 +164,6 @@ function resolveParentsRecursive(
       }
     }
   }
-
   return results;
 }
 
@@ -154,7 +174,6 @@ export function getAssembliesForPart(
   const results: BOMRelation[] = [];
   const addedIds = new Set<string>();
 
-  // 1. Check explicit usedInAssemblies (user-defined)
   if (part.usedInAssemblies && part.usedInAssemblies.length > 0) {
     for (const aRef of part.usedInAssemblies) {
       const match = allParts.find(
@@ -171,7 +190,6 @@ export function getAssembliesForPart(
     }
   }
 
-  // 2. Reverse lookup from BOM_PARENTS (data-driven)
   const visited = new Set<string>();
   const parentAssemblies = resolveParentsRecursive(part.partNo, allParts, visited, 0);
   for (const pa of parentAssemblies) {
@@ -180,6 +198,5 @@ export function getAssembliesForPart(
       results.push(pa);
     }
   }
-
   return results;
 }

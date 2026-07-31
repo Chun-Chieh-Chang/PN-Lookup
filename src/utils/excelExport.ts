@@ -1,7 +1,6 @@
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
-import { BOM_CHILDREN } from '../data/bomData';
-import { enrichParts } from './bomEngine';
+import { enrichParts, getBOMChildren } from './bomEngine';
 
 function lookupName(partNo: string, partsLookup: Map<string, PartItem>): string {
   const found = partsLookup.get(partNo) || partsLookup.get(partNo.toUpperCase());
@@ -13,10 +12,11 @@ function buildAssemblySheet(
   labelForNameCol: '零件名稱' | '組立名稱',
   partsLookup: Map<string, PartItem>,
 ): XLSX.WorkSheet | null {
-  const keys = Object.keys(BOM_CHILDREN).filter(k => k.startsWith(prefix)).sort();
+  const bd = getBOMChildren();
+  const keys = Object.keys(bd).filter(k => k.startsWith(prefix)).sort();
   if (keys.length === 0) return null;
 
-  const maxComponents = keys.reduce((max, k) => Math.max(max, BOM_CHILDREN[k]?.length || 0), 0);
+  const maxComponents = keys.reduce((max, k) => Math.max(max, bd[k]?.length || 0), 0);
 
   const colKeys: string[] = ['序號', '組立名稱', '組立名稱(英)', '組立編號'];
   for (let i = 1; i <= maxComponents; i++) {
@@ -26,7 +26,7 @@ function buildAssemblySheet(
 
   const rows: Record<string, string | number>[] = keys.map((key, idx) => {
     const part = partsLookup.get(key);
-    const children = BOM_CHILDREN[key] || [];
+    const children = getBOMChildren()[key] || [];
     const row: Record<string, string | number> = {
       '序號': idx + 1,
       '組立名稱': part?.name || key,

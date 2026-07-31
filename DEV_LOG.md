@@ -1,5 +1,37 @@
 # PN-Lookup 開發日誌
 
+## v2.1.0 — 後端伺服器與 BOM 維護管理
+
+### 新增功能
+- **Express 後端伺服器** (`server.js`)：提供靜態檔案服務 + RESTful BOM API
+- **BOM API**：`GET /api/bom` 回傳完整 BOM 階層，`PUT /api/bom` 更新 BOM 資料，儲存於 `data/bom.json`
+- **後台管理頁面** (`#admin`)：僅透過 URL hash 存取（`/PN-Lookup/#admin`），主畫面無任何導覽連結
+- **AdminPanel 功能**：
+  - 以 SA/SB/SC/SD 分組顯示 BOM 階層樹
+  - 新增/刪除組立編號
+  - 對每個組立新增/移除零件（含品號搜尋 autocomplete）
+  - 一鍵儲存至伺服器
+- **Runtime BOM 資料**：`bomEngine.ts` 開機時從 API 載入 BOM 資料，API 不可用時自動降級使用靜態備份 (`bomData.ts`)
+- **啟動指令**：`npm run serve`（先 build 後啟動伺服器）或 `node server.js`
+
+### 移除
+無
+
+### 檔案結構（新增）
+```
+├── server.js                 ← Express 後端伺服器
+├── data/
+│   └── bom.json              ← BOM 資料持久化儲存（JSON）
+├── src/
+│   ├── utils/
+│   │   ├── bomEngine.ts      ← 改為 runtime BOM cache（可從 API 更新）
+│   │   └── bomService.ts     ← BOM API 客戶端（fetch + cache）
+│   └── components/
+│       └── AdminPanel.tsx    ← 後台管理頁面（#admin）
+```
+
+---
+
 ## v2.0.0 — 全面清理、Excel 匯出匯入、Light Theme 遷移
 
 ### 新增功能

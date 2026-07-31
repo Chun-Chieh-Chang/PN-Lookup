@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
@@ -8,13 +8,27 @@ import { CustomerStatsModal } from './components/CustomerStatsModal';
 import { AddEditModal } from './components/AddEditModal';
 import { PartDetailModal } from './components/PartDetailModal';
 import { ExportImportModal } from './components/ExportImportModal';
+import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { INITIAL_PARTS_DATA } from './data/partsData';
-import { getItemType, enrichParts } from './utils/bomEngine';
+import { getItemType, enrichParts, initBOM } from './utils/bomEngine';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
 export default function App() {
+  const [route, setRoute] = useState(() => window.location.hash === '#admin' ? 'admin' : 'main');
+  const onHashChange = useCallback(() => {
+    setRoute(window.location.hash === '#admin' ? 'admin' : 'main');
+  }, []);
+
+  useEffect(() => {
+    initBOM().then(() => {
+      // Trigger re-render with fresh BOM data
+      setRoute(prev => prev);
+    });
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [onHashChange]);
   // Load parts from LocalStorage or default
   const [parts, setParts] = useState<PartItem[]>(() => {
     try {
@@ -184,6 +198,10 @@ export default function App() {
     });
     }, [parts, filterState]);
 
+
+  if (route === 'admin') {
+    return <AdminPanel parts={parts} onClose={() => { window.location.hash = ''; }} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
