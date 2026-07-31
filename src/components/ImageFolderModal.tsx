@@ -39,7 +39,7 @@ export const ImageFolderModal: React.FC<ImageFolderModalProps> = ({
               選擇存放品號圖檔的資料夾後，檢索結果中的品號將可直接點選開啟圖檔（新分頁顯示）。
             </p>
             <ul className="list-disc list-inside space-y-1 text-gray-500">
-              <li>圖檔檔名需包含品號，例如 <code className="text-blue-700 bg-blue-50 px-1 rounded font-mono">3M41459.jpg</code></li>
+              <li>檔名任一節需包含品號，例如 <code className="text-blue-700 bg-blue-50 px-1 rounded font-mono">3M41459_02_3M41459.jpg</code> 或 <code className="text-blue-700 bg-blue-50 px-1 rounded font-mono">3M-41459_01_V2.png</code>（`品號_版本_別稱` / `別稱_版本_品號` 皆可）</li>
               <li>支援 <code className="text-gray-700 font-mono">JPG / PNG / GIF / WEBP / BMP / SVG</code></li>
               <li>系統會自動遍歷所有子資料夾</li>
               <li>選擇位置會保存在本機，下次開啟自動載入；此功能完全在本機瀏覽器內執行，圖檔不會上傳</li>

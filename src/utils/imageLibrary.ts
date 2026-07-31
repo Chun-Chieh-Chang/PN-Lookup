@@ -6,6 +6,7 @@ export interface ImageLibrary {
   folderName: string;
   count: number;
   urlFor(partNo: string): string | null;
+  nameFor(partNo: string): string | null;
 }
 
 // ---------- IndexedDB（保存資料夾 handle，下次開啟自動恢復） ----------
@@ -55,7 +56,9 @@ async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[]): Prom
   }
 }
 
-// ---------- 品號 → 圖檔配對（優先序：完全一致 → 忽略符號比對 → 品號開頭） ----------
+// ---------- 品號 → 圖檔配對 ----------
+// 檔名常見命名：「品號_版本_品號別稱」或「品號別稱_版本_品號」（底線分隔）
+// 策略：整個檔名先比對，再拆成片段比對（任一片段等於品號即命中），符號一律忽略
 const NORM_RE = /[-_\s.]+/g;
 
 function normalize(s: string): string {
@@ -63,21 +66,18 @@ function normalize(s: string): string {
 }
 
 function matchFile(files: File[], partNo: string): File | null {
-  const pn = partNo.toUpperCase();
+  const pn = partNo.trim().toUpperCase();
   const pnNorm = normalize(pn);
+  const canPrefix = pnNorm.length >= 4;
 
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
-    if (base === pn) return f;
-  }
-  for (const f of files) {
-    const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
-    if (normalize(base) === pnNorm) return f;
-  }
-  if (pnNorm.length >= 4) {
-    for (const f of files) {
-      const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
-      if (normalize(base).startsWith(pnNorm)) return f;
+    if (base === pn || normalize(base) === pnNorm) return f;
+    if (canPrefix && normalize(base).startsWith(pnNorm)) return f;
+    const segs = base.split(/[-_\s.]+/);
+    for (const s of segs) {
+      if (s === pn || normalize(s) === pnNorm) return f;
+      if (canPrefix && normalize(s).startsWith(pnNorm)) return f;
     }
   }
   return null;
@@ -85,6 +85,7 @@ function matchFile(files: File[], partNo: string): File | null {
 
 function buildLibrary(files: File[], folderName: string): ImageLibrary {
   const urlCache = new Map<string, string | null>();
+  const nameCache = new Map<string, string | null>();
   return {
     folderName,
     count: files.length,
@@ -98,6 +99,12 @@ function buildLibrary(files: File[], folderName: string): ImageLibrary {
       const url = URL.createObjectURL(hit);
       urlCache.set(partNo, url);
       return url;
+    },
+    nameFor(partNo: string): string | null {
+      if (nameCache.has(partNo)) return nameCache.get(partNo) ?? null;
+      const hit = matchFile(files, partNo);
+      nameCache.set(partNo, hit ? hit.name : null);
+      return nameCache.get(partNo) ?? null;
     },
   };
 }

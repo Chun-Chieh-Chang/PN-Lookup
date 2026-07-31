@@ -368,7 +368,11 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       <button
                         onClick={() => openImage(imageUrl)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
-                        title={`開啟圖檔：${item.partNo}`}
+                        title={
+                          imageLib
+                            ? `開啟圖檔：${item.partNo} → ${imageLib.nameFor(item.partNo)}`
+                            : `開啟圖檔：${item.partNo}`
+                        }
                       >
                         <ImageIcon className="w-3.5 h-3.5" />
                         <span>開啟圖檔</span>
