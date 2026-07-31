@@ -158,7 +158,16 @@ export const PartsTable: React.FC<PartsTableProps> = ({
           )}
 
           {imageLib && (
-            <span className="ml-2 text-gray-500 text-xs">
+            <span
+              className="ml-2 text-gray-500 text-xs cursor-help"
+              title={
+                `圖檔資料夾：${imageLib.folderName}\n` +
+                `掃描檔案：${imageLib.debug.totalFiles} 個（副檔名不支援的會被略過）\n` +
+                `收錄圖檔：${imageLib.count} 張\n` +
+                `檔名範例：\n${imageLib.debug.sampleNames.map((n) => '  · ' + n).join('\n')}\n` +
+                `本頁品號對應：${paginatedItems.filter((i) => imageLib.urlFor(i.partNo)).length} 筆`
+              }
+            >
               圖檔 {imageLib.count} 張 · 品號對應{' '}
               <strong className="text-gray-700">
                 {paginatedItems.filter((i) => imageLib.urlFor(i.partNo)).length}

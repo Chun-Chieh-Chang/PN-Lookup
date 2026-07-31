@@ -7,6 +7,10 @@ export interface ImageLibrary {
   count: number;
   urlFor(partNo: string): string | null;
   nameFor(partNo: string): string | null;
+  debug: {
+    totalFiles: number;
+    sampleNames: string[];
+  };
 }
 
 // ---------- IndexedDB（保存資料夾 handle，下次開啟自動恢復） ----------
@@ -43,15 +47,18 @@ async function idbGet(key: string): Promise<unknown> {
 }
 
 // ---------- 遍歷子資料夾收集圖檔 ----------
-async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[]): Promise<void> {
+async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[], stats: { totalFiles: number }): Promise<void> {
   const iterable = dir.entries() as unknown as AsyncIterableIterator<[string, FileSystemHandle]>;
   for await (const [, handle] of iterable) {
     if (handle.kind === 'directory') {
-      await collectFromDir(handle as FileSystemDirectoryHandle, out);
-    } else if (IS_IMAGE.test(handle.name)) {
-      try {
-        out.push(await (handle as FileSystemFileHandle).getFile());
-      } catch { /* 檔案無法讀取時略過 */ }
+      await collectFromDir(handle as FileSystemDirectoryHandle, out, stats);
+    } else {
+      stats.totalFiles += 1;
+      if (IS_IMAGE.test(handle.name)) {
+        try {
+          out.push(await (handle as FileSystemFileHandle).getFile());
+        } catch { /* 檔案無法讀取時略過 */ }
+      }
     }
   }
 }
@@ -83,12 +90,16 @@ function matchFile(files: File[], partNo: string): File | null {
   return null;
 }
 
-function buildLibrary(files: File[], folderName: string): ImageLibrary {
+function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
   const urlCache = new Map<string, string | null>();
   const nameCache = new Map<string, string | null>();
   return {
     folderName,
     count: files.length,
+    debug: {
+      totalFiles,
+      sampleNames: files.slice(0, 10).map((f) => f.name),
+    },
     urlFor(partNo: string): string | null {
       if (urlCache.has(partNo)) return urlCache.get(partNo) ?? null;
       const hit = matchFile(files, partNo);
@@ -113,11 +124,12 @@ function buildLibrary(files: File[], folderName: string): ImageLibrary {
 async function pickWithDirectoryPicker(): Promise<ImageLibrary> {
   const handle = await window.showDirectoryPicker({ mode: 'read' });
   const files: File[] = [];
-  await collectFromDir(handle, files);
+  const stats = { totalFiles: 0 };
+  await collectFromDir(handle, files, stats);
   if (files.length === 0) throw new Error('empty');
   try { await idbSet('image-folder', handle); } catch { /* 無法持久化時不影響本次使用 */ }
   localStorage.setItem(FLAG_SET, '1');
-  return buildLibrary(files, handle.name);
+  return buildLibrary(files, handle.name, stats.totalFiles);
 }
 
 function pickWithInput(): Promise<ImageLibrary> {
@@ -133,9 +145,10 @@ function pickWithInput(): Promise<ImageLibrary> {
         reject(new Error('cancelled'));
         return;
       }
+      const totalFiles = Array.from(input.files || []).length;
       const folderName = files[0].webkitRelativePath?.split('/')[0] || '圖檔資料夾';
       localStorage.setItem(FLAG_SET, '1');
-      resolve(buildLibrary(files, folderName));
+      resolve(buildLibrary(files, folderName, totalFiles));
     };
     input.oncancel = () => reject(new Error('cancelled'));
     input.click();
@@ -160,9 +173,10 @@ export async function restoreImageFolder(): Promise<ImageLibrary | null> {
       if (req !== 'granted') return null;
     }
     const files: File[] = [];
-    await collectFromDir(handle, files);
+    const stats = { totalFiles: 0 };
+    await collectFromDir(handle, files, stats);
     if (files.length === 0) return null;
-    return buildLibrary(files, handle.name);
+    return buildLibrary(files, handle.name, stats.totalFiles);
   } catch {
     return null;
   }
