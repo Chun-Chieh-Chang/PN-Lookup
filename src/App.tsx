@@ -15,6 +15,7 @@ import { INITIAL_PARTS_DATA } from './data/partsData';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
 import { getServerStatus } from './utils/serverStatus';
+import { dedupeAlternates } from './utils/alternates';
 import {
   ImageLibrary,
   pickImageFolder,
@@ -193,6 +194,10 @@ export default function App() {
 
   // Add or Edit Part Item
   const handleSaveItem = (itemData: Omit<PartItem, 'id'> & { id?: string }) => {
+    const cleanData = {
+      ...itemData,
+      alternates: dedupeAlternates(itemData.alternates ?? [], itemData.partNo),
+    };
     if (itemData.id) {
       // Edit existing — 品號變更時同步更新 BOM join key
       const existing = parts.find((p) => p.id === itemData.id);
@@ -200,14 +205,19 @@ export default function App() {
         renamePartNo(existing.partNo, itemData.partNo);
       }
       setParts((prev) =>
-        enrichParts(prev.map((p) =>
-          p.id === itemData.id ? ({ ...p, ...itemData } as PartItem) : p
-        ))
+        enrichParts(prev.map((p) => {
+          let item = p;
+          // 其他品號的替代清單中若有舊品號，一併更新為新品號
+          if (existing && itemData.partNo && p.alternates?.includes(existing.partNo)) {
+            item = { ...p, alternates: p.alternates.map((a) => (a === existing.partNo ? itemData.partNo! : a)) };
+          }
+          return item.id === itemData.id ? ({ ...item, ...cleanData } as PartItem) : item;
+        }))
       );
     } else {
       // Add new
       const newItem: PartItem = {
-        ...itemData,
+        ...cleanData,
         id: `custom-${Date.now()}`,
       };
       setParts((prev) => [newItem, ...prev]);
@@ -267,6 +277,10 @@ export default function App() {
           ? item.partNo.toLowerCase().startsWith(q)
           : item.partNo.toLowerCase().includes(q);
 
+        const matchAlternates = (item.alternates ?? []).some((a) =>
+          isExact ? a.toLowerCase().startsWith(q) : a.toLowerCase().includes(q)
+        );
+
         const matchCustomer = isExact
           ? item.customer.toLowerCase().startsWith(q)
           : item.customer.toLowerCase().includes(q);
@@ -275,11 +289,11 @@ export default function App() {
           ? item.name.toLowerCase().startsWith(q)
           : item.name.toLowerCase().includes(q);
 
-        if (filterState.searchField === 'partNo') return matchPartNo;
+        if (filterState.searchField === 'partNo') return matchPartNo || matchAlternates;
         if (filterState.searchField === 'customer') return matchCustomer;
         if (filterState.searchField === 'name') return matchName;
 
-        return matchPartNo || matchCustomer || matchName;
+        return matchPartNo || matchAlternates || matchCustomer || matchName;
       }
 
       return true;
@@ -296,6 +310,7 @@ export default function App() {
         onAddPart={(itemData) => {
           const newItem: PartItem = {
             ...itemData,
+            alternates: dedupeAlternates(itemData.alternates ?? [], itemData.partNo),
             id: `custom-${Date.now()}`,
           };
           setParts((prev) => [newItem, ...prev]);

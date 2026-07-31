@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, PlusCircle, Edit3, Check } from 'lucide-react';
 import { PartItem } from '../types';
+import { parseAlternates } from '../utils/alternates';
 
 interface AddEditModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
   const [partNo, setPartNo] = useState('');
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
+  const [alternatesText, setAlternatesText] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
@@ -29,11 +31,13 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
       setPartNo(initialItem.partNo || '');
       setName(initialItem.name || '');
       setNotes(initialItem.notes || '');
+      setAlternatesText((initialItem.alternates ?? []).join('、'));
     } else {
       setCustomer('');
       setPartNo('');
       setName('');
       setNotes('');
+      setAlternatesText('');
     }
     setErrors({});
   }, [initialItem, isOpen]);
@@ -58,6 +62,7 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
       partNo: partNo.trim(),
       name: name.trim(),
       notes: notes.trim(),
+      alternates: parseAlternates(alternatesText, partNo.trim()),
     });
 
     onClose();
@@ -152,6 +157,21 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
               placeholder="選擇性填寫特別材質或組裝要求..."
               className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:border-blue-500"
             />
+          </div>
+
+          {/* Alternates */}
+          <div className="space-y-1.5">
+            <label className="font-semibold text-gray-700">替代品號 (可互相替代的品號)</label>
+            <input
+              type="text"
+              value={alternatesText}
+              onChange={(e) => setAlternatesText(e.target.value)}
+              placeholder="以逗號或空格分隔，例如: D09-410-111-1、3M55567"
+              className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 font-mono focus:outline-none focus:border-blue-500"
+            />
+            <p className="text-xs text-gray-400">
+              輸入後圖檔比對與搜尋都會一併查詢這些品號（例如 3M55567 的圖檔以 D09-410-111-1 命名也能找到）
+            </p>
           </div>
 
           {/* Buttons */}

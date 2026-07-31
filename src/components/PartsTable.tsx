@@ -281,7 +281,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               const isCopiedFull = copiedFullId === item.id;
               const type = getItemType(item);
               const isAssembly = type === 'assembly';
-              const imageUrl = imageLib ? imageLib.urlFor(item.partNo) : null;
+              const imageUrl = imageLib ? imageLib.urlFor(item.partNo, item.alternates) : null;
 
               return (
                 <tr
@@ -379,7 +379,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
                         title={
                           imageLib
-                            ? `開啟圖檔：${item.partNo} → ${imageLib.nameFor(item.partNo)}`
+                            ? `開啟圖檔：${item.partNo} → ${imageLib.nameFor(item.partNo, item.alternates)}`
                             : `開啟圖檔：${item.partNo}`
                         }
                       >

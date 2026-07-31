@@ -72,8 +72,9 @@ function normalize(s: string): string {
   return s.replace(NORM_RE, '').toUpperCase();
 }
 
-function matchFile(files: File[], partNo: string): File | null {
-  const pn = partNo.trim().toUpperCase();
+function findForCandidate(files: File[], candidate: string): File | null {
+  const pn = candidate.trim().toUpperCase();
+  if (!pn) return null;
   const pnNorm = normalize(pn);
   const canPrefix = pnNorm.length >= 4;
 
@@ -90,6 +91,15 @@ function matchFile(files: File[], partNo: string): File | null {
   return null;
 }
 
+// 依品號及其替代品號逐一比對
+function matchFile(files: File[], partNo: string, aliases?: string[]): File | null {
+  for (const c of [partNo, ...(aliases ?? [])]) {
+    const hit = findForCandidate(files, c);
+    if (hit) return hit;
+  }
+  return null;
+}
+
 function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
   const urlCache = new Map<string, string | null>();
   const nameCache = new Map<string, string | null>();
@@ -100,23 +110,25 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
       totalFiles,
       sampleNames: files.slice(0, 10).map((f) => f.name),
     },
-    urlFor(partNo: string): string | null {
-      if (urlCache.has(partNo)) return urlCache.get(partNo) ?? null;
-      const hit = matchFile(files, partNo);
-      if (!hit) {
-        urlCache.set(partNo, null);
-        return null;
-      }
-      const url = URL.createObjectURL(hit);
-      urlCache.set(partNo, url);
-      return url;
-    },
-    nameFor(partNo: string): string | null {
-      if (nameCache.has(partNo)) return nameCache.get(partNo) ?? null;
-      const hit = matchFile(files, partNo);
-      nameCache.set(partNo, hit ? hit.name : null);
-      return nameCache.get(partNo) ?? null;
-    },
+  urlFor(partNo: string, aliases?: string[]): string | null {
+    const key = `${partNo}\u0000${(aliases ?? []).join('\u0000')}`;
+    if (urlCache.has(key)) return urlCache.get(key) ?? null;
+    const hit = matchFile(files, partNo, aliases);
+    if (!hit) {
+      urlCache.set(key, null);
+      return null;
+    }
+    const url = URL.createObjectURL(hit);
+    urlCache.set(key, url);
+    return url;
+  },
+  nameFor(partNo: string, aliases?: string[]): string | null {
+    const key = `${partNo}\u0000${(aliases ?? []).join('\u0000')}`;
+    if (nameCache.has(key)) return nameCache.get(key) ?? null;
+    const hit = matchFile(files, partNo, aliases);
+    nameCache.set(key, hit ? hit.name : null);
+    return nameCache.get(key) ?? null;
+  },
   };
 }
 

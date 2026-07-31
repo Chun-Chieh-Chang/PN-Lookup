@@ -49,7 +49,7 @@ function buildAssemblySheet(
   return ws;
 }
 
-const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'notes', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
+const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
 
 export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
@@ -61,12 +61,13 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   }
 
   // Sheet 1: 客戶產品對照表
-  const MAIN_HEADERS = ['客戶', '品號', '品名', '物料類別', '備註'];
+  const MAIN_HEADERS = ['客戶', '品號', '品名', '物料類別', '替代品號', '備註'];
   const sheet1Data = [MAIN_HEADERS, ...parts.map(p => [
     p.customer,
     p.partNo,
     p.name,
     p.itemType === 'assembly' ? '組件' : p.itemType === 'part' ? '零件' : '',
+    (p.alternates ?? []).join('、'),
     p.notes ?? '',
   ])];
   const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
@@ -75,6 +76,7 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     { wch: Math.max(4, ...parts.map(p => p.partNo.length)) + 3 },
     { wch: Math.max(4, ...parts.map(p => p.name.length)) + 3 },
     { wch: 12 },
+    { wch: 22 },
     { wch: 24 },
   ];
   XLSX.utils.book_append_sheet(wb, ws1, '客戶產品對照表');
@@ -98,6 +100,7 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     'partNo': p.partNo,
     'name': p.name,
     'notes': p.notes ?? '',
+    'alternates': (p.alternates ?? []).join('、'),
     'itemType': p.itemType ?? '',
     'components': p.components && p.components.length > 0 ? JSON.stringify(p.components) : '',
     'usedInAssemblies': p.usedInAssemblies && p.usedInAssemblies.length > 0 ? JSON.stringify(p.usedInAssemblies) : '',
@@ -129,6 +132,9 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
           name: String(r['name'] || r['partNo']).trim(),
         };
         if (r['notes']) item.notes = r['notes'];
+        if (r['alternates']) {
+          item.alternates = String(r['alternates']).split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+        }
         if (r['createdAt']) item.createdAt = r['createdAt'];
         parsed.push(item);
       }
@@ -156,6 +162,10 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
     };
     const notes = (r['備註'] || '').toString().trim();
     if (notes) item.notes = notes;
+    const alts = (r['替代品號'] || '').toString().trim();
+    if (alts) {
+      item.alternates = alts.split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+    }
     parsed.push(item);
   }
   return enrichParts(parsed);

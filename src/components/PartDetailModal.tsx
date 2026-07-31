@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight } from 'lucide-react';
+import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType, getComponentsForAssembly, getAssembliesForPart } from '../utils/bomEngine';
 
@@ -116,6 +116,22 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               </span>
               <p className="text-base font-medium text-gray-900">{item.name}</p>
             </div>
+
+            {item.alternates && item.alternates.length > 0 && (
+              <div className="pt-2 border-t border-gray-200">
+                <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
+                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+                  <span>替代品號（可互相替代）</span>
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {item.alternates.map((a) => (
+                    <span key={a} className="px-2 py-0.5 bg-amber-50 text-amber-700 font-mono rounded border border-amber-200 text-sm">
+                      {a}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {item.notes && (
               <div className="pt-2 border-t border-gray-200">

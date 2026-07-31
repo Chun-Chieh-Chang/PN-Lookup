@@ -3,6 +3,7 @@ import { X, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Downlo
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData, stripDerivedFields } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
+import { parseAlternates } from '../utils/alternates';
 
 interface AdminPanelProps {
   parts: PartItem[];
@@ -24,7 +25,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const [addKey, setAddKey] = useState('');
   const [syncState, setSyncState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [message, setMessage] = useState('');
-  const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '' });
+  const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '', alternates: '' });
   const [addPartMsg, setAddPartMsg] = useState('');
   const [newCustomer, setNewCustomer] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addCustMsg, setAddCustMsg] = useState('');
@@ -96,9 +97,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       setAddPartMsg(`品號 ${partNo} 已存在（客戶：${dup.customer}），請確認是否重複`);
       return;
     }
-    onAddPart({ customer, partNo, name, notes: newPart.notes.trim() || undefined });
+    onAddPart({
+      customer,
+      partNo,
+      name,
+      notes: newPart.notes.trim() || undefined,
+      alternates: parseAlternates(newPart.alternates, partNo),
+    });
     setAddPartMsg('品號已新增成功');
-    setNewPart({ customer: '', partNo: '', name: '', notes: '' });
+    setNewPart({ customer: '', partNo: '', name: '', notes: '', alternates: '' });
   };
 
   // ---------- 客戶新增（含既有產品） ----------
@@ -478,6 +485,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                   value={newPart.notes}
                   onChange={e => setNewPart(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="備註（選填）"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-sm text-gray-500 mb-1">替代品號（可互相替代，逗號/空格分隔）</label>
+                <input
+                  type="text"
+                  value={newPart.alternates}
+                  onChange={e => setNewPart(prev => ({ ...prev, alternates: e.target.value }))}
+                  placeholder="例如: D09-410-111-1、3M55567"
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>

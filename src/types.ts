@@ -6,6 +6,7 @@ export interface PartItem {
   partNo: string;
   name: string;
   notes?: string;
+  alternates?: string[];
   itemType?: ItemType;
   components?: string[];
   usedInAssemblies?: string[];

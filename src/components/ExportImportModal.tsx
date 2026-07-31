@@ -12,7 +12,7 @@ interface ExportImportModalProps {
   onResetData: () => void;
 }
 
-const CSV_HEADERS = 'id,customer,partNo,name,notes,itemType,components,usedInAssemblies,createdAt';
+const CSV_HEADERS = 'id,customer,partNo,name,notes,alternates,itemType,components,usedInAssemblies,createdAt';
 
 function csvEscape(val: unknown): string {
   const s = val == null ? '' : String(val);
@@ -28,6 +28,7 @@ function generateCSVString(parts: PartItem[]): string {
       csvEscape(p.partNo),
       csvEscape(p.name),
       csvEscape(p.notes ?? ''),
+      csvEscape(p.alternates ? p.alternates.join('、') : ''),
       csvEscape(p.itemType ?? ''),
       csvEscape(p.components ? JSON.stringify(p.components) : ''),
       csvEscape(p.usedInAssemblies ? JSON.stringify(p.usedInAssemblies) : ''),
@@ -81,10 +82,13 @@ function parseImportedCSV(text: string): PartItem[] {
         name: parts[3]?.trim() || parts[2]?.trim() || '',
       };
       if (parts[4]?.trim()) item.notes = parts[4].trim();
-      if (parts[5]?.trim() === 'part' || parts[5]?.trim() === 'assembly') item.itemType = parts[5].trim() as 'part' | 'assembly';
-      if (parts[6]?.trim()) try { item.components = JSON.parse(parts[6].trim()); } catch { /* ignore */ }
-      if (parts[7]?.trim()) try { item.usedInAssemblies = JSON.parse(parts[7].trim()); } catch { /* ignore */ }
-      if (parts[8]?.trim()) item.createdAt = parts[8].trim();
+      if (parts[5]?.trim()) {
+        item.alternates = parts[5].trim().split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+      }
+      if (parts[6]?.trim() === 'part' || parts[6]?.trim() === 'assembly') item.itemType = parts[6].trim() as 'part' | 'assembly';
+      if (parts[7]?.trim()) try { item.components = JSON.parse(parts[7].trim()); } catch { /* ignore */ }
+      if (parts[8]?.trim()) try { item.usedInAssemblies = JSON.parse(parts[8].trim()); } catch { /* ignore */ }
+      if (parts[9]?.trim()) item.createdAt = parts[9].trim();
       if (item.customer && item.partNo) parsed.push(item);
     } else {
       const cust = parts[0]?.replace(/^"|"$/g, '').trim() || '';
@@ -200,6 +204,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           partNo: String(x.partNo),
           name: String(x.name || x.partNo || ''),
           notes: x.notes,
+          alternates: Array.isArray(x.alternates) ? x.alternates.map(String) : undefined,
           itemType: x.itemType,
           components: x.components,
           usedInAssemblies: x.usedInAssemblies,
