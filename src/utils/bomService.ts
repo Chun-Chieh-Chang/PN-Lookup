@@ -1,15 +1,20 @@
 import { IS_STATIC_MODE } from './serverStatus';
+import masterData from '../../data/master.json';
 
 interface BOMData {
   children: Record<string, string[]>;
   parents: Record<string, string[]>;
 }
 
+const defaultBOM: BOMData = (masterData && masterData.bom)
+  ? (masterData.bom as unknown as BOMData)
+  : { children: {}, parents: {} };
+
 let cache: BOMData | null = null;
 let loading: Promise<BOMData> | null = null;
 
 async function fetchBOM(): Promise<BOMData> {
-  if (IS_STATIC_MODE) throw new Error('static mode');
+  if (IS_STATIC_MODE) return defaultBOM;
   const res = await fetch('/api/bom');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
@@ -24,7 +29,8 @@ export async function loadBOM(): Promise<BOMData> {
     return data;
   }).catch(() => {
     loading = null;
-    throw new Error('BOM API unavailable');
+    cache = defaultBOM;
+    return defaultBOM;
   });
   return loading;
 }

@@ -12,7 +12,8 @@ import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
-import { saveParts } from './utils/partsService';
+import { loadParts, saveParts } from './utils/partsService';
+import masterData from '../data/master.json';
 import { dedupeAlternates } from './utils/alternates';
 import {
   ImageLibrary,
@@ -22,8 +23,9 @@ import {
   clearImageFolderDismissed,
 } from './utils/imageLibrary';
 import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils/ocr';
-import { loadBindings, saveBindings } from './utils/imageResolver';
+import { loadBindings, saveBindings, getOrphanFiles } from './utils/imageResolver';
 import { ImageBindModal } from './components/ImageBindModal';
+import { OrphanImagesModal } from './components/OrphanImagesModal';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -33,8 +35,27 @@ export default function App() {
     setRoute(window.location.hash === '#admin' ? 'admin' : 'main');
   }, []);
 
+  const [parts, setParts] = useState<PartItem[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_PARTS);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return enrichParts(parsed);
+      } catch { /* ignore */ }
+    }
+    const defaultParts = (masterData && Array.isArray(masterData.parts)) ? masterData.parts as unknown as PartItem[] : [];
+    return enrichParts(defaultParts);
+  });
+  const partsRef = useRef(parts);
+  partsRef.current = parts;
+
   useEffect(() => {
     initBOM().then(() => {
+      loadParts().then((loadedParts) => {
+        if (loadedParts && loadedParts.length > 0) {
+          setParts(enrichParts(loadedParts));
+        }
+      }).catch(() => {});
       setRoute(prev => prev);
     });
     window.addEventListener('hashchange', onHashChange);
@@ -49,11 +70,6 @@ export default function App() {
       window.removeEventListener('keydown', onKey);
     };
   }, [onHashChange]);
-
-  // 預設不載入任何資料，等待用戶明確匯入
-  const [parts, setParts] = useState<PartItem[]>(() => enrichParts([]));
-  const partsRef = useRef(parts);
-  partsRef.current = parts;
 
   const [hasHydrated, setHasHydrated] = useState(true);
   const serverDownRef = useRef(false);
@@ -175,6 +191,12 @@ export default function App() {
   const [isBatchSearchOpen, setIsBatchSearchOpen] = useState(false);
   const [isCustomerStatsOpen, setIsCustomerStatsOpen] = useState(false);
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
+  const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
+
+  // 孤兒圖檔 (未對應圖檔) 統計
+  const orphanInfo = useMemo(() => {
+    return getOrphanFiles(imageLib, parts, bindings, ocrIndex);
+  }, [imageLib, parts, bindings, ocrIndex]);
 
   // Save to localStorage on change, debounce-save to server (derived fields stripped)
   const lastSavedRef = useRef('');

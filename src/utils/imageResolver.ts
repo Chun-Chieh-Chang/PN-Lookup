@@ -71,3 +71,29 @@ export function resolveImage(
 export function getPartNoAliases(item: Pick<PartItem, 'partNo' | 'alternates'>): string[] {
   return [item.partNo, ...(item.alternates ?? [])];
 }
+
+// ---------- 統計所有受控圖檔與未對應孤兒圖檔 ----------
+export function getOrphanFiles(
+  lib: ImageLibrary | null,
+  parts: PartItem[],
+  bindings: Record<string, string>,
+  ocrIndex: Map<string, string>,
+): { matchedFiles: Set<string>; orphanFiles: string[]; matchedCount: number } {
+  if (!lib) return { matchedFiles: new Set(), orphanFiles: [], matchedCount: 0 };
+
+  const matchedFiles = new Set<string>();
+
+  for (const part of parts) {
+    const res = resolveImage(part.partNo, part.alternates, lib, bindings, ocrIndex);
+    if (res) {
+      matchedFiles.add(res.name);
+    }
+  }
+
+  const orphanFiles = lib.fileNames.filter((fname) => !matchedFiles.has(fname));
+  return {
+    matchedFiles,
+    orphanFiles,
+    matchedCount: matchedFiles.size,
+  };
+}

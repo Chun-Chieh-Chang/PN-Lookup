@@ -5,6 +5,9 @@ export interface PartItem {
   customer: string;
   partNo: string;
   name: string;
+  category?: string;
+  color?: string;
+  material?: string;
   notes?: string;
   alternates?: string[];
   itemType?: ItemType;

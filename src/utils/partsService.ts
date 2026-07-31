@@ -1,11 +1,16 @@
 import { PartItem } from '../types';
 import { IS_STATIC_MODE } from './serverStatus';
+import masterData from '../../data/master.json';
+
+const defaultParts: PartItem[] = (masterData && Array.isArray(masterData.parts))
+  ? (masterData.parts as unknown as PartItem[])
+  : [];
 
 let cache: PartItem[] | null = null;
 let loading: Promise<PartItem[]> | null = null;
 
 async function fetchParts(): Promise<PartItem[]> {
-  if (IS_STATIC_MODE) throw new Error('static mode');
+  if (IS_STATIC_MODE) return defaultParts;
   const res = await fetch('/api/parts');
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
@@ -20,9 +25,10 @@ export async function loadParts(): Promise<PartItem[]> {
     cache = data;
     loading = null;
     return data;
-  }).catch((err) => {
+  }).catch(() => {
     loading = null;
-    throw err;
+    cache = defaultParts;
+    return defaultParts;
   });
   return loading;
 }

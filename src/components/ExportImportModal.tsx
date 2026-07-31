@@ -200,13 +200,26 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
       try {
         const json = JSON.parse(trimmed);
-        const arr = Array.isArray(json) ? json : [json];
-        parsed = arr.filter((x: any) => x && x.customer && x.partNo).map((x: any, idx: number) => ({
-          id: x.id || `imp-${Date.now()}-${idx}`,
-          customer: String(x.customer),
-          partNo: String(x.partNo),
+        if (json && json.bom && json.bom.children && json.bom.parents) {
+          import('../utils/bomEngine').then(({ updateBOMData }) => {
+            updateBOMData(json.bom.children, json.bom.parents);
+          });
+        }
+        const rawParts = Array.isArray(json)
+          ? json
+          : (json && Array.isArray(json.parts))
+          ? json.parts
+          : [json];
+
+        parsed = rawParts.filter((x: any) => x && (x.partNo || x.customer)).map((x: any, idx: number) => ({
+          id: x.id || x.partNo || `imp-${Date.now()}-${idx}`,
+          customer: String(x.customer || ''),
+          partNo: String(x.partNo || ''),
           name: String(x.name || x.partNo || ''),
-          notes: x.notes,
+          category: x.category ? String(x.category) : undefined,
+          color: x.color ? String(x.color) : undefined,
+          material: x.material ? String(x.material) : undefined,
+          notes: x.notes ? String(x.notes) : undefined,
           alternates: Array.isArray(x.alternates) ? x.alternates.map(String) : undefined,
           itemType: x.itemType,
           components: x.components,

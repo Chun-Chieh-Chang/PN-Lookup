@@ -31,7 +31,7 @@ interface PartsTableProps {
   onCustomerClick: (customerName: string) => void;
 }
 
-type SortField = 'customer' | 'partNo' | 'name';
+type SortField = 'customer' | 'partNo' | 'category' | 'name';
 type SortOrder = 'asc' | 'desc';
 
 export const PartsTable: React.FC<PartsTableProps> = ({
@@ -82,8 +82,19 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   const sortedItems = [...items].sort((a, b) => {
-    const valA = a[sortField] || '';
-    const valB = b[sortField] || '';
+    let valA = '';
+    let valB = '';
+
+    if (sortField === 'category') {
+      const typeA = getItemType(a);
+      const typeB = getItemType(b);
+      valA = a.category || (typeA === 'assembly' ? '組件 Assembly' : '零件 Part');
+      valB = b.category || (typeB === 'assembly' ? '組件 Assembly' : '零件 Part');
+    } else {
+      valA = a[sortField] || '';
+      valB = b[sortField] || '';
+    }
+
     const cmp = valA.localeCompare(valB, 'zh-Hant', { numeric: true, sensitivity: 'base' });
     return sortOrder === 'asc' ? cmp : -cmp;
   });
@@ -287,7 +298,15 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                 </div>
               </th>
 
-              <th className="p-3">物料類別</th>
+              <th
+                onClick={() => handleSort('category')}
+                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>物料類別</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
 
               <th
                 onClick={() => handleSort('name')}
@@ -410,14 +429,30 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       title={isAssembly ? '查看組成此組件的所有零件' : '查看可組成該零件的相應組件'}
                     >
                       {isAssembly ? <Boxes className="w-3 h-3" /> : <Component className="w-3 h-3" />}
-                      <span>{isAssembly ? '組件 Assembly' : '零件 Part'}</span>
+                      <span>{item.category || (isAssembly ? '組件 Assembly' : '零件 Part')}</span>
                     </button>
                   </td>
 
                   {/* Part Name */}
                   <td className={`p-3 text-gray-600 max-w-md ${isCompact ? 'py-2' : 'py-3.5'}`}>
-                    <div className="truncate" title={item.name}>
-                      {highlightText(item.name, searchKeyword)}
+                    <div className="flex flex-col gap-1">
+                      <div className="truncate font-medium text-gray-800" title={item.name}>
+                        {highlightText(item.name, searchKeyword)}
+                      </div>
+                      {(item.color || item.material) && (
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                          {item.color && (
+                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200 text-[11px]">
+                              顏色: {item.color}
+                            </span>
+                          )}
+                          {item.material && (
+                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 font-mono rounded border border-emerald-200 text-[11px]">
+                              原料: {item.material}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
 

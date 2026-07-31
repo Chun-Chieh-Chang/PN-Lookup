@@ -25,7 +25,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const [addKey, setAddKey] = useState('');
   const [syncState, setSyncState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [message, setMessage] = useState('');
-  const [newPart, setNewPart] = useState({ customer: '', partNo: '', name: '', notes: '', alternates: '' });
+  const [newPart, setNewPart] = useState({
+    customer: '',
+    partNo: '',
+    name: '',
+    category: '單品射出件',
+    color: '',
+    material: '',
+    notes: '',
+    alternates: '',
+  });
+
+  const CATEGORY_OPTIONS = [
+    '單品射出件',
+    'SA組件',
+    'SB組件',
+    'SC組件',
+    'SD組件',
+    '客戶特規對照件',
+    '輔料/膠材/包材',
+  ];
+
   const [addPartMsg, setAddPartMsg] = useState('');
   const [newCustomer, setNewCustomer] = useState({ customer: '', partNo: '', name: '', notes: '' });
   const [addCustMsg, setAddCustMsg] = useState('');
@@ -101,11 +121,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       customer,
       partNo,
       name,
+      category: newPart.category || '單品射出件',
+      color: newPart.color.trim() || undefined,
+      material: newPart.material.trim() || undefined,
       notes: newPart.notes.trim() || undefined,
       alternates: parseAlternates(newPart.alternates, partNo),
     });
     setAddPartMsg('品號已新增成功');
-    setNewPart({ customer: '', partNo: '', name: '', notes: '', alternates: '' });
+    setNewPart({
+      customer: '',
+      partNo: '',
+      name: '',
+      category: '單品射出件',
+      color: '',
+      material: '',
+      notes: '',
+      alternates: '',
+    });
   };
 
   // ---------- 客戶新增（含既有產品） ----------
@@ -475,6 +507,38 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                   value={newPart.name}
                   onChange={e => setNewPart(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="品名規格"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">物料類別</label>
+                <select
+                  value={newPart.category}
+                  onChange={e => setNewPart(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                >
+                  {CATEGORY_OPTIONS.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">顏色</label>
+                <input
+                  type="text"
+                  value={newPart.color}
+                  onChange={e => setNewPart(prev => ({ ...prev, color: e.target.value }))}
+                  placeholder="如: 本 / 白 / 綠 (選填)"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-500 mb-1">原料</label>
+                <input
+                  type="text"
+                  value={newPart.material}
+                  onChange={e => setNewPart(prev => ({ ...prev, material: e.target.value }))}
+                  placeholder="如: ABS TOYOLAC (選填)"
                   className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
                 />
               </div>

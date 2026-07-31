@@ -11,7 +11,9 @@ interface HeaderProps {
   onEnterAdmin?: () => void;
   imageFolderName?: string | null;
   imageCount?: number;
+  orphanCount?: number;
   onPickImageFolder?: () => void;
+  onOpenOrphansModal?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,7 +26,9 @@ export const Header: React.FC<HeaderProps> = ({
   onEnterAdmin,
   imageFolderName,
   imageCount,
+  orphanCount = 0,
   onPickImageFolder,
+  onOpenOrphansModal,
 }) => {
   const versionClickCount = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,22 +90,42 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {onPickImageFolder && (
-              <button
-                onClick={onPickImageFolder}
-                className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors gap-1.5 cursor-pointer ${
-                  imageFolderName
-                    ? 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
-                }`}
-                title={
-                  imageFolderName
-                    ? `圖檔資料夾：${imageFolderName}（${imageCount} 個檔案）— 點擊可更換`
-                    : '指定圖檔資料夾（品號可直接點選開啟圖檔）'
-                }
-              >
-                <ImageIcon className={`w-3.5 h-3.5 ${imageFolderName ? 'text-teal-600' : 'text-gray-500'}`} />
-                <span>{imageFolderName ? imageFolderName : '圖檔'}</span>
-              </button>
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={onPickImageFolder}
+                  className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors gap-1.5 cursor-pointer ${
+                    imageFolderName
+                      ? 'bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
+                  }`}
+                  title={
+                    imageFolderName
+                      ? `圖檔資料夾：${imageFolderName}（${imageCount} 個檔案）— 點擊可更換`
+                      : '指定圖檔資料夾（品號可直接點選開啟圖檔）'
+                  }
+                >
+                  <ImageIcon className={`w-3.5 h-3.5 ${imageFolderName ? 'text-teal-600' : 'text-gray-500'}`} />
+                  <span>{imageFolderName ? imageFolderName : '圖檔'}</span>
+                </button>
+
+                {imageFolderName && onOpenOrphansModal && (
+                  <button
+                    onClick={onOpenOrphansModal}
+                    className={`inline-flex items-center px-2.5 py-1.5 text-sm font-medium rounded-lg transition-colors gap-1 cursor-pointer border ${
+                      orphanCount > 0
+                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-300 font-bold'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}
+                    title={
+                      orphanCount > 0
+                        ? `發現 ${orphanCount} 張未連結品號的孤兒圖檔！點擊開啓管理中心進行手動/OCR連動`
+                        : '所有圖檔均已精準對應品號（無孤兒檔案）'
+                    }
+                  >
+                    <span>{orphanCount > 0 ? `未對應孤兒圖檔 (${orphanCount})` : '圖檔對應率 100%'}</span>
+                  </button>
+                )}
+              </div>
             )}
 
             <button

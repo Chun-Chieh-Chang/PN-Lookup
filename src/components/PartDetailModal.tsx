@@ -117,11 +117,42 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               <p className="text-base font-medium text-gray-900">{item.name}</p>
             </div>
 
+            {(item.category || item.color || item.material) && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
+                {item.category && (
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-0.5">物料類別</span>
+                    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 font-medium rounded text-xs border border-indigo-200">
+                      {item.category}
+                    </span>
+                  </div>
+                )}
+
+                {item.color && (
+                  <div>
+                    <span className="text-xs text-gray-500 block mb-0.5">顏色</span>
+                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 font-medium rounded text-xs border border-amber-200">
+                      {item.color}
+                    </span>
+                  </div>
+                )}
+
+                {item.material && (
+                  <div className="sm:col-span-1">
+                    <span className="text-xs text-gray-500 block mb-0.5">原料</span>
+                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 font-mono text-xs rounded border border-emerald-200">
+                      {item.material}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {item.alternates && item.alternates.length > 0 && (
               <div className="pt-2 border-t border-gray-200">
                 <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
                   <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
-                  <span>替代品號（可互相替代）</span>
+                  <span>別稱 / 替代品號</span>
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {item.alternates.map((a) => (

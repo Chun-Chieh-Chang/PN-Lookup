@@ -1,3 +1,4 @@
+# Dependencies and Build Output
 node_modules/
 build/
 dist/
@@ -7,6 +8,10 @@ coverage/
 .env*
 !.env.example
 
-# Local data and reference files — do not push to GitHub
+# Sensitive Data & Privacy Files — NEVER push to GitHub
 data/
+rawdata/
 ref/
+*.xlsm
+*.xlsx
+*.csv

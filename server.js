@@ -117,11 +117,15 @@ app.put('/api/parts', (req, res) => {
   });
 });
 
-// Serve static files
+// Serve static files (supports both root and /PN-Lookup/ base path)
+app.use('/PN-Lookup', express.static(join(__dirname, 'dist')));
 app.use(express.static(join(__dirname, 'dist')));
 
 // SPA fallback — all non-API routes serve index.html
-app.use((_req, res) => {
+app.use((req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
   res.sendFile(join(__dirname, 'dist', 'index.html'));
 });
 

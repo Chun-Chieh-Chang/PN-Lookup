@@ -35,6 +35,24 @@ async function ocrPdf(file: File): Promise<string> {
   try {
     for (let i = 1; i <= pages; i++) {
       const page = await doc.getPage(i);
+      
+      // 1. 優先提取 PDF 原生文字層（極速，數毫秒內完成）
+      try {
+        const textContent = await page.getTextContent();
+        const extractedText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ')
+          .trim();
+        if (extractedText.length > 5) {
+          text += extractedText + '\n';
+          page.cleanup();
+          continue;
+        }
+      } catch {
+        /* 文字層提取失敗，降級執行 Canvas OCR 影像辨識 */
+      }
+
+      // 2. 掃描版 PDF 降級執行 Canvas + Tesseract.js 視覺 OCR 辨識
       const viewport = page.getViewport({ scale: 2 });
       const canvas = document.createElement('canvas');
       canvas.width = viewport.width;
