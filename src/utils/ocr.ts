@@ -60,7 +60,7 @@ export async function recognizeFile(file: File): Promise<string> {
   return ocrImage(file);
 }
 
-interface OcrEntry {
+export interface OcrEntry {
   key: string;
   text: string;
 }

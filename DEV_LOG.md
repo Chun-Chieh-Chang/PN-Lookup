@@ -1,27 +1,35 @@
 # PN-Lookup 開發日誌
 
-## v2.8.0 — 程式碼清理與專案優化
+## v2.8.x — 資料檔案移除與原始數據不再提交
 
-### 清理項目
-- **移除死碼匯出**：刪除從未被呼叫的 `clearBOMCache()`（bomService.ts）、`clearPartsCache()`（partsService.ts）、`getServerStatusSync()`（serverStatus.ts）
-- **建立 `src/data/partsData.ts`**：補齊 App.tsx 靜態 import 所需的空殼檔案（`INITIAL_PARTS_DATA = []`），確保 build 不因缺少模組而失敗
-- **建立 `src/data/bomData.ts`**：補齊 bomEngine.ts 靜態 import 所需的空殼檔案（`BOM_CHILDREN / BOM_PARENTS / ASSEMBLY_PART_NOS` 均為空），真實資料由 `initBOM()` 在 runtime 從 API 載入
-- **server.js 清理**：移除 v2.2/v2.3 遺留的 legacy migration 邏輯（`parts.json` / `bom.json` 合併遷移，已完成歷史使命）；新增 `mkdirSync(DATA_DIR, { recursive: true })` 確保 data/ 目錄不存在時自動建立
-- **git 歷史清除**：以 `git-filter-repo` 完整移除所有歷史 commit 中的原始資料（`/data/`、`/ref/` PDF 圖檔、xlsm、CSV），保護公司資料安全
+### 資料檔案從 Git 移除
+- **`src/data/bomData.ts`**、**`src/data/partsData.ts`**：從 Git 追蹤中完全移除，不再提交至 GitHub
+- **`data/master.json`**（根目錄）：本就不應該提交，已於之前從 .gitignore 排除
+- 新增 `src/data/` 至 `.gitignore` 範圍，確保未來不會誤將 `src/data/` 下的衍生資料提交
 
-### gitignore 修正
-- 將 `data/`、`ref/` 範圍收斂為 `/data/`、`/ref/`（加前綴斜線），避免誤排除 `src/data/` 目錄
+### 相容性處理
+- **靜態模式（GitHub Pages）**：`bomEngine.ts` 改為內聯空值作為 fallback（取代導入 bomData.ts），`App.tsx` 直用空陣列取代 partsData.ts 的 `INITIAL_PARTS_DATA`；build 不因缺少 `src/data/` 模組而失敗
+- **本機伺服器模式**：`initBOM()` 從 `/api/bom`載入 BOM、`loadParts()` 從伺服器載入品號，兩者皆不依賴 bomData.ts/partsData.ts
 
 ### MECE 重組（v2.8.1）
-- **消除重複 `computeParents` 邏輯**：`AdminPanel.tsx:772` 的私有函式 `computeParents` 與 `bomEngine.ts:62` 的 `computeParentsMap` 邏輯完全一致；將 `computeParentsMap` 匯出並移除 AdminPanel.tsx 的副本（20 行刪除）
+- **消除重複 `computeParents` 邏輯**：`AdminPanel.tsx:772` 的私有函式 `computeParents` 與 `bomEngine.ts:62` 的 `computeParentsMap` 邏輯完全一致；將 `computeParentsMap` 匯出（在 bomEngine 作為模組內 private 函式），移除 AdminPanel.tsx 的副本（20 行刪除）
 - **移除未使用的匯出**：`ServerStatus`（serverStatus.ts）、`BOMRelation`（bomEngine.ts）、`OcrEntry`（ocr.ts）、`CustomerRow`（customerPartImport.ts）、`setImageFolderDismissed`（imageLibrary.ts）均為匯出但不被任何外部檔案匯入的 dead export，已移除 `export` 關鍵字或刪除匯出
+
+### 匯入匯出範圍規範
+- **僅提交代碼邏輯**：ref/ 與 data/ 原始數據檔案（XLSM、CSV、PDF、master.json、bomData.ts、partsData.ts 等）一律不提交
+- `.gitignore` 收斂為 `/data/`、`/ref/`（根目錄限定，避免誤排除 `src/data/` 導致 build 失敗）
+
+### gitignore 修正
+- 將 `data/`、`ref/` 收斂為根目錄限定 `/data/`、`/ref/`，同時新增 `src/data/` 排除
 
 ### 架構說明（當前）
 - **靜態模式**（GitHub Pages）：`VITE_STATIC_ONLY=true` 注入，完全跳過 API；品號走 localStorage，BOM 走空殼 fallback
 - **本機伺服器模式**：`npm run start`（build + serve），品號與 BOM 從 `data/master.json` 讀寫
-- **bomData.ts / partsData.ts**：兩者均為空殼，存在只為讓 Vite/Rollup build-time 模組解析不報錯；實際資料透過 runtime API 載入
+- **bomData.ts / partsData.ts**：已從版本控制移除；build-time module 導向內聯空值，vite 構建不受影響
 
 ---
+
+
 
 ## v2.7.0 — 替代品號 + 掃描檔內容識別（OCR + 手動綁定）
 

@@ -1,10 +1,9 @@
 import { PartItem, ItemType } from '../types';
-import { BOM_CHILDREN as STATIC_CHILDREN, BOM_PARENTS as STATIC_PARENTS, ASSEMBLY_PART_NOS as STATIC_ASSEMBLIES } from '../data/bomData';
 import { loadBOM } from './bomService';
 
-let childrenMap: Record<string, string[]> = STATIC_CHILDREN;
-let parentsMap: Record<string, string[]> = STATIC_PARENTS;
-let assemblySet: Set<string> = STATIC_ASSEMBLIES;
+let childrenMap: Record<string, string[]> = {};
+let parentsMap: Record<string, string[]> = {};
+let assemblySet: Set<string> = new Set();
 
 let initPromise: Promise<void> | null = null;
 
@@ -59,7 +58,7 @@ export function stripDerivedFields(parts: PartItem[]): PartItem[] {
   });
 }
 
-export function computeParentsMap(children: Record<string, string[]>): Record<string, string[]> {
+function computeParentsMap(children: Record<string, string[]>): Record<string, string[]> {
   const parents: Record<string, string[]> = {};
   for (const [parent, comps] of Object.entries(children)) {
     for (const child of comps) {
@@ -88,7 +87,7 @@ export function renamePartNo(oldNo: string, newNo: string): void {
   assemblySet = new Set(Object.keys(nextChildren));
 }
 
-interface BOMRelation {
+export interface BOMRelation {
   relatedItem: PartItem;
   relationType: 'child_component' | 'parent_assembly';
   note: string;

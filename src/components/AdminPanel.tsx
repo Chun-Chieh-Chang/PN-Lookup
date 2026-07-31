@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup, Layers } from 'lucide-react';
 import { PartItem } from '../types';
-import { getBOMChildren, getBOMParents, updateBOMData, stripDerivedFields, computeParentsMap } from '../utils/bomEngine';
+import { getBOMChildren, getBOMParents, updateBOMData, stripDerivedFields } from '../utils/bomEngine';
 import { saveBOM } from '../utils/bomService';
 import { parseAlternates } from '../utils/alternates';
 
@@ -55,7 +55,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         if (filtered.length > 0) next[key] = filtered;
       }
       setChildren(next);
-      setParents(computeParentsMap(next));
+      setParents(computeParents(next));
       onBOMUpdated();
     }
     onDeleteCustomer(c.name);
@@ -149,7 +149,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       next[assemblyKey] = filtered;
     }
     setChildren(next);
-    setParents(computeParentsMap(next));
+    setParents(computeParents(next));
   };
 
   const handleAddComponent = (assemblyKey: string, partNo: string) => {
@@ -158,7 +158,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     if (comps.includes(partNo.trim())) return;
     const next = { ...children, [assemblyKey]: [...comps, partNo.trim()] };
     setChildren(next);
-    setParents(computeParentsMap(next));
+    setParents(computeParents(next));
     setEditingKey(null);
     setSearchQuery('');
   };
@@ -175,7 +175,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     const next = { ...children };
     delete next[key];
     setChildren(next);
-    setParents(computeParentsMap(next));
+    setParents(computeParents(next));
   };
 
   const handleDeletePart = (p: PartItem) => {
@@ -190,7 +190,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         if (filtered.length > 0) next[key] = filtered;
       }
       setChildren(next);
-      setParents(computeParentsMap(next));
+      setParents(computeParents(next));
     }
     onDeletePart(p.id);
   };
@@ -208,7 +208,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     if (!serverOnline) return;
     setSyncState('saving');
     const timer = setTimeout(() => {
-      const newParents = computeParentsMap(childrenRef.current);
+      const newParents = computeParents(childrenRef.current);
       saveBOM(childrenRef.current, newParents).then(() => {
         updateBOMData(childrenRef.current, newParents);
         setParents(newParents);
@@ -226,7 +226,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       version: 2,
       exportedAt: new Date().toISOString(),
       parts: stripDerivedFields(parts),
-      bom: { children, parents: computeParentsMap(children) },
+      bom: { children, parents: computeParents(children) },
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -256,7 +256,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         if (isFull) {
           onImportParts(data.parts, true);
         }
-        const newParents = computeParentsMap(newChildren);
+        const newParents = computeParents(newChildren);
         setChildren(newChildren);
         setParents(newParents);
         if (!isFull) {
@@ -769,3 +769,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   );
 };
 
+function computeParents(children: Record<string, string[]>): Record<string, string[]> {
+  const parents: Record<string, string[]> = {};
+  for (const [parent, comps] of Object.entries(children)) {
+    for (const child of comps) {
+      if (!parents[child]) parents[child] = [];
+      if (!parents[child].includes(parent)) parents[child].push(parent);
+    }
+  }
+  return parents;
+}

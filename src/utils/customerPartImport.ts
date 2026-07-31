@@ -3,7 +3,7 @@ import { PartItem } from '../types';
 import { dedupeAlternates } from './alternates';
 import { renamePartNo } from './bomEngine';
 
-interface CustomerRow {
+export interface CustomerRow {
   drawing: string;
   product: string;
   customerPart: string;

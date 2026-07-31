@@ -1,6 +1,0 @@
-{
-  "name": "品號檢索系統",
-  "description": "提供醫療器材配件品號、客戶及品名的高效檢索、批次查詢與資料管理工具",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

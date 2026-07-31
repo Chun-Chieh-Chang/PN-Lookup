@@ -204,7 +204,7 @@ export function isImageFolderDismissed(): boolean {
   return localStorage.getItem(FLAG_DISMISSED) === '1';
 }
 
-function setImageFolderDismissed() {
+export function setImageFolderDismissed() {
   localStorage.setItem(FLAG_DISMISSED, '1');
 }
 

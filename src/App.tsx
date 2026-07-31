@@ -11,7 +11,6 @@ import { ExportImportModal } from './components/ExportImportModal';
 import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
-import { INITIAL_PARTS_DATA } from './data/partsData';
 import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
 import { getServerStatus } from './utils/serverStatus';
@@ -62,7 +61,7 @@ export default function App() {
     } catch {
       // ignore
     }
-    return enrichParts(INITIAL_PARTS_DATA);
+    return enrichParts([]);
   });
   const partsRef = useRef(parts);
   partsRef.current = parts;
