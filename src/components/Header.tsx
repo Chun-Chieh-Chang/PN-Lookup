@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Search, FileSpreadsheet, Plus, ListChecks, Layers } from 'lucide-react';
 
 interface HeaderProps {
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenCustomerStats: () => void;
   onOpenExportImport: () => void;
   onResetData: () => void;
+  onEnterAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,7 +20,22 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCustomerStats,
   onOpenExportImport,
   onResetData,
+  onEnterAdmin,
 }) => {
+  const versionClickCount = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleVersionClick = () => {
+    versionClickCount.current += 1;
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => {
+      versionClickCount.current = 0;
+    }, 1500);
+    if (versionClickCount.current >= 5) {
+      versionClickCount.current = 0;
+      if (onEnterAdmin) onEnterAdmin();
+    }
+  };
   return (
     <header className="bg-white text-gray-900 border-b border-gray-200 sticky top-0 z-30 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
@@ -33,7 +49,11 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-xl font-bold tracking-tight text-gray-900">品號檢索系統</h1>
-                <span className="bg-blue-100 text-blue-700 text-sm px-2 py-0.5 rounded-full border border-blue-200 font-mono">
+                <span
+                  onClick={handleVersionClick}
+                  title="版本資訊"
+                  className="bg-blue-100 text-blue-700 text-sm px-2 py-0.5 rounded-full border border-blue-200 font-mono select-none cursor-pointer"
+                >
                   v2.0
                 </span>
               </div>

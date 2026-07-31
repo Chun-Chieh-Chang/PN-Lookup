@@ -23,11 +23,19 @@ export default function App() {
 
   useEffect(() => {
     initBOM().then(() => {
-      // Trigger re-render with fresh BOM data
       setRoute(prev => prev);
     });
     window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        window.location.hash = 'admin';
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+      window.removeEventListener('keydown', onKey);
+    };
   }, [onHashChange]);
   // Load parts from LocalStorage or default
   const [parts, setParts] = useState<PartItem[]>(() => {
@@ -218,6 +226,7 @@ export default function App() {
         onOpenCustomerStats={() => setIsCustomerStatsOpen(true)}
         onOpenExportImport={() => setIsExportImportOpen(true)}
         onResetData={handleResetData}
+        onEnterAdmin={() => { window.location.hash = 'admin'; }}
       />
 
       {/* Stats Summary Bar */}
