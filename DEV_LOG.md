@@ -1,5 +1,14 @@
 # PN-Lookup 開發日誌
 
+## v3.1.1 — Excel 匯出「組立名稱(英)」欄位資料補全 (Assembly English Name Population)
+
+### 需求內容與作業
+- **問題分析與 RCA**：在 Excel 匯出的 SA/SB/SC/SD 組立頁籤中，表頭保留原始規範 `['序號', '組立名稱', '組立名稱(英)', '組立編號']`，但原程式 `excelExport.ts` 中對 `'組立名稱(英)'` 填入空白 `''`，導致匯出結果欄位空白。
+- **資料提取與補全**：解析原始資料中 132 筆 SA/SB/SC/SD 組件之英文品名（如 `3M41459` ➔ `MLS with Rotating Nut, I.D. 4.1mm`），建置對照字典 `assemblyEnglishMap.json`。
+- **匯出引擎升級**：更新 `src/utils/excelExport.ts`，匯出時自動帶入 132 筆組立英文品名，補齊欄位資料。
+
+---
+
 ## v3.1.0 — 孤兒圖檔 100% 納入主品號資料庫與全自動超連結 (Orphan Images Zero-Residual Ingestion)
 
 ### 需求內容與作業

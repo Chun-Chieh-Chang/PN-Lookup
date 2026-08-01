@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
 import { enrichParts, getBOMChildren } from './bomEngine';
+import assemblyEngMap from './assemblyEnglishMap.json';
 
 function lookupName(partNo: string, partsLookup: Map<string, PartItem>): string {
   const found = partsLookup.get(partNo) || partsLookup.get(partNo.toUpperCase());
@@ -27,10 +28,11 @@ function buildAssemblySheet(
   const rows: Record<string, string | number>[] = keys.map((key, idx) => {
     const part = partsLookup.get(key);
     const children = getBOMChildren()[key] || [];
+    const engName = (assemblyEngMap as Record<string, string>)[key.toUpperCase()] || '';
     const row: Record<string, string | number> = {
       '序號': idx + 1,
       '組立名稱': part?.name || key,
-      '組立名稱(英)': '',
+      '組立名稱(英)': engName,
       '組立編號': key,
     };
     for (let i = 0; i < maxComponents; i++) {
