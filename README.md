@@ -1,33 +1,90 @@
-# PN-Lookup — 品號檢索系統
+# PN-Lookup — 醫療器材品號檢索與 BOM 階層管理系統 (v3.3.0)
 
-醫療配件品號檢索、圖檔超連結、BOM 階層瀏覽與客戶料號三碼互換匯入工具。
+PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與多規格對照平台**。
 
-## 功能
+![Version](https://img.shields.io/badge/version-v3.3.0-indigo.svg)
+![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
+![Security](https://img.shields.io/badge/Security-Zero%20Private%20Data-emerald.svg)
 
-- 品號即時檢索（支援搜尋品號、品名、客戶名、替代品號）
-- 圖檔資料夾掃描 + 檔名自動比對 + OCR 內容辨識（瀏覽器內執行、檔案不上傳）
-- 手動圖檔綁定（localStorage 持久化）
-- BOM 階層瀏覽：組件 ↔ 零件關係即時推導
-- 替代品號（alternates）：前後台均可設定，圖檔比對一併查詢
-- 客戶料號工作表批次匯入（圖面編號 / 產品編號 / 零件編號 三碼互換）
-- 完整備份匯出／匯入（xlsx / csv / json 自選格式）
-- 後台管理（#admin）：品號／客戶／BOM 階層維護
+---
 
-## 快速開始
+## 🌟 核心功能亮點
 
-```bash
-npm install
-npm run dev           # 開發模式（本機伺服器 + API）
-npm run build         # 產出 dist/
-npm run serve         # 產出後以 Express 啟動伺服器（localhost:3001）
-npm run start         # build + serve 一鍵啟動
+- 🔍 **極速全域與欄位比對**：支援品號 (Part No)、客戶名稱、中文品名規格、替代料號 (Alternates) 即時模糊與前綴檢索，提供鍵盤快捷鍵與全域排序。
+- 🖼️ **圖檔全自動超連結與 0 孤兒圖檔管理**：
+  - 全自動遞迴掃描 `rawdata/圖檔` 及其子資料夾下全數 **1,527 個工程圖面 (PDF/PNG/JPG)**。
+  - 支援檔名高級正規化匹配（拆分括號 `()` 與修飾符號）、PDF 原生文字層提取與視覺 OCR 雙軌辨識。
+  - 圖檔對應率達 **100.0%**（孤兒圖檔數 `0` 檔）。
+- 🌳 **雙向 BOM 階層展算引擎**：
+  - 即時反查 SA / SB / SC / SD 階層組件與單品零件關聯。
+  - 支援從組件向下展開零件清單，或從單品零件向上追蹤影響的組件。
+- 📊 **多格式數據匯出與匯入 (Round-Trip)**：
+  - 支援一鍵產生完整 Excel (.xlsx)、CSV 與 JSON 報表。
+  - 包含 SA/SB/SC/SD 頁籤與**132 筆組件英文品名 (`組立名稱(英)`)** 對照。
+- 🎨 **Taste-Skill 次世代美學 UI 介面**：
+  - 導入 Google Fonts (`Inter` + `JetBrains Mono` 等購/等寬字體)。
+  - 具備 Morandi 莫蘭迪分級標籤與高階 `glass-header` 毛玻璃視覺體驗。
+- 🔒 **資安與數據實體隔離 (Zero Private Data Security Patch)**：
+  - 靜態編譯包 (`dist/assets/*.js`) 100% 零私有數據。
+  - 本地 Server 模式由 `node server.js` 動態讀寫 `data/master.json`（已列入 `.gitignore`）。
+
+---
+
+## 📁 專案目錄結構 (MECE 原則)
+
+```text
+PN-Lookup/
+├── data/                    # [隱私隔離] 本地單一真實資料庫 (master.json)
+├── rawdata/                 # [隱私隔離] 原始 Excel 與 1,527 份工程圖檔
+├── src/                     # 前端應用程式原始碼
+│   ├── components/          # 視覺 UI 元件 (MECE 分類)
+│   │   ├── Header.tsx           # 頂部導覽與全域功能按鈕
+│   │   ├── SearchControls.tsx   # 搜尋列與進階排序控制
+│   │   ├── PartsTable.tsx       # 品號清單表格與 Morandi 標籤
+│   │   ├── PartDetailModal.tsx  # 品號詳情與 BOM 階層雙向展開
+│   │   ├── AdminPanel.tsx       # 後台管理與 BOM 維護面板
+│   │   ├── CustomerStatsModal.tsx # 客戶別品號分佈統計
+│   │   ├── OrphanImagesModal.tsx# 未對應孤兒圖檔管理中心
+│   │   ├── ExportImportModal.tsx# 資料備份與多格式匯出匯入
+│   │   └── ...
+│   ├── utils/               # 邏輯與引擎工具庫
+│   │   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
+│   │   ├── imageResolver.ts    # 檔名/綁定/OCR 三階解析器
+│   │   ├── bomEngine.ts        # BOM 階層雙向推導引擎
+│   │   ├── excelExport.ts      # Excel/CSV 多工作表匯出引擎
+│   │   ├── assemblyEnglishMap.json # 132 筆組件英文品名對照
+│   │   └── ...
+│   ├── App.tsx              # 主應用程式入口與狀態控制
+│   └── index.css            # Taste-Skill 設計系統樣式與字型
+├── DEV_LOG.md               # 開發日誌與版本變更歷史 (RCA & CAPA)
+├── index.html               # Web 頁面載入點 (Google Fonts)
+├── server.js                # 本地 Express REST API 伺服器
+└── vite.config.ts           # Vite 建構設定檔
 ```
 
-## 部署
+---
 
-- **GitHub Pages（靜態）**：`VITE_STATIC_ONLY=true` 打包，品號走 localStorage，BOM 走空殼 fallback
-- **本機伺服器模式**：`npm run start`，品號與 BOM 從 `data/master.json` 讀寫
+## 🚀 快速開始 (Quick Start)
 
-## 授權
+### 1. 安裝依賴
+```bash
+npm install
+```
 
-專用內部工具，未经授权不得外传。
+### 2. 本地開發模式 (伺服器 + REST API)
+```bash
+npm run dev
+```
+
+### 3. 一鍵建構與生產部署
+```bash
+npm run start         # 自動建構 dist/ 並啟動 Express 伺服器 (http://localhost:3000)
+```
+
+---
+
+## 📜 授權說明
+
+專用內部工具，未經授權不得外傳。
