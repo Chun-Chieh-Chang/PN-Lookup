@@ -362,67 +362,58 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// ConnectorTree – 量測子節點真實高度後畫精確連接線
+// ConnectorTree – 由子節點卡片 callback 回傳精確高度後畫連接線
 // ────────────────────────────────────────────────────────────────────────────
 
 interface ConnectorTreeProps {
-  childCount: number;
   connColor: string;
   horizontalLen: number;
   lineW: number;
   defaultHalfH: number;
-  children: React.ReactNode[];
+  children: React.ReactElement[];
 }
 
 const ConnectorTree: React.FC<ConnectorTreeProps> = ({
-  childCount, connColor, horizontalLen, lineW, defaultHalfH, children,
+  connColor, horizontalLen, lineW, defaultHalfH, children,
 }) => {
-  // 每個子節點「直接卡片」的 clientHeight（量測後存入陣列）
-  const [cardHeights, setCardHeights] = React.useState<number[]>([]);
-  const rowRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+  const count = children.length;
+  const [cardHeights, setCardHeights] = React.useState<number[]>(() =>
+    Array(count).fill(defaultHalfH * 2)
+  );
 
-  // ResizeObserver：只量測首個子元素（即卡片本身，不含展開的孫節點）
-  React.useLayoutEffect(() => {
-    const obs = new ResizeObserver(() => {
-      const heights = rowRefs.current.map((el) => {
-        if (!el) return defaultHalfH * 2;
-        // 量測 el 內第一個直接子 div（即節點卡片 wrapper）的高度
-        const card = el.firstElementChild as HTMLElement | null;
-        return card ? card.offsetHeight : defaultHalfH * 2;
-      });
-      setCardHeights(heights);
+  const handleCardHeight = React.useCallback((idx: number, h: number) => {
+    setCardHeights((prev) => {
+      if (prev[idx] === h) return prev;
+      const next = [...prev];
+      next[idx] = h;
+      return next;
     });
-    rowRefs.current.forEach((el) => { if (el) obs.observe(el); });
-    return () => obs.disconnect();
-  }, [childCount, defaultHalfH]);
+  }, []);
 
   const GAP = 10;
 
-  // 計算每個子節點出線點的 Y 座標（相對 children 容器頂部）
-  // Y_i = sum(heights[0..i-1]) + i*GAP + heights[i]/2
+  // 每個子節點水平出線點的 Y 座標（相對容器頂部）= 累積高度 + i*GAP + 本卡片高度/2
   const midYs: number[] = [];
   let acc = 0;
-  for (let i = 0; i < childCount; i++) {
+  for (let i = 0; i < count; i++) {
     const h = cardHeights[i] ?? defaultHalfH * 2;
     midYs.push(acc + Math.floor(h / 2));
     acc += h + GAP;
   }
   const firstMid = midYs[0] ?? defaultHalfH;
-  const lastMid  = midYs[childCount - 1] ?? defaultHalfH;
+  const lastMid  = midYs[count - 1] ?? defaultHalfH;
 
   return (
-    <div
-      style={{ marginLeft: horizontalLen + 8, position: 'relative', display: 'flex', flexDirection: 'column', gap: GAP }}
-    >
-      {/* 垂直主幹 */}
-      {childCount > 1 && (
+    <div style={{ marginLeft: horizontalLen + 8, position: 'relative', display: 'flex', flexDirection: 'column', gap: GAP }}>
+      {/* 垂直主幹：首尾子節點出線點之間 */}
+      {count > 1 && (
         <div
           aria-hidden
           style={{
             position: 'absolute',
-            left: -(horizontalLen + 1),
+            left: -(horizontalLen + Math.floor(lineW / 2) + 1),
             top: firstMid,
-            height: lastMid - firstMid,
+            height: Math.max(0, lastMid - firstMid),
             width: lineW,
             backgroundColor: connColor,
             pointerEvents: 'none',
@@ -430,18 +421,17 @@ const ConnectorTree: React.FC<ConnectorTreeProps> = ({
         />
       )}
 
-      {(children as React.ReactNode[]).map((child, idx) => (
+      {children.map((child, idx) => (
         <div
-          key={idx}
-          ref={(el) => { rowRefs.current[idx] = el; }}
+          key={child.key ?? idx}
           className="relative flex items-start"
         >
-          {/* 水平橫線 */}
+          {/* 水平橫線：從主幹到子節點左緣 */}
           <div
             aria-hidden
             style={{
               position: 'absolute',
-              left: -(horizontalLen + 1),
+              left: -(horizontalLen + Math.floor(lineW / 2) + 1),
               top: (midYs[idx] ?? defaultHalfH) - Math.floor(lineW / 2),
               width: horizontalLen,
               height: lineW,
@@ -449,7 +439,10 @@ const ConnectorTree: React.FC<ConnectorTreeProps> = ({
               pointerEvents: 'none',
             }}
           />
-          {child}
+          {/* 把 onCardHeight 注入子節點 */}
+          {React.cloneElement(child, {
+            onCardHeight: (h: number) => handleCardHeight(idx, h),
+          } as Partial<NodeProps>)}
         </div>
       ))}
     </div>
@@ -468,10 +461,12 @@ interface NodeProps {
   onToggle: (id: string) => void;
   onShowThumbnail: (part: PartItem, e: React.MouseEvent) => void;
   onSelectPart?: (partNo: string) => void;
+  /** 節點卡片掛載後回傳卡片高度（供父層 ConnectorTree 精確定位連接線） */
+  onCardHeight?: (h: number) => void;
 }
 
 const MindMapNodeComponent: React.FC<NodeProps> = ({
-  node, searchQuery, expandedIds, highlightIds, onToggle, onShowThumbnail, onSelectPart,
+  node, searchQuery, expandedIds, highlightIds, onToggle, onShowThumbnail, onSelectPart, onCardHeight,
 }) => {
   const isExpanded    = expandedIds.has(node.id);
   const isHighlighted = highlightIds.size > 0 && highlightIds.has(node.id);
@@ -531,7 +526,16 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
 
   return (
     <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
-      <div className="flex flex-col items-stretch" style={{ minWidth: minW }}>
+      <div
+        ref={(el) => {
+          if (el && onCardHeight) {
+            // 量測卡片 wrapper 的實際高度，包含 padding/border，回傳給父層
+            onCardHeight(el.offsetHeight);
+          }
+        }}
+        className="flex flex-col items-stretch"
+        style={{ minWidth: minW }}
+      >
         <div
           className={`
             relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-md
@@ -568,11 +572,9 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
       </div>
 
       {isExpanded && hasChildren && (() => {
-        const childCount = node.children.length;
-        const HALF_H = CONN.nodeHeaderH; // 節點卡片頂到視覺中心的像素估算
+        const HALF_H = CONN.nodeHeaderH;
         return (
           <ConnectorTree
-            childCount={childCount}
             connColor={connColor}
             horizontalLen={CONN.horizontalLen}
             lineW={CONN.lineW}
