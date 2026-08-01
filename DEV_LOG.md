@@ -1101,6 +1101,26 @@ pn-lookup/
    * **單擊** 或 **雙擊卡片** 均可切換展開/收合下層子類別分支 (`toggleNode()`)。
 3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.9.0 — 全專案五步 SOP 架構審查、代碼清理與規格整合 (Comprehensive Project Optimization & Standards Audit)
+
+### 需求內容
+執行全專案 5 步驟全流程 SOP 審查與清理作業：
+1. 全面盤點與清理無效程式碼與廢棄模組。
+2. 同步更新所有開發相關文件（`DEV_LOG.md` 與 `README.md`）。
+3. 依 MECE 原則重構檔案目錄與模組依賴。
+4. 建立規範 Git 提交基準點。
+5. 確效後推送至 GitHub 遠端倉庫。
+
+### 執行與 CAPA 總結
+1. **MECE 資源整合與清查**：確認所有前端組件 (`src/components/`) 與引擎模組 (`src/utils/`) 職責劃分清晰，全數 14 個核心組件與 14 個工具模組均經確效無冗餘檔。
+2. **規格與規則演化 (Self-Evolution Rules)**：
+   * 在 [.agents/AGENTS.md](file:///d:/Self-developed_Apps/PN-Lookup/.agents/AGENTS.md) 中建立 `<RULE[data_structure_change_notification]>`：規定重大數據結構與筆數變動時必須主動說明。
+   * 在 [.agents/AGENTS.md](file:///d:/Self-developed_Apps/PN-Lookup/.agents/AGENTS.md) 中建立 `<RULE[explicit_file_path_prompt_rule]>`：規定所有匯入匯出必須提供顯性 OS 另存新檔/檔案選擇對話框 (`window.showSaveFilePicker`)。
+3. **驗證確效**：`npx tsc --noEmit` 0 錯誤，`npm run build` 打包成功。
+
+
 
 
 
