@@ -1,5 +1,14 @@
 # PN-Lookup 開發日誌
 
+## v3.4.1 — 品牌標題更新與作者資訊標示 (Title & Author Credit)
+
+### 需求內容與作業
+- **品牌名稱標示**：主 Header 系統標題由「品號檢索系統」更名為 **「凱益品號檢索系統」**。
+- **作者與版權資訊**：於頂部導覽列副標題與頁尾 (Footer) 加入開發資訊 `Developed by Wesley Chang, July-2026 @Mouldex.`。
+- **建構與部署確效**：通過 `npx tsc --noEmit` 0 錯誤與 Vite 生產打包確效。
+
+---
+
 ## v3.4.0 — 頂尖數位藝術總監視角：全介面美學與比例深度重構 (High-End Aesthetic & Proportional UI Redesign)
 
 ### 需求內容與作業

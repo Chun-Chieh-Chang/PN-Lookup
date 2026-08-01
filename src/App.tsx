@@ -514,6 +514,14 @@ export default function App() {
         onClose={() => setBindPartNo(null)}
       />
 
+      {/* Footer */}
+      <footer className="mt-auto py-3 text-xs text-slate-500 border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <span className="font-semibold text-slate-700">凱益品號檢索系統 v3.4.0</span>
+          <span className="font-mono text-slate-500 font-medium">Developed by Wesley Chang, July-2026 @Mouldex.</span>
+        </div>
+      </footer>
+
     </div>
   );
 }

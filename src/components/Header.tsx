@@ -56,16 +56,20 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div>
               <div className="flex items-center space-x-2.5">
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">品號檢索系統</h1>
+                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">凱益品號檢索系統</h1>
                 <span
                   onClick={handleVersionClick}
                   title="五擊解鎖後台管理面板"
                   className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
-                  v3.1.1
+                  v3.4.0
                 </span>
               </div>
-              <p className="text-xs text-slate-500 font-medium">醫療器材與 BOM 階層規格料號即時對照平台</p>
+              <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <span>醫療器材與 BOM 階層規格料號即時對照平台</span>
+                <span className="hidden sm:inline text-slate-300">•</span>
+                <span className="font-mono text-indigo-700/80 font-semibold text-[11px]">Developed by Wesley Chang, July-2026 @Mouldex.</span>
+              </p>
             </div>
           </div>
 
