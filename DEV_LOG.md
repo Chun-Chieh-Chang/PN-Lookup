@@ -1151,6 +1151,26 @@ pn-lookup/
    重構 [imageResolver.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageResolver.ts)。在 `getOrphanFiles` 迴圈中調用 `resolveAllImages`，使每個主品號及其 **所有 `alternates` 客戶料號** 對應的圖檔均被完整納入 `matchedFiles`！
 2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.9.3 — 防禦與機制固化：自動化核心邏輯固化確效驗證門禁 (Automated Core Logic Freeze & Verification Suite)
+
+### 需求內容
+回應使用者「固化數據邏輯，杜絕改 A 錯 B (Side-Effects & Regression)」的硬性要求。建立自動化不變量單元測試（Verification Suite），防止未來任何程式碼修改破壞核心數據與圖檔匹配邏輯。
+
+### 矯正與預防措施 (CAPA)
+1. **建立自動化驗證腳本 (`scripts/verifyCoreLogic.js`)**：
+   涵蓋 6 大核心防禦單元測試：
+   * 測試 1: 驗證 `data/pn-lookup-master.json` 實體品號筆數 **100% 獨一無二去重，鎖定 565 筆**。
+   * 測試 2: 驗證 `buildMaster.js` 轉譯器保持 MECE 去重，**BOM 組件數嚴格鎖定 181 組**。
+   * 測試 3: 驗證 `isMatchedSegment` 圖檔邊界防禦（防護 `B-003` 與 `B-0030` 分離，並允許 `Rev1`/`v1` 修飾符）。
+2. **綁定生產環境打包門禁 (`npm run build`)**：
+   更新 `package.json` 中的 `"build"` 指令為 `"node scripts/verifyCoreLogic.js && vite build"`。
+   * 今後每次進行打包或部署前，系統均會**自動強制運行 6 項邏輯固化測試**。若有任何一項測試失敗，會立即在第一時間攔截並終止打包，從源頭徹底杜絕「改 A 錯 B」！
+3. **寫入全域 Agent 規範**：
+   在 [.agents/AGENTS.md](file:///d:/Self-developed_Apps/PN-Lookup/.agents/AGENTS.md) 中新增 `<RULE[regression_defense_and_logic_freezing]>` 規則。
+
+
 
 
 

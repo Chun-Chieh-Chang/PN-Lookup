@@ -57,3 +57,15 @@
 1. 匯出操作 (Export)：優先採用 HTML5 File System Access API (`window.showSaveFilePicker`) 彈出 OS 原生「另存新檔」視窗，允許使用者自訂儲存資料夾路徑與檔名，防止默默下載至預設 Downloads 資料夾。
 2. 匯入操作 (Import)：提供顯性「開啟檔案 / 選擇資料夾」視窗，讓使用者自行選取檔案來源路徑。
 </RULE[explicit_file_path_prompt_rule]>
+
+<RULE[regression_defense_and_logic_freezing]>
+數據邏輯防迴歸與不變量固化規則 (Anti-Regression & Data Invariants Freeze Rule)
+
+為了徹底杜絕「改 A 錯 B (Side-effects & Regression)」之混亂：
+1. 核心數據不變量 (Data Invariants)：
+   - 主資料庫 parts 實體必須 100% 保持依 `partNo` 去重，數值嚴格鎖定 565 筆實體。
+   - BOM 關聯必須嚴格鎖定 181 組組件。
+   - 圖檔解析器 `resolveAllImages` 必須同時比對 `partNo` 與所有 `alternates` 別稱。
+2. 自動化確效門禁 (Automated Build Gate)：
+   - 每次執行 `npm run build` 或 Git commit 前，必須自動運行 `scripts/verifyCoreLogic.js`。若有任何一項邏輯不變量失敗，強制攔截編譯與部署！
+</RULE[regression_defense_and_logic_freezing]>

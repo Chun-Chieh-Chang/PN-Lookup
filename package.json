@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "node scripts/verifyCoreLogic.js && vite build",
     "serve": "node server.js",
     "start": "npm run build && node server.js",
     "lint": "tsc --noEmit"
