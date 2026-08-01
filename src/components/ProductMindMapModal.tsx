@@ -262,6 +262,7 @@ interface ThumbnailPopupProps {
 
 const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onNavigate }) => {
   const [imgError, setImgError] = useState(false);
+  const isPdf = !!thumbnail.imageName && thumbnail.imageName.toLowerCase().endsWith('.pdf');
   const hasImage = !!thumbnail.imageUrl && !imgError;
 
   const style: React.CSSProperties = {
@@ -316,12 +317,21 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
         <div className="w-full h-48 flex items-center justify-center bg-slate-950 relative overflow-hidden">
           {hasImage ? (
             <div className="relative w-full h-full p-2 flex items-center justify-center">
-              <img
-                src={thumbnail.imageUrl!}
-                alt={thumbnail.partNo}
-                className="max-w-full max-h-full object-contain"
-                onError={() => setImgError(true)}
-              />
+              {isPdf ? (
+                <iframe
+                  src={thumbnail.imageUrl! + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'}
+                  title={thumbnail.partNo}
+                  className="w-full h-full border-0"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <img
+                  src={thumbnail.imageUrl!}
+                  alt={thumbnail.partNo}
+                  className="max-w-full max-h-full object-contain"
+                  onError={() => setImgError(true)}
+                />
+              )}
               {thumbnail.imageName && (
                 <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 truncate maxWidth-[200px]">
                   {thumbnail.imageName}
