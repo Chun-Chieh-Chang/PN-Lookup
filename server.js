@@ -53,6 +53,16 @@ function loadMaster() {
 function saveMaster(data) {
   const next = { ...defaultMaster(), ...data };
   if (!Array.isArray(next.parts)) next.parts = [];
+
+  // 自動防禦去重：依 partNo 保留唯一實體，防止重複追加
+  const partsMap = new Map();
+  for (const p of next.parts) {
+    if (p && p.partNo && !partsMap.has(p.partNo)) {
+      partsMap.set(p.partNo, p);
+    }
+  }
+  next.parts = Array.from(partsMap.values());
+
   if (!next.bom || typeof next.bom !== 'object') next.bom = { children: {}, parents: {} };
   if (!next.bom.children) next.bom.children = {};
   if (!next.bom.parents) next.bom.parents = {};
