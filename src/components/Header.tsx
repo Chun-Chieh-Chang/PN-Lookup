@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon, ShieldAlert, ExternalLink } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, ShieldAlert, ExternalLink } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
   customerCount: number;
   onOpenBatchSearch: () => void;
-  onOpenCustomerStats: () => void;
+
   onOpenExportImport: () => void;
   onResetData: () => void;
   onEnterAdmin?: () => void;
@@ -21,7 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   totalCount,
   customerCount,
   onOpenBatchSearch,
-  onOpenCustomerStats,
+
   onOpenExportImport,
   onResetData,
   onEnterAdmin,
@@ -111,13 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span>批次檢索</span>
             </button>
 
-            <button
-              onClick={onOpenCustomerStats}
-              className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border border-slate-200 transition-all gap-1.5 cursor-pointer active:scale-95"
-            >
-              <Layers className="w-4 h-4 text-indigo-600" />
-              <span>客戶統計</span>
-            </button>
+
 
             {onPickImageFolder && (
               <div className="flex items-center space-x-1.5">

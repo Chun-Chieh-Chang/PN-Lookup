@@ -1,5 +1,14 @@
 # PN-Lookup 開發日誌
 
+## v3.6.2 — MECE 介面清理：移除冗餘「客戶統計」按鈕與 Modal (UI Optimization & Code Cleanup)
+
+### 需求內容與作業
+- **MECE 介面精簡**：經過需求對照，確認搜尋欄位已具備「精確與模糊客戶檢索」能力，移除冗餘的「客戶統計」按鈕。
+- **孤兒元件與檔案清理**：完全清理 `CustomerStatsModal.tsx` 元件檔及 `Header.tsx` / `App.tsx` 中的引用與狀態控制，維持代碼庫極簡。
+- **建構與部署確效**：通過 `npx tsc --noEmit` 0 錯誤與 Vite 3.89s 生產打包測試。
+
+---
+
 ## v3.6.0 — 數據維護權責分工：「修訂」與「增刪」邏輯重構與雙通道設計 (Data Maintenance Governance: Revision vs Add/Delete Separation)
 
 ### 需求內容與作業

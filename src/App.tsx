@@ -4,7 +4,7 @@ import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
 import { PartsTable } from './components/PartsTable';
 import { BatchSearchModal } from './components/BatchSearchModal';
-import { CustomerStatsModal } from './components/CustomerStatsModal';
+
 import { AddEditModal } from './components/AddEditModal';
 import { PartDetailModal } from './components/PartDetailModal';
 import { ExportImportModal } from './components/ExportImportModal';
@@ -193,7 +193,7 @@ export default function App() {
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PartItem | null>(null);
   const [isBatchSearchOpen, setIsBatchSearchOpen] = useState(false);
-  const [isCustomerStatsOpen, setIsCustomerStatsOpen] = useState(false);
+
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
   const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
 
@@ -402,7 +402,7 @@ export default function App() {
         totalCount={parts.length}
         customerCount={allCustomers.length}
         onOpenBatchSearch={() => setIsBatchSearchOpen(true)}
-        onOpenCustomerStats={() => setIsCustomerStatsOpen(true)}
+
         onOpenExportImport={() => setIsExportImportOpen(true)}
         onResetData={handleResetData}
         onEnterAdmin={() => {
@@ -469,17 +469,7 @@ export default function App() {
         allParts={parts}
       />
 
-      <CustomerStatsModal
-        isOpen={isCustomerStatsOpen}
-        onClose={() => setIsCustomerStatsOpen(false)}
-        allParts={parts}
-        onSelectCustomer={(customerName) => {
-          setFilterState({
-            ...filterState,
-            selectedCustomers: [customerName],
-          });
-        }}
-      />
+
 
       <AddEditModal
         isOpen={isAddEditOpen}
