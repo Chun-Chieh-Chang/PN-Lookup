@@ -14,6 +14,7 @@ import {
   Image as ImageIcon,
   ExternalLink,
   Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 import { Tree as D3Tree, TreeLinkDatum } from 'react-d3-tree';
 import { PartItem } from '../types';
@@ -396,9 +397,20 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
+  const [treeKey, setTreeKey]         = useState(0);
   const containerRef                  = useRef<HTMLDivElement>(null);
   // react-d3-tree translate：等容器掛載後取真實高度置中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 300 });
+
+  const handleResetDefault = useCallback(() => {
+    setSearchQuery('');
+    setThumbnail(null);
+    setTreeKey(prev => prev + 1);
+    if (containerRef.current) {
+      setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
+    }
+  }, []);
+
   React.useEffect(() => {
     if (containerRef.current) {
       setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
@@ -648,6 +660,15 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               </button>
             )}
           </div>
+
+          <button
+            onClick={handleResetDefault}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+            title="一鍵重置畫面視角並返回預設收合狀態"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>返回預設狀態</span>
+          </button>
         </div>
       </div>
 
@@ -671,6 +692,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       {/* ── Canvas (react-d3-tree) ── */}
       <div ref={containerRef} className="flex-1 overflow-hidden relative" onClick={() => setThumbnail(null)}>
         <D3Tree
+          key={treeKey}
           data={d3TreeData}
           orientation="horizontal"
           pathFunc={customStepPath}
@@ -682,7 +704,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           zoomable={false}
           enableLegacyTransitions={false}
           collapsible={true}
-          initialDepth={2}
+          initialDepth={1}
           pathClassFunc={() => 'mindmap-link'}
           svgClassName="mindmap-svg"
         />

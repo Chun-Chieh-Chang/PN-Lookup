@@ -997,7 +997,21 @@ pn-lookup/
 
 ### 矯正與預防措施 (CAPA)
 1. **目錄與規則整合**：整合 `.agents/AGENTS.md` agent 規則檔，強化防迎合討好與 5 人 AI 智囊團機制。
-2. **確效驗證**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+---
+
+## v3.8.2 — 功能升級：思維導圖預設 Layer-1 收合視角與一鍵返回預設狀態按鈕 (MindMap Initial Depth-1 View & One-Click Reset Default State)
+
+### 需求內容
+1. 調整思維導圖開啟時的預設展算狀態：僅展開根節點，三個 Level-1 分類卡片（廠內品號編碼介紹、客戶品號編碼介紹、待人工分類）呈預設收合狀態。
+2. 頂部工具列新增「一鍵返回預設狀態」按鈕，方便隨時歸位視角與收合狀態。
+
+### 矯正與預防措施 (CAPA)
+1. **預設深度設為 `initialDepth={1}`**：`ProductMindMapModal.tsx` 設定 `<D3Tree initialDepth={1} />`，確保初次開啟即呈現層級一卡片收合狀態。
+2. **新增 `handleResetDefault` 與 `treeKey` 重新掛載機制**：點擊「返回預設狀態」按鈕時，自動重置視角平移向量 (`treeTranslate`)、清空搜尋關鍵字、關閉縮圖彈窗，並透過 `treeKey` 觸發 D3 樹重新重置回 Layer-1 收合狀態。
+3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
 
 ---
 
