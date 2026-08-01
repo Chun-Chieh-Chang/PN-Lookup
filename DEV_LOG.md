@@ -1066,6 +1066,27 @@ pn-lookup/
    * 全樹 D3 節點數大幅縮減為極簡 15 個分類節點，畫布高度縮小為近千像素，拖曳極速順暢！
 3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.8.5 — 預設狀態修復：思維導圖 Level 1 節點統一預設收合修復 (MindMap Level 1 Collapsing & Spacing Alignment Fix)
+
+### 需求內容
+修復思維導圖開啟時，第一層（Level 1）的「待人工分類」未如同「廠內品號」與「客戶品號」一樣保持預設收合，而是直接在 Level 1 展開高達 300px 的卷軸卡片、導致預設畫面不對稱且擋住下方卡片的問題。
+
+### 根因分析 (RCA)
+在 `react-d3-tree` 中，`initialDepth={1}` 的折疊機制只對**擁有子節點 (`children.length > 0`) 的節點生效**。
+過往「待人工分類」作為 Level 1 節點，其 `children` 為空陣列 `[]`（直接掛載品號陣列）。`react-d3-tree` 判定其為 Leaf Node（無子可折疊），因此在初始渲染時強制展開品號卡片，破壞了原本預設狀態三項 Level 1 齊平收合的畫面平衡。
+
+### 矯正與預防措施 (CAPA)
+1. **建立 Level 2 待對應品號清單封裝節點 (`unclassified-list`)**：
+   重構 [ProductMindMapModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductMindMapModal.tsx)。將「待人工分類」包裹 Level 2 子節點「待對應品號清單」，使三個 Level 1 節點 (`廠內品號`, `客戶品號`, `待人工分類`) 均具備 `children`！
+2. **完全對齊預設狀態 (100% Alignment with Default View)**：
+   * 開啟 Modal 時，三個 Level 1 節點 100% 統一呈收合狀態（顯示 `>` 箭頭），畫面簡潔齊整！
+   * 點擊「待人工分類」展開後，才進入 Level 2 顯示「待對應品號清單」卷軸卡片。
+   * 將 `D3Tree` 的 `nodeSize` 與 `separation` 調校為垂直與水平合理的留白比例，確保展開後卡片不重疊。
+3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 

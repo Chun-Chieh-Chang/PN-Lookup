@@ -228,7 +228,9 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
       custLeaf('biometrix','Biometrix', '購買 Set MDXE-093-01，依標準製作標籤包裝', 'customer_biometrix'),
       n('vivus',    'Vivus (動物使用)', '廠內品號下單 MDXE-XXX，Animalcare 品號出貨', PALETTE.customerOther, 2, [], buckets.get('customer_vivus')!, 'customer_vivus'),
     ], []),
-    n('unclassified', '待人工分類', `${unclassParts.length} 件品號等待對應`, PALETTE.unclassified, 1, [], unclassParts, 'unclassified'),
+    n('unclassified', '待人工分類', `${unclassParts.length} 件品號等待對應`, PALETTE.unclassified, 1, [
+      n('unclassified-list', '待對應品號清單', `${unclassParts.length} 件待對應品號`, PALETTE.unclassified, 2, [], unclassParts, 'unclassified'),
+    ], []),
   ], []);
 }
 
@@ -791,8 +793,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           data={d3TreeData}
           orientation="horizontal"
           pathFunc={customStepPath}
-          separation={{ siblings: 1.2, nonSiblings: 1.6 }}
-          nodeSize={{ x: 360, y: 80 }}
+          separation={{ siblings: 1.5, nonSiblings: 2.0 }}
+          nodeSize={{ x: 360, y: 130 }}
           renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
           translate={treeTranslate}
           zoom={1}
