@@ -942,3 +942,62 @@ pn-lookup/
 - Vite 6 + Tailwind CSS 4
 - Lucide React (icons)
 - SheetJS (xlsx) for Excel 處理
+
+---
+
+## v2.8.1 — 思維導圖 (MindMap) 連接線起點修正與幾何對齊
+
+### 需求內容
+修復思維導圖 (`ProductMindMapModal.tsx`) 在節點展開/擴展時，延伸出來的連接線 (Connection Link) 起點不正確、由圖塊中間穿越過去的視覺 Bug。
+
+### 根因分析 (RCA)
+1. **SVG 座標系與 HTML 寬度不對齊**：`react-d3-tree` 在 `orientation="horizontal"` 時，以 `source.y` 為 SVG 的橫軸原點。自訂 `<foreignObject>` 自 `x={0}` 開始渲染，導致卡片由 `source.y` 向右延伸 168px ~ 288px。
+2. **預設 Step Path 起點計算錯誤**：`pathFunc="step"` 預設從 `(source.y, source.x)` 出發，即卡片**左邊界**。當線條連向位於右側的子節點時，起點橫跨整張卡片內部，造成線條從圖塊中間穿過的缺陷。
+
+### 矯正與預防措施 (CAPA)
+1. **精準卡片寬度估算**：實作 `getNodeCardWidth(mmNode)` 依據節點深度與類型精準導出寬度 (288px / 240px / 204px / 180px / 168px)，並將 `<foreignObject>` 與內層 `div` 的 `width` 嚴格約束為 `cardW`。
+2. **自訂 `customStepPath` 繪製引擎**：計算出發點 X 座標為 `startX = source.y + sourceWidth`（父卡片右緣），到達點為 `endX = target.y`（子卡片左緣），垂直折轉點取 `midX = startX + (endX - startX) / 2`。
+3. **固定基準縮放與禁用滾輪縮放 (不縮放、只平移)**：設置 `zoom={1}` 保持 1.0 基準大小（解決先前被 `zoom={0.75}` 縮小 25% 及字體過小問題），並設置 `zoomable={false}` 鎖定 `.scaleExtent([1, 1])` 禁用滾輪/手勢縮放，完整保留滑鼠拖曳平移 (Pan) 功能。
+4. **驗證確效**：完成 `npx tsc --noEmit` 零錯誤與 `npm run build` 打包驗證。
+
+---
+
+## v3.7.9 — Master Table 建置腳本與災難復原轉譯器 (Automated Master Table Seed Builder & Seamless Disaster Recovery)
+
+### 需求內容
+採納 Kiro 的審查意見，補齊從 `rawdata/master_table_unified.json` 轉譯生成符合系統介面 `{ parts, bom }` 結構 Master Table 的建置腳本，並修復 `server.js` 災難復原時因格式不符導致靜默覆寫為空矩陣的嚴重漏洞。
+
+### 根因分析 (RCA)
+1. **結構不匹配**：`rawdata/master_table_unified.json` 為 `{ meta, customerParts, internalParts, customerPartNumbers, bomHierarchy }`，而 `server.js` 及前端期望的 `pn-lookup-master.json` 格式為 `{ parts: [...], bom: { children: {}, parents: {} } }`。
+2. **災難復原盲區**：舊版 `server.js` 呼叫 `loadMaster()` 若遇到 `pn-lookup-master.json` 遺失，會直接將 `master_table_unified.json` 送入 `saveMaster()`，因找不到 `parts` 陣列而寫入空 `parts: []` 與空 `bom`，導致復原機制失敗。
+
+### 矯正與預防措施 (CAPA)
+1. **新增獨立轉譯腳本 `scripts/buildMaster.js`**：
+   - 包含 `convertUnifiedSeedToMaster(seedData)` 轉換引擎。
+   - 解析 `internalParts`, `customerParts`, `customerPartNumbers` 並去重構建出符合型別規範之 `parts` 陣列。
+   - 解析 `bomHierarchy` (SA/SB/SC/SD) 構建出雙向展算的 `children` 與 `parents` BOM 關聯表。
+   - 提供 `node scripts/buildMaster.js` 獨立 CLI 命令，可隨時從原始種子檔一鍵重構出 `data/pn-lookup-master.json`。
+2. **無縫整合 `server.js` 災難自修復**：
+   - `server.js` 導入 `convertUnifiedSeedToMaster`。
+   - 當庫存主檔遺失時，自動對 `RAW_SEED_PATH` 進行現場動態轉譯，徹底解決災難復原覆寫為空的危機。
+3. **驗證確效**：
+   - 執行 `node scripts/buildMaster.js` 成功產生 565 筆品號與 181 組雙向 BOM 階層。
+   - `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 打包 100% 成功。
+
+---
+
+## v3.8.0 — 專案代碼與檔案 MECE 全面優化、元規則整合與發行基準 (Comprehensive Project Code & File Optimization, Meta-Rules Integration & Release Baseline)
+
+### 需求內容
+執行專案全域代碼與檔案優化：
+1. **全面盤點與清理**：清理冗餘/過時設定，規範目錄結構，確認零副作用與零功能退化。
+2. **開發文檔全域同步**：全面更新 `README.md` 目錄樹與元件清單，同步 `.agents/AGENTS.md`（包含「第一性原理與防迎合討好元規則」、「反向提問」與「AI 智囊團審查機制」）。
+3. **MECE 原則重構**：優化 `scripts/buildMaster.js`、`server.js` 與 `ProductMindMapModal.tsx` 之結構。
+4. **確立發行基準**：完成 TypeScript 類型確效與 Vite 打包驗證。
+
+### 矯正與預防措施 (CAPA)
+1. **目錄與規則整合**：整合 `.agents/AGENTS.md` agent 規則檔，強化防迎合討好與 5 人 AI 智囊團機制。
+2. **確效驗證**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
+

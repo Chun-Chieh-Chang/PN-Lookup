@@ -15,7 +15,7 @@ import {
   ExternalLink,
   Sparkles,
 } from 'lucide-react';
-import { Tree as D3Tree } from 'react-d3-tree';
+import { Tree as D3Tree, TreeLinkDatum } from 'react-d3-tree';
 import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from '../utils/mindmapClassifier';
 import { ImageLibrary } from '../utils/imageLibrary';
@@ -376,6 +376,17 @@ function toD3Tree(node: MindMapNode): D3TreeNode {
   };
 }
 
+function getNodeCardWidth(mmNode: MindMapNode): number {
+  if (mmNode.isPartNode) return CARD.partMinW;
+  return mmNode.depth === 0
+    ? CARD.rootMinW
+    : mmNode.depth === 1
+    ? CARD.d1MinW
+    : mmNode.depth === 2
+    ? CARD.d2MinW
+    : CARD.d3MinW;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Main modal
 // ────────────────────────────────────────────────────────────────────────────
@@ -437,6 +448,23 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     onClose();
   };
 
+  // 自訂連接線繪製：讓線條由父卡片右緣 (source.y + sourceWidth) 延伸至子卡片左緣 (target.y)
+  const customStepPath = useCallback((linkDatum: TreeLinkDatum) => {
+    const { source, target } = linkDatum;
+    const sourceNode = (source.data as unknown as D3TreeNode)._mmNode;
+    const sourceWidth = getNodeCardWidth(sourceNode);
+
+    // react-d3-tree 在 orientation="horizontal" 下：SVG X 軸為 y，SVG Y 軸為 x
+    const startX = source.y + sourceWidth;
+    const startY = source.x;
+    const endX = target.y;
+    const endY = target.x;
+
+    const midX = startX + (endX - startX) / 2;
+
+    return `M${startX},${startY} H${midX} V${endY} H${endX}`;
+  }, []);
+
   // react-d3-tree renderCustomNodeElement：每個節點渲染成自訂卡片
   const renderNode = ({ nodeDatum, toggleNode }: {
     nodeDatum: D3TreeNode & { __rd3t: { collapsed: boolean } };
@@ -479,7 +507,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               opacity: isDimmed ? 0.3 : 1,
               outline: isHighlighted ? '2px solid #FBBF24' : 'none',
               outlineOffset: 2,
-              minWidth: CARD.partMinW, maxWidth: CARD.maxW,
+              width: CARD.partMinW, minWidth: CARD.partMinW, maxWidth: CARD.maxW,
+              boxSizing: 'border-box',
               transition: 'background 0.15s, border-color 0.15s',
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#EEF2FF'; (e.currentTarget as HTMLDivElement).style.borderColor = '#818CF8'; }}
@@ -505,7 +534,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     const isRoot = mm.depth === 0;
     const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
     const subFontSize = isRoot ? 10 : 9;
-    const minW = isRoot ? CARD.rootMinW : mm.depth === 1 ? CARD.d1MinW : mm.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
+    const cardW = getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 7;
     // 節點高度估算（用於 foreignObject 定位）
@@ -513,7 +542,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
     return (
       <foreignObject
-        width={Math.min(minW + 80, CARD.maxW)}
+        width={cardW}
         height={nodeH + 8}
         x={0}
         y={-(nodeH + 8) / 2}
@@ -532,7 +561,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
             opacity: isDimmed ? 0.3 : 1,
             outline: isHighlighted ? '2px solid #FBBF24' : 'none',
             outlineOffset: 2,
-            minWidth: minW, maxWidth: CARD.maxW,
+            width: cardW, minWidth: cardW, maxWidth: CARD.maxW,
+            boxSizing: 'border-box',
             transition: 'filter 0.15s',
             userSelect: 'none',
           }}
@@ -625,7 +655,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
         <div className="flex items-center gap-4">
           <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span>🖱️ 滾輪縮放 · 拖曳移動 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
+          <span>🖱️ 拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
           {searchQuery && highlightIds.size > 0 && (
             <span className="text-amber-600 font-semibold">找到 {highlightIds.size} 個匹配節點</span>
           )}
@@ -643,13 +673,13 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         <D3Tree
           data={d3TreeData}
           orientation="horizontal"
-          pathFunc="step"
+          pathFunc={customStepPath}
           separation={{ siblings: 1.2, nonSiblings: 1.6 }}
           nodeSize={{ x: 360, y: 80 }}
           renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
           translate={treeTranslate}
-          zoom={0.75}
-          scaleExtent={{ min: 0.2, max: 2 }}
+          zoom={1}
+          zoomable={false}
           enableLegacyTransitions={false}
           collapsible={true}
           initialDepth={2}

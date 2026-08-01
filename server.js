@@ -2,6 +2,7 @@ import express from 'express';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { convertUnifiedSeedToMaster } from './scripts/buildMaster.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
@@ -33,12 +34,13 @@ function loadMaster() {
         /* ignore fallback error */
       }
     }
-    // 2. 若資料庫檔案全數遺失，自動從 rawdata 統一種子檔災難復原
+    // 2. 若資料庫檔案全數遺失，自動從 rawdata 統一種子檔轉譯並做災難復原
     if (existsSync(RAW_SEED_PATH)) {
       try {
         const seedData = JSON.parse(readFileSync(RAW_SEED_PATH, 'utf-8'));
-        saveMaster(seedData);
-        return seedData;
+        const master = (seedData.parts && seedData.bom) ? seedData : convertUnifiedSeedToMaster(seedData);
+        saveMaster(master);
+        return master;
       } catch {
         /* ignore seed error */
       }

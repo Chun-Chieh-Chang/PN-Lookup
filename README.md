@@ -42,35 +42,41 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 
 ```text
 PN-Lookup/
+├── .agents/                 # AI Agent 專案全域行為規則 (AGENTS.md)
 ├── data/                    # [隱私隔離] 本地單一真實資料庫 (pn-lookup-master.json)
 ├── rawdata/                 # [隱私隔離] 原始 Excel 與 1,527 份工程圖檔
+├── scripts/                 # 資料處理與建置腳本 (buildMaster.js)
 ├── src/                     # 前端應用程式原始碼
-├── components/          # 視覺 UI 元件 (MECE 分類)
-│   ├── Header.tsx           # 頂部導覽與全域功能按鈕
-│   ├── SearchControls.tsx   # 搜尋列與進階排序控制
-│   ├── PartsTable.tsx       # 品號清單表格與 Morandi 標籤
-│   ├── PartDetailModal.tsx  # 品號詳情與 BOM 階層雙向展開
-│   ├── AdminPanel.tsx       # 後台管理與 BOM 維護面板
-│   ├── OrphanImagesModal.tsx# 未對應孤兒圖檔管理中心
-│   ├── ExportImportModal.tsx# 資料備份與多格式匯出匯入
-│   ├── ImageBindModal.tsx   # 手動圖檔對應綁定彈窗
-│   ├── ImageFolderModal.tsx # 本地圖檔資料夾選擇彈窗
-│   ├── AddEditModal.tsx     # 品號資料新增/修改彈窗
-│   ├── BatchSearchModal.tsx # 批次品號搜尋與比對對照
-│   └── StatsBar.tsx         # 統計指標列 (Morandi 微卡片)
-├── utils/               # 邏輯與引擎工具庫
-│   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
-│   ├── imageResolver.ts    # 檔名/綁定/OCR 三階解析器
-│   ├── bomEngine.ts        # BOM 階層雙向推導引擎
-│   ├── excelExport.ts      # Excel/CSV 多工作表匯出引擎
-│   ├── ocr.ts              # Tesseract.js / pdf.js 本地 OCR 辨識引擎
-│   ├── assemblyEnglishMap.json # 132 筆組件英文品名對照
-│   └── ...
-├── App.tsx              # 主應用程式入口與狀態控制
-└── index.css            # Taste-Skill 設計系統樣式與字型
+│   ├── components/          # 視覺 UI 元件 (MECE 分類)
+│   │   ├── Header.tsx           # 頂部導覽與全域功能按鈕
+│   │   ├── SearchControls.tsx   # 搜尋列與欄位篩選控制
+│   │   ├── PartsTable.tsx       # 品號清單表格與 Morandi 標籤
+│   │   ├── PartDetailModal.tsx  # 品號詳情與 BOM 階層雙向展開
+│   │   ├── AdminPanel.tsx       # 後台管理與 BOM 維護面板
+│   │   ├── ProductMindMapModal.tsx # 產品分類思維導圖與樹狀展開 (react-d3-tree)
+│   │   ├── ProductGraphModal.tsx# 2D/3D 產品知識圖譜矩陣 (force-graph)
+│   │   ├── OrphanImagesModal.tsx# 未對應孤兒圖檔管理中心
+│   │   ├── ExportImportModal.tsx# 資料備份與多格式匯出匯入
+│   │   ├── ImageBindModal.tsx   # 手動圖檔對應綁定彈窗
+│   │   ├── ImageFolderModal.tsx # 本地圖檔資料夾選擇彈窗
+│   │   ├── AddEditModal.tsx     # 品號資料新增/修改彈窗
+│   │   ├── BatchSearchModal.tsx # 批次品號搜尋與比對對照
+│   │   └── StatsBar.tsx         # 統計指標列 (Morandi 微卡片)
+│   ├── utils/               # 邏輯與引擎工具庫
+│   │   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
+│   │   ├── imageResolver.ts    # 檔名/綁定/OCR 三階解析器
+│   │   ├── bomEngine.ts        # BOM 階層雙向推導引擎
+│   │   ├── excelExport.ts      # Excel/CSV 多工作表匯出引擎
+│   │   ├── mindmapClassifier.ts# 思維導圖產品分類引擎
+│   │   ├── productKnowledgeGraph.ts # 產品六維知識圖譜矩陣引擎
+│   │   ├── ocr.ts              # Tesseract.js / pdf.js 本地 OCR 辨識引擎
+│   │   ├── assemblyEnglishMap.json # 132 筆組件英文品名對照
+│   │   └── ...
+│   ├── App.tsx              # 主應用程式入口與狀態控制
+│   └── index.css            # Taste-Skill 設計系統樣式與字型
 ├── DEV_LOG.md               # 開發日誌與版本變更歷史 (RCA & CAPA)
 ├── index.html               # Web 頁面載入點 (Google Fonts)
-├── server.js                # 本地 Express REST API 伺服器
+├── server.js                # 本地 Express REST API 伺服器 (包含無縫災難自修復轉譯)
 └── vite.config.ts           # Vite 建構設定檔
 ```
 

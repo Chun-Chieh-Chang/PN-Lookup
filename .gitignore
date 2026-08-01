@@ -16,3 +16,4 @@ ref/
 *.xlsx
 *.csv
 *.ffs_db
+.vscode/
