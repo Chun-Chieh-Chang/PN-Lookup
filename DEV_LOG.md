@@ -1,5 +1,22 @@
 # PN-Lookup 開發日誌
 
+## v3.9.0 — 品號多圖檔超連結：支援多圖檔對應與多選擇下拉選單 (Multi-Image Resolution & Popover Dropdown)
+
+### 需求內容與作業
+- **多圖檔對應解析器 (`resolveAllImages`)**：
+  - 在 [imageLibrary.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageLibrary.ts) 擴充 `matchAll()` 演算法，支援找出檔名全數命中之圖檔列表。
+  - 在 [imageResolver.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageResolver.ts) 實現 `resolveAllImages()`，全量聚合檔名比對、手動綁定與 OCR 內文命中之圖檔並去除重複。
+- **多選擇超連結下拉選單 (Multi-Image Popover Dropdown)**：
+  - 在 [PartsTable.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/PartsTable.tsx) 中：
+    - **單張圖檔**：保持經典藍色 `[開啟圖檔]` 快捷按鈕。
+    - **多張圖檔 (2張以上)**：自動轉換為 **`[開啟圖檔 (N張) ▾]`** 下拉選單，可檢視各圖檔名稱與命中依據 (檔名比對 / 手動綁定 / OCR 內容)。
+    - **一鍵全開 (`⚡ 一鍵開啟全部`)**：提供一次性在獨立分頁開啟全數關聯圖檔之快捷按鈕。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包成功通過。
+
+---
+
 ## v3.8.0 — 孤兒圖檔清理機制：導入「標記排除 (重複/別稱圖檔)」與數據清理功能 (Orphan Image Dismissal & Duplicate Exclusion)
 
 ### 需求內容與作業

@@ -46,7 +46,58 @@ export function saveDismissedOrphans(dismissed: Set<string>): void {
   } catch { /* ignore */ }
 }
 
-// ---------- 解析：檔名 → 手動綁定 → OCR 內容 ----------
+// ---------- 解析：多圖檔與單圖檔檔名 → 手動綁定 → OCR 內容 ----------
+export function resolveAllImages(
+  partNo: string,
+  alternates: string[] | undefined,
+  lib: ImageLibrary | null,
+  bindings: Record<string, string>,
+  ocrIndex: Map<string, string>,
+): ImageResolution[] {
+  if (!lib) return [];
+  const aliases = alternates ?? [];
+  const allSearchKeys = [partNo, ...aliases];
+  const results: ImageResolution[] = [];
+  const seenFiles = new Set<string>();
+
+  // 1. 檔名比對 (找出所有命中的圖檔檔名)
+  const matchedNames = lib.matchAll ? lib.matchAll(partNo, aliases) : [lib.match(partNo, aliases)].filter(Boolean) as string[];
+  for (const fname of matchedNames) {
+    if (fname && !seenFiles.has(fname)) {
+      seenFiles.add(fname);
+      results.push({ url: lib.urlForFile(fname) as string, name: fname, via: 'file' });
+    }
+  }
+
+  // 2. 手動綁定 (包含主品號與所有別稱的綁定)
+  for (const pn of allSearchKeys) {
+    const bound = bindings[pn];
+    if (bound && lib.fileNames.includes(bound) && !seenFiles.has(bound)) {
+      seenFiles.add(bound);
+      results.push({ url: lib.urlForFile(bound) as string, name: bound, via: 'binding' });
+    }
+  }
+
+  // 3. OCR 內容辨識命中
+  if (ocrIndex.size > 0) {
+    const targets = allSearchKeys.map((p) => normalize(p)).filter(Boolean);
+    if (targets.length > 0) {
+      for (const fname of lib.fileNames) {
+        if (seenFiles.has(fname)) continue;
+        const text = ocrIndex.get(fname);
+        if (!text) continue;
+        const norm = normalize(text);
+        if (targets.some((t) => norm.includes(t))) {
+          seenFiles.add(fname);
+          results.push({ url: lib.urlForFile(fname) as string, name: fname, via: 'ocr' });
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
 export function resolveImage(
   partNo: string,
   alternates: string[] | undefined,
@@ -54,37 +105,8 @@ export function resolveImage(
   bindings: Record<string, string>,
   ocrIndex: Map<string, string>,
 ): ImageResolution | null {
-  if (!lib) return null;
-  const aliases = alternates ?? [];
-
-  // 1. 檔名比對
-  const fname = lib.match(partNo, aliases);
-  if (fname) return { url: lib.urlForFile(fname) as string, name: fname, via: 'file' };
-
-  // 2. 手動綁定
-  for (const pn of [partNo, ...aliases]) {
-    const bound = bindings[pn];
-    if (bound && lib.fileNames.includes(bound)) {
-      return { url: lib.urlForFile(bound) as string, name: bound, via: 'binding' };
-    }
-  }
-
-  // 3. OCR 內容（需已辨識完畢；部分檔案未辨識時會漏，背景掃描完成後自動補上）
-  if (ocrIndex.size > 0) {
-    const targets = [partNo, ...aliases].map((p) => normalize(p)).filter(Boolean);
-    if (targets.length > 0) {
-      for (const fname of lib.fileNames) {
-        const text = ocrIndex.get(fname);
-        if (!text) continue;
-        const norm = normalize(text);
-        if (targets.some((t) => norm.includes(t))) {
-          return { url: lib.urlForFile(fname) as string, name: fname, via: 'ocr' };
-        }
-      }
-    }
-  }
-
-  return null;
+  const all = resolveAllImages(partNo, alternates, lib, bindings, ocrIndex);
+  return all.length > 0 ? all[0] : null;
 }
 
 export function getPartNoAliases(item: Pick<PartItem, 'partNo' | 'alternates'>): string[] {

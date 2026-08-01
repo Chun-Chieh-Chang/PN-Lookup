@@ -7,8 +7,10 @@ export interface ImageLibrary {
   count: number;
   fileNames: string[];
   fileFor(fileName: string): File | null;
-  /** 檔名比對：回傳命中的檔名 */
+  /** 檔名比對：回傳首個命中的檔名 */
   match(partNo: string, aliases?: string[]): string | null;
+  /** 檔名比對：回傳所有命中的檔名列表 */
+  matchAll(partNo: string, aliases?: string[]): string[];
   /** 依檔名取得 object URL（快取） */
   urlForFile(fileName: string): string | null;
   urlFor(partNo: string, aliases?: string[]): string | null;
@@ -80,6 +82,39 @@ function findForCandidate(files: File[], candidate: string): File | null {
   return null;
 }
 
+function findAllForCandidate(files: File[], candidate: string): File[] {
+  const pn = candidate.trim().toUpperCase();
+  if (!pn) return [];
+  const pnNorm = normalize(pn);
+  if (pnNorm.length < 3) return [];
+  const canPrefix = pnNorm.length >= 4;
+  const result: File[] = [];
+
+  for (const f of files) {
+    const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
+    const baseNorm = normalize(base);
+
+    if (base === pn || baseNorm === pnNorm) {
+      result.push(f);
+      continue;
+    }
+    if (canPrefix && (baseNorm.includes(pnNorm) || baseNorm.startsWith(pnNorm))) {
+      result.push(f);
+      continue;
+    }
+
+    const segs = base.split(/[^A-Z0-9]+/i);
+    for (const s of segs) {
+      const sNorm = normalize(s);
+      if (sNorm === pnNorm || (canPrefix && sNorm.startsWith(pnNorm))) {
+        result.push(f);
+        break;
+      }
+    }
+  }
+  return result;
+}
+
 // 依品號及其替代品號逐一比對
 function matchFile(files: File[], partNo: string, aliases?: string[]): File | null {
   for (const c of [partNo, ...(aliases ?? [])]) {
@@ -87,6 +122,17 @@ function matchFile(files: File[], partNo: string, aliases?: string[]): File | nu
     if (hit) return hit;
   }
   return null;
+}
+
+function matchAllFiles(files: File[], partNo: string, aliases?: string[]): File[] {
+  const fileMap = new Map<string, File>();
+  for (const c of [partNo, ...(aliases ?? [])]) {
+    const hits = findAllForCandidate(files, c);
+    for (const h of hits) {
+      fileMap.set(h.name, h);
+    }
+  }
+  return Array.from(fileMap.values());
 }
 
 function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
@@ -105,6 +151,10 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
     match(partNo: string, aliases?: string[]): string | null {
       const hit = matchFile(files, partNo, aliases);
       return hit ? hit.name : null;
+    },
+    matchAll(partNo: string, aliases?: string[]): string[] {
+      const hits = matchAllFiles(files, partNo, aliases);
+      return hits.map((f) => f.name);
     },
     urlForFile(fileName: string): string | null {
       if (urlCache.has(fileName)) return urlCache.get(fileName) ?? null;

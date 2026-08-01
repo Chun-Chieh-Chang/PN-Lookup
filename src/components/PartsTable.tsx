@@ -12,11 +12,13 @@ import {
   Boxes,
   Component,
   Image as ImageIcon,
+  ExternalLink,
+  ChevronDown,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType } from '../utils/bomEngine';
 import { ImageLibrary } from '../utils/imageLibrary';
-import { resolveImage, ImageResolution } from '../utils/imageResolver';
+import { resolveAllImages, ImageResolution } from '../utils/imageResolver';
 
 interface PartsTableProps {
   items: PartItem[];
@@ -55,18 +57,21 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const [pageSize, setPageSize] = useState(25);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  const [openMultiId, setOpenMultiId] = useState<string | null>(null);
+
   // 每列圖檔解析快取（imageLib/bindings/ocrIndex 變動時清除）
-  const resolveCache = useRef(new Map<string, ImageResolution | null>());
+  const resolveCache = useRef(new Map<string, ImageResolution[]>());
   const resolveCacheKey = useRef('');
-  const currentCacheKey = `${imageLib?.folderName ?? ''}|${JSON.stringify(bindings)}|${ocrIndex.size}`;
+  const currentCacheKey = `${imageLib?.folderName ?? ''}|${JSON.stringify(bindings)}|${ocrIndex?.size ?? 0}`;
   if (resolveCacheKey.current !== currentCacheKey) {
     resolveCache.current.clear();
     resolveCacheKey.current = currentCacheKey;
   }
-  const resolveRow = (item: PartItem): ImageResolution | null => {
+
+  const resolveRowAll = (item: PartItem): ImageResolution[] => {
     const key = `${item.partNo}\u0000${(item.alternates ?? []).join('\u0000')}`;
-    if (resolveCache.current.has(key)) return resolveCache.current.get(key) ?? null;
-    const res = resolveImage(item.partNo, item.alternates, imageLib ?? null, bindings, ocrIndex);
+    if (resolveCache.current.has(key)) return resolveCache.current.get(key) ?? [];
+    const res = resolveAllImages(item.partNo, item.alternates, imageLib ?? null, bindings, ocrIndex || new Map());
     resolveCache.current.set(key, res);
     return res;
   };
@@ -98,7 +103,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const validPage = Math.min(currentPage, totalPages);
   const startIndex = (validPage - 1) * pageSize;
   const paginatedItems = sortedItems.slice(startIndex, startIndex + pageSize);
-  const resolvedCount = paginatedItems.filter((i) => resolveRow(i)).length;
+  const resolvedCount = paginatedItems.filter((i) => resolveRowAll(i).length > 0).length;
 
   // Copy helpers
   const openImage = (url: string) => {
@@ -305,8 +310,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               const isCopiedFull = copiedFullId === item.id;
               const type = getItemType(item);
               const isAssembly = type === 'assembly';
-              const imageRes = resolveRow(item);
-              const imageUrl = imageRes ? imageRes.url : null;
+              const allImages = resolveRowAll(item);
+              const hasImages = allImages.length > 0;
+              const firstImage = hasImages ? allImages[0] : null;
 
               return (
                 <tr
@@ -343,11 +349,21 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center space-x-2">
                         <span
-                          onClick={imageUrl ? () => openImage(imageUrl) : undefined}
+                          onClick={
+                            firstImage
+                              ? () => openImage(firstImage.url)
+                              : undefined
+                          }
                           className={`text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200/80 font-bold ${
-                            imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:shadow-xs' : ''
+                            firstImage ? 'cursor-pointer hover:bg-teal-100 hover:shadow-xs' : ''
                           }`}
-                          title={imageUrl ? '點擊開啟圖檔' : undefined}
+                          title={
+                            allImages.length > 1
+                              ? `此品號包含 ${allImages.length} 張圖檔（點擊開啟首張）`
+                              : firstImage
+                              ? '點擊開啟圖檔'
+                              : undefined
+                          }
                         >
                           {highlightText(item.partNo, searchKeyword)}
                         </span>
@@ -362,11 +378,11 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         >
                           {isCopied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
-                        {imageUrl && (
+                        {firstImage && (
                           <button
-                            onClick={() => openImage(imageUrl)}
+                            onClick={() => openImage(firstImage.url)}
                             className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                            title="開啟圖檔"
+                            title={allImages.length > 1 ? `對應 ${allImages.length} 張圖檔（點擊開啟首張）` : '開啟圖檔'}
                           >
                             <ImageIcon className="w-3.5 h-3.5" />
                           </button>
@@ -436,15 +452,15 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                   {/* 圖檔連結 */}
                   <td className="p-3 py-3.5">
-                    {imageRes ? (
+                    {allImages.length === 1 ? (
                       <button
-                        onClick={() => openImage(imageUrl as string)}
+                        onClick={() => openImage(allImages[0].url)}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
                         title={
-                          `開啟圖檔：${item.partNo} → ${imageRes.name}\n` +
-                          (imageRes.via === 'file'
+                          `開啟圖檔：${item.partNo} → ${allImages[0].name}\n` +
+                          (allImages[0].via === 'file'
                             ? '（檔名比對命中）'
-                            : imageRes.via === 'binding'
+                            : allImages[0].via === 'binding'
                             ? '（手動綁定）'
                             : '（OCR 內容辨識命中）')
                         }
@@ -452,6 +468,64 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         <ImageIcon className="w-3.5 h-3.5" />
                         <span>開啟圖檔</span>
                       </button>
+                    ) : allImages.length > 1 ? (
+                      <div className="relative inline-block text-left">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMultiId(openMultiId === item.id ? null : item.id);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs"
+                          title={`此品號對應 ${allImages.length} 張圖檔，點擊展開選擇`}
+                        >
+                          <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>開啟圖檔 ({allImages.length}張)</span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openMultiId === item.id ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {openMultiId === item.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-40 py-2 text-xs"
+                          >
+                            <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                              <span className="font-bold text-gray-700">對應圖檔 ({allImages.length} 張)</span>
+                              <button
+                                onClick={() => {
+                                  allImages.forEach((img) => openImage(img.url));
+                                  setOpenMultiId(null);
+                                }}
+                                className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-[11px] cursor-pointer"
+                                title="在瀏覽器新分頁一次打開所有關聯圖檔"
+                              >
+                                ⚡ 一鍵開啟全部
+                              </button>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto divide-y divide-gray-100">
+                              {allImages.map((img, idx) => (
+                                <button
+                                  key={`${img.name}-${idx}`}
+                                  onClick={() => {
+                                    openImage(img.url);
+                                    setOpenMultiId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 flex items-center justify-between group transition-colors cursor-pointer"
+                                >
+                                  <div className="min-w-0 pr-2">
+                                    <p className="font-mono font-bold text-gray-800 group-hover:text-indigo-700 truncate" title={img.name}>
+                                      {img.name}
+                                    </p>
+                                    <span className="text-[10px] text-gray-400">
+                                      {img.via === 'file' ? '檔名比對命中' : img.via === 'binding' ? '手動綁定' : 'OCR 內容辨識'}
+                                    </span>
+                                  </div>
+                                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-600 shrink-0" />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex items-center space-x-1.5">
                         <span
