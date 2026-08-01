@@ -461,10 +461,6 @@ export default function App() {
         onKeywordChange={(kw) => setFilterState({...filterState, keyword: kw})}
         searchField={filterState.searchField}
         onSearchFieldChange={(field) => setFilterState({...filterState, searchField: field})}
-        sortField={filterState.sortField ?? 'partNo'}
-        onSortFieldChange={(field) => setFilterState({...filterState, sortField: field})}
-        sortOrder={filterState.sortOrder ?? 'asc'}
-        onSortOrderChange={(order) => setFilterState({...filterState, sortOrder: order})}
         filterCustomer={filterState.selectedCustomers[0] ?? null}
         onClearCustomerFilter={() => setFilterState({...filterState, selectedCustomers: []})}
       />

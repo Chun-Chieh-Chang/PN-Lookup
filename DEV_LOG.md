@@ -1,5 +1,17 @@
 # PN-Lookup 開發日誌
 
+## v3.7.5 — 介面極簡實用化重構：移除花俏折疊選單與多餘切換鈕，回歸工廠現場直覺極速檢索 (Zero-Fluff UI & Minimalist Search Controls)
+
+### 需求內容與作業
+- **第一性原理介面極簡化 (Minimalist Industrial UI)**：
+  - 響應使用者「介面不要用太多花俏功能」的反饋，全面去除冗餘的介面折疊按鈕與複雜切換器。
+  - 在 [SearchControls.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/SearchControls.tsx) 中移除 `SlidersHorizontal` 進階排序折疊選單，保留大字體清晰搜尋框、四項直覺欄位選擇標籤（全域/品號/品名/客戶）與鎖定客戶標籤。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 成功通過。
+
+---
+
 ## v3.7.4 — 排序邏輯簡化：取消「依序/倒序」切換，全系統一律統一採用「正序 (A➔Z / 數字正向)」排列 (Strict Ascending Sort Lock)
 
 ### 需求內容與作業
