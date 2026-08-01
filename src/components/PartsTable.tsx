@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Copy,
   Check,
@@ -58,6 +58,27 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [openMultiId, setOpenMultiId] = useState<string | null>(null);
+
+  // ── 懸停縮圖 popup ──────────────────────────────────────────────────────────
+  interface HoverThumb { url: string; name: string; x: number; y: number }
+  const [hoverThumb, setHoverThumb] = useState<HoverThumb | null>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleImageMouseEnter = useCallback((url: string, name: string, e: React.MouseEvent) => {
+    hoverTimerRef.current && clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => {
+      setHoverThumb({ url, name, x: e.clientX, y: e.clientY });
+    }, 120);
+  }, []);
+
+  const handleImageMouseMove = useCallback((e: React.MouseEvent) => {
+    setHoverThumb((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null);
+  }, []);
+
+  const handleImageMouseLeave = useCallback(() => {
+    hoverTimerRef.current && clearTimeout(hoverTimerRef.current);
+    setHoverThumb(null);
+  }, []);
 
   // 每列圖檔解析快取（imageLib/bindings/ocrIndex 變動時清除）
   const resolveCache = useRef(new Map<string, ImageResolution[]>());
@@ -165,6 +186,45 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 w-full flex-1 flex flex-col">
+
+      {/* ── 懸停縮圖 popup ── */}
+      {hoverThumb && (() => {
+        const isPdf = hoverThumb.name.toLowerCase().endsWith('.pdf');
+        const POPUP_W = 260;
+        const POPUP_H = 210;
+        const GAP = 14;
+        // 避免超出視窗右側與下方
+        const left = hoverThumb.x + GAP + POPUP_W > window.innerWidth
+          ? hoverThumb.x - POPUP_W - GAP
+          : hoverThumb.x + GAP;
+        const top  = Math.min(hoverThumb.y - 20, window.innerHeight - POPUP_H - 8);
+        return (
+          <div
+            style={{ position: 'fixed', left, top, width: POPUP_W, zIndex: 9999, pointerEvents: 'none' }}
+            className="rounded-xl border border-slate-300 bg-white shadow-2xl overflow-hidden"
+          >
+            <div className="bg-slate-700 px-3 py-1.5 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-mono font-bold text-white truncate">{hoverThumb.name}</span>
+            </div>
+            <div className="w-full bg-slate-100 flex items-center justify-center" style={{ height: POPUP_H - 32 }}>
+              {isPdf ? (
+                <iframe
+                  src={hoverThumb.url + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'}
+                  title={hoverThumb.name}
+                  className="w-full h-full border-0"
+                  style={{ pointerEvents: 'none' }}
+                />
+              ) : (
+                <img
+                  src={hoverThumb.url}
+                  alt={hoverThumb.name}
+                  className="max-w-full max-h-full object-contain p-2"
+                />
+              )}
+            </div>
+          </div>
+        );
+      })()}
       <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col flex-1">
         
         {/* Table Toolbar / Controls */}
@@ -455,6 +515,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     {allImages.length === 1 ? (
                       <button
                         onClick={() => openImage(allImages[0].url)}
+                        onMouseEnter={(e) => handleImageMouseEnter(allImages[0].url, allImages[0].name, e)}
+                        onMouseMove={handleImageMouseMove}
+                        onMouseLeave={handleImageMouseLeave}
                         className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
                         title={
                           `開啟圖檔：${item.partNo} → ${allImages[0].name}\n` +
@@ -509,6 +572,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                     openImage(img.url);
                                     setOpenMultiId(null);
                                   }}
+                                  onMouseEnter={(e) => handleImageMouseEnter(img.url, img.name, e)}
+                                  onMouseMove={handleImageMouseMove}
+                                  onMouseLeave={handleImageMouseLeave}
                                   className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 flex items-center justify-between group transition-colors cursor-pointer"
                                 >
                                   <div className="min-w-0 pr-2">
