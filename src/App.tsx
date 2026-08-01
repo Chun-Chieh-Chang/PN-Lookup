@@ -586,6 +586,9 @@ export default function App() {
         isOpen={isGraphModalOpen}
         onClose={() => setIsGraphModalOpen(false)}
         parts={parts}
+        imageLib={imageLib}
+        bindings={bindings}
+        ocrIndex={ocrIndex}
         onSelectPart={(pn) => {
           setFilterState((prev) => ({ ...prev, keyword: pn, searchField: 'partNo' }));
         }}

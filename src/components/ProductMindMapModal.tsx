@@ -17,33 +17,34 @@ import {
   Info,
   Image as ImageIcon,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from '../utils/mindmapClassifier';
-import { loadBindings } from '../utils/imageResolver';
+import { ImageLibrary } from '../utils/imageLibrary';
+import { resolveImage } from '../utils/imageResolver';
 
 // ────────────────────────────────────────────────────────────────────────────
-// Constants – 1.5× baseline vs v5.0.0
+// Constants – 1.5× baseline
 // ────────────────────────────────────────────────────────────────────────────
 
 const CARD = {
-  rootMinW:  360,   // 240 × 1.5
-  d1MinW:    300,   // 200 × 1.5
-  d2MinW:    255,   // 170 × 1.5
-  d3MinW:    225,   // 150 × 1.5
-  partMinW:  210,   // 品號葉子卡片寬度
-  maxW:      420,   // 280 × 1.5
+  rootMinW:  360,
+  d1MinW:    300,
+  d2MinW:    255,
+  d3MinW:    225,
+  partMinW:  210,
+  maxW:      420,
   rootPad:   '18px 24px',
   nodePad:   '12px 18px',
   leafPad:   '9px 15px',
   partPad:   '8px 12px',
 };
 
-// Connector geometry (px)
 const CONN = {
-  horizontalLen: 28,   // horizontal branch length
+  horizontalLen: 28,
   lineW: 2,
-  nodeHeaderH: 26,     // approximate half-height of a node header (for connector y-offset)
+  nodeHeaderH: 26,
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -61,7 +62,7 @@ interface MindMapNode {
   parts: PartItem[];
   category?: MindMapCategory;
   depth: number;
-  isPartNode?: boolean; // 標示為品號末端卡片
+  isPartNode?: boolean;
 }
 
 interface ThumbnailState {
@@ -69,6 +70,8 @@ interface ThumbnailState {
   partName: string;
   customer: string;
   imageUrl: string | null;
+  imageName: string | null;
+  via: 'file' | 'binding' | 'ocr' | null;
   anchorX: number;
   anchorY: number;
 }
@@ -77,6 +80,9 @@ interface ProductMindMapModalProps {
   isOpen: boolean;
   onClose: () => void;
   parts: PartItem[];
+  imageLib?: ImageLibrary | null;
+  bindings?: Record<string, string>;
+  ocrIndex?: Map<string, string>;
   onSelectPart?: (partNo: string) => void;
 }
 
@@ -95,12 +101,8 @@ const PALETTE = {
   customerBD:    { bg: '#1C3144', border: '#38BDF8', text: '#BAE6FD' },
   customerOther: { bg: '#1F2937', border: '#6B7280', text: '#D1D5DB' },
   unclassified:  { bg: '#2D2D2D', border: '#6B7280', text: '#9CA3AF' },
-  partNode:      { bg: '#0F172A', border: '#334155', text: '#38BDF8' }, // 品號節點特有顏色
+  partNode:      { bg: '#0F172A', border: '#334155', text: '#38BDF8' },
 };
-
-// ────────────────────────────────────────────────────────────────────────────
-// Helper: 建立品號末端葉子節點
-// ────────────────────────────────────────────────────────────────────────────
 
 function createPartLeafNodes(partsList: PartItem[], depth: number): MindMapNode[] {
   return partsList.map((part) => ({
@@ -116,10 +118,6 @@ function createPartLeafNodes(partsList: PartItem[], depth: number): MindMapNode[
     isPartNode: true,
   }));
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Tree builder: 將品號作為 MindMap 真正的子節點分支展開
-// ────────────────────────────────────────────────────────────────────────────
 
 function buildMindMapTree(parts: PartItem[]): MindMapNode {
   const buckets = new Map<MindMapCategory, PartItem[]>();
@@ -237,10 +235,6 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
   ], []);
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Search helpers
-// ────────────────────────────────────────────────────────────────────────────
-
 function collectMatchingIds(node: MindMapNode, query: string, ancestors: string[], result: Set<string>) {
   const q = query.toLowerCase();
   const selfMatch =
@@ -272,12 +266,14 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 
   const style: React.CSSProperties = {
     position: 'fixed',
-    left: Math.min(thumbnail.anchorX + 12, window.innerWidth - 250),
-    top:  Math.max(Math.min(thumbnail.anchorY - 60, window.innerHeight - 300), 12),
+    left: Math.min(thumbnail.anchorX + 12, window.innerWidth - 260),
+    top:  Math.max(Math.min(thumbnail.anchorY - 70, window.innerHeight - 340), 12),
     zIndex: 200,
-    width: 230,
+    width: 240,
     animation: 'fadeInScale 0.18s ease-out forwards',
   };
+
+  const viaBadge = thumbnail.via === 'file' ? '檔名比對' : thumbnail.via === 'binding' ? '手動綁定' : thumbnail.via === 'ocr' ? 'OCR辨識' : null;
 
   return (
     <>
@@ -289,9 +285,16 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
       `}</style>
       <div style={style} className="rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-800/60">
-          <span className="text-[12px] font-mono font-bold text-indigo-300 truncate flex-1 mr-2">{thumbnail.partNo}</span>
-          <div className="flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-800/80">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-[12px] font-mono font-bold text-indigo-300 truncate">{thumbnail.partNo}</span>
+            {viaBadge && (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                {viaBadge}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={onNavigate}
               title="跳轉至主頁查詢此品號 BOM"
@@ -310,19 +313,28 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
         </div>
 
         {/* Image area */}
-        <div className="w-full h-44 flex items-center justify-center bg-slate-950 relative overflow-hidden">
+        <div className="w-full h-48 flex items-center justify-center bg-slate-950 relative overflow-hidden">
           {hasImage ? (
-            <img
-              src={thumbnail.imageUrl!}
-              alt={thumbnail.partNo}
-              className="max-w-full max-h-full object-contain p-2"
-              onError={() => setImgError(true)}
-            />
+            <div className="relative w-full h-full p-2 flex items-center justify-center">
+              <img
+                src={thumbnail.imageUrl!}
+                alt={thumbnail.partNo}
+                className="max-w-full max-h-full object-contain"
+                onError={() => setImgError(true)}
+              />
+              {thumbnail.imageName && (
+                <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 truncate maxWidth-[200px]">
+                  {thumbnail.imageName}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col items-center gap-2 text-slate-600 px-4 text-center">
               <ImageIcon className="w-10 h-10 opacity-40 text-slate-500" />
-              <span className="text-[11px] text-slate-400 font-medium">尚無綁定圖檔</span>
-              <span className="text-[9.5px] text-slate-500 leading-tight">可至主頁管理員面板綁定檔案後於此處顯示縮圖</span>
+              <span className="text-[11px] text-slate-400 font-medium">尚無對應圖檔</span>
+              <span className="text-[9.5px] text-slate-500 leading-tight">
+                請在主系統點擊右上角「圖檔資料夾」選擇本機圖檔資料夾，或進行圖片手動綁定。
+              </span>
             </div>
           )}
         </div>
@@ -340,7 +352,7 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// MindMap node component  (1.5× sizing + proper L-connector + part leaf cards)
+// MindMap node component
 // ────────────────────────────────────────────────────────────────────────────
 
 interface NodeProps {
@@ -370,7 +382,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
     return <>{text.slice(0, idx)}<mark className="bg-amber-400/70 text-black rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</>;
   };
 
-  // 品號葉子卡片特別樣式處理
   if (node.isPartNode && node.parts.length > 0) {
     const part = node.parts[0];
     return (
@@ -383,7 +394,7 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
         `}
         style={{ minWidth: CARD.partMinW, maxWidth: CARD.maxW }}
         onClick={(e) => onShowThumbnail(part, e)}
-        title={`點擊查看 ${part.partNo} 縮圖與詳情`}
+        title={`點擊彈出 ${part.partNo} 縮圖`}
       >
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-mono font-bold text-sky-300 truncate group-hover:text-indigo-300 transition-colors">
@@ -400,7 +411,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
     );
   }
 
-  // 1.5× font sizes for Category Nodes
   const labelClass = isRoot
     ? 'text-lg font-bold leading-snug'
     : node.depth === 1 ? 'text-base font-bold leading-snug'
@@ -414,11 +424,7 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
 
   return (
     <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
-
-      {/* ── Node body column ── */}
       <div className="flex flex-col items-stretch" style={{ minWidth: minW }}>
-
-        {/* Node card */}
         <div
           className={`
             relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-xl
@@ -443,7 +449,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
               {node.sublabel}
             </div>
           )}
-          {/* Part count badge */}
           {totalParts > 0 && (
             <div
               className="absolute -top-2.5 -right-2.5 min-w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold shadow-lg"
@@ -455,7 +460,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
         </div>
       </div>
 
-      {/* ── Children with proper L-connectors ── */}
       {isExpanded && hasChildren && (() => {
         const childCount = node.children.length;
         return (
@@ -463,7 +467,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
             className="flex flex-col"
             style={{ marginLeft: CONN.horizontalLen + 8, position: 'relative' }}
           >
-            {/* Vertical spine: from first child midpoint to last child midpoint */}
             {childCount > 1 && (
               <div
                 style={{
@@ -484,7 +487,6 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
                 className="relative flex items-start"
                 style={{ marginBottom: idx < childCount - 1 ? 10 : 0 }}
               >
-                {/* Horizontal branch from spine to child */}
                 <div
                   style={{
                     position: 'absolute',
@@ -519,7 +521,7 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
 // ────────────────────────────────────────────────────────────────────────────
 
 export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
-  isOpen, onClose, parts, onSelectPart,
+  isOpen, onClose, parts, imageLib, bindings = {}, ocrIndex = new Map(), onSelectPart,
 }) => {
   const [searchQuery, setSearchQuery]     = useState('');
   const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set(['root', 'factory', 'customer', 'factory-part', 'icu', 'icu-bag', 'icu-vial']));
@@ -530,8 +532,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const lastPan                           = useRef<{ x: number; y: number } | null>(null);
   const containerRef                      = useRef<HTMLDivElement>(null);
 
-  const imageBindings = useMemo<Record<string, string>>(() => loadBindings(), []);
-  const mindMapTree   = useMemo(() => buildMindMapTree(parts), [parts]);
+  const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
 
   const [unclassifiedCount, classifiedCount] = useMemo(() => {
     let u = 0, c = 0;
@@ -566,19 +567,30 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   };
   const handleMouseUp = () => { setIsDragging(false); lastPan.current = null; };
 
+  // 核心解圖邏輯：使用整合的 resolveImage (檔名、手動綁定、OCR 內容)
   const handleShowThumbnail = useCallback((part: PartItem, e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const imageUrl = imageBindings[part.partNo] ?? null;
+    
+    const res = resolveImage(
+      part.partNo,
+      part.alternates,
+      imageLib ?? null,
+      bindings,
+      ocrIndex,
+    );
+
     setThumbnail({
       partNo: part.partNo,
       partName: part.name,
       customer: part.customer || '',
-      imageUrl,
+      imageUrl: res?.url ?? null,
+      imageName: res?.name ?? null,
+      via: res?.via ?? null,
       anchorX: rect.right,
       anchorY: rect.top + rect.height / 2,
     });
-  }, [imageBindings]);
+  }, [imageLib, bindings, ocrIndex]);
 
   const handleToggle = useCallback((id: string) => {
     setExpandedIds(prev => {
@@ -627,7 +639,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v5.2.0</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v5.3.0</span>
             </h2>
             <p className="text-[11px] text-slate-400">
               已分類 <span className="text-emerald-400 font-bold">{classifiedCount}</span> 件 ·
@@ -666,11 +678,19 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       </div>
 
       {/* ── Hint bar ── */}
-      <div className="px-5 py-1.5 bg-slate-900/60 border-b border-slate-800/60 flex items-center gap-4 text-[11px] text-slate-500 shrink-0">
-        <Info className="w-3 h-3 shrink-0" />
-        <span>🖱️ 左鍵拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖與跳轉 BOM</span>
-        {searchQuery && highlightIds.size > 0 && (
-          <span className="text-amber-400">找到 {highlightIds.size} 個匹配節點</span>
+      <div className="px-5 py-1.5 bg-slate-900/60 border-b border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+        <div className="flex items-center gap-4">
+          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <span>🖱️ 左鍵拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖與跳轉 BOM</span>
+          {searchQuery && highlightIds.size > 0 && (
+            <span className="text-amber-400 font-medium">找到 {highlightIds.size} 個匹配節點</span>
+          )}
+        </div>
+        {!imageLib && (
+          <div className="flex items-center gap-1.5 text-amber-400/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10.5px]">
+            <Sparkles className="w-3 h-3 shrink-0" />
+            <span>提示：請回主頁右上角「圖檔資料夾」載入本機圖片以顯示縮圖</span>
+          </div>
         )}
       </div>
 
