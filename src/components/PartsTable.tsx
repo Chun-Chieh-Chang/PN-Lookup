@@ -51,7 +51,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedFullId, setCopiedFullId] = useState<string | null>(null);
   const [sortField, setSortField] = useState<SortField>('partNo');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -72,14 +71,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
     return res;
   };
 
-  // Sorting
+  // Sorting — 一律採用「正序 (A➔Z / 數字正序)」
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
+    setSortField(field);
   };
 
   const sortedItems = [...items].sort((a, b) => {
@@ -96,8 +90,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
       valB = b[sortField] || '';
     }
 
-    const cmp = valA.localeCompare(valB, 'zh-Hant', { numeric: true, sensitivity: 'base' });
-    return sortOrder === 'asc' ? cmp : -cmp;
+    return valA.localeCompare(valB, 'zh-Hant', { numeric: true, sensitivity: 'base' });
   });
 
   // Pagination

@@ -1,5 +1,17 @@
 # PN-Lookup 開發日誌
 
+## v3.7.4 — 排序邏輯簡化：取消「依序/倒序」切換，全系統一律統一採用「正序 (A➔Z / 數字正向)」排列 (Strict Ascending Sort Lock)
+
+### 需求內容與作業
+- **排序邏輯簡化與 UI 簡潔化**：
+  - 移除 [SearchControls.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/SearchControls.tsx) 中「正序/倒序」切換按鈕，標籤說明更新為「正序排列 (A➔Z)」。
+  - 簡化 [PartsTable.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/PartsTable.tsx) 的表頭與欄位排序邏輯，移除 `sortOrder` 狀態，一律採用正向自然語言排序 `localeCompare(..., { numeric: true })`。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包測試 100% 通過。
+
+---
+
 ## v3.7.3 — 介面體驗優化：取消「舒適/緊湊」切換開關，全介面統一強制採用「舒適 (Morandi High-End Comfort)」版面內距 (UI Layout & Comfort Lock)
 
 ### 需求內容與作業

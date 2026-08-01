@@ -12,8 +12,8 @@ interface SearchControlsProps {
   onSearchFieldChange: (field: 'all' | 'partNo' | 'name' | 'customer') => void;
   sortField: string;
   onSortFieldChange: (field: string) => void;
-  sortOrder: 'asc' | 'desc';
-  onSortOrderChange: (order: 'asc' | 'desc') => void;
+  sortOrder?: 'asc' | 'desc';
+  onSortOrderChange?: (order: 'asc' | 'desc') => void;
   filterCustomer: string | null;
   onClearCustomerFilter: () => void;
 }
@@ -109,7 +109,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
 
           {/* Sort */}
           <div className="flex items-center space-x-3">
-            <span className="text-slate-500 font-semibold text-xs">依序排列:</span>
+            <span className="text-slate-500 font-semibold text-xs">正序排列 (A➔Z):</span>
             <div className="flex items-center bg-slate-100/90 rounded-lg p-1 border border-slate-200/80">
               {(['partNo', 'name', 'customer'] as const).map((field) => (
                 <button
@@ -117,7 +117,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
                   onClick={() => onSortFieldChange(field)}
                   className={`px-2.5 py-1 text-xs font-semibold rounded transition-all cursor-pointer ${
                     sortField === field
-                      ? 'bg-white text-indigo-700 shadow-xs border border-slate-200'
+                      ? 'bg-white text-indigo-700 shadow-xs border border-slate-200 font-bold'
                       : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
@@ -125,16 +125,6 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                sortOrder === 'asc'
-                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
-                  : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-              }`}
-            >
-              {sortOrder === 'asc' ? '正序 A➔Z ↑' : '倒序 Z➔A ↓'}
-            </button>
           </div>
 
           {/* Customer filter badge */}
