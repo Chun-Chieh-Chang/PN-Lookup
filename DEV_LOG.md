@@ -1028,6 +1028,25 @@ pn-lookup/
 1. **Hook 提至頂層 (Top-Level Hook Lift)**：將 `customStepPath` 的 `useCallback` 移至 `if (!isOpen) return null;` 之前，確保組件於任何條件渲染下均執行相同數量的 Hook。
 2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.8.3 — 演算法防禦修復：修復圖檔比對貪婪前綴比對缺陷（防止 B-003 誤吞 B-0030~B-0039 等 11 張圖檔） (Precise Boundary Image Matching Fix)
+
+### 需求內容
+排查並修復品號 `B-003` 異常對應到 11 張圖檔的嚴重大瑕疵。
+
+### 根因分析 (RCA)
+在 [imageLibrary.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageLibrary.ts) 舊版 `findForCandidate` 與 `findAllForCandidate` 函數中，當品號歸一化長度大於等於 4 時（如 `B-003` 的歸一化 `B003` 長度為 4），系統誤啟用了 `canPrefix = true` 並且直接使用 `baseNorm.includes(pnNorm)` 或 `baseNorm.startsWith(pnNorm)` 進行子字串比對，**缺乏字元邊界防護**。
+這導致 `B-003`（歸一化 `B003`）貪婪匹配到了所有以 `B003` 開頭的衍生品號圖檔（如 `B-0030`, `B-0031`, `B-0032`, `B-0033`, `B-0034` ... `B-0039` 以及 `B-003-1`, `B-003-2` 等共 11 張完全不同的品號圖檔）。
+
+### 矯正與預防措施 (CAPA)
+1. **引入數字邊界防禦匹配 (`isMatchedSegment`)**：
+   重構 [imageLibrary.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageLibrary.ts) 匹配核心。當 `sNorm.startsWith(pnNorm)` 成立時，強制檢查接續的第一個字元：
+   * 若後續字元為**數字 (0-9)**：判定為不同數值品號（如 `B003` 之於 `B0030`），**拒絕匹配**！
+   * 若後續字元為**非數字**（如 `v1`, `RevA` 或無後續）：判定為版本修飾符，允許匹配！
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 

@@ -58,25 +58,35 @@ export function normalize(s: string): string {
   return s.replace(NORM_RE, '').toUpperCase();
 }
 
+function isMatchedSegment(sNorm: string, pnNorm: string): boolean {
+  if (!sNorm || !pnNorm) return false;
+  if (sNorm === pnNorm) return true;
+  // 長度大於 pnNorm 且開頭為 pnNorm 時，必須確保後續第一個字元不是數字 (例如 V1, RevA 允許，但 B0030, B0031 拒絕)
+  if (sNorm.length > pnNorm.length && sNorm.startsWith(pnNorm)) {
+    const nextChar = sNorm[pnNorm.length];
+    if (nextChar < '0' || nextChar > '9') {
+      return true;
+    }
+  }
+  return false;
+}
+
 function findForCandidate(files: File[], candidate: string): File | null {
   const pn = candidate.trim().toUpperCase();
   if (!pn) return null;
   const pnNorm = normalize(pn);
   if (pnNorm.length < 3) return null;
-  const canPrefix = pnNorm.length >= 4;
 
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
     const baseNorm = normalize(base);
 
-    if (base === pn || baseNorm === pnNorm) return f;
-    if (canPrefix && (baseNorm.includes(pnNorm) || baseNorm.startsWith(pnNorm))) return f;
+    if (base === pn || baseNorm === pnNorm || isMatchedSegment(baseNorm, pnNorm)) return f;
 
-    const segs = base.split(/[^A-Z0-9]+/i);
+    const segs = base.split(/[_\s()\[\],/]+/i);
     for (const s of segs) {
       const sNorm = normalize(s);
-      if (sNorm === pnNorm) return f;
-      if (canPrefix && sNorm.startsWith(pnNorm)) return f;
+      if (isMatchedSegment(sNorm, pnNorm)) return f;
     }
   }
   return null;
@@ -87,26 +97,21 @@ function findAllForCandidate(files: File[], candidate: string): File[] {
   if (!pn) return [];
   const pnNorm = normalize(pn);
   if (pnNorm.length < 3) return [];
-  const canPrefix = pnNorm.length >= 4;
   const result: File[] = [];
 
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
     const baseNorm = normalize(base);
 
-    if (base === pn || baseNorm === pnNorm) {
-      result.push(f);
-      continue;
-    }
-    if (canPrefix && (baseNorm.includes(pnNorm) || baseNorm.startsWith(pnNorm))) {
+    if (base === pn || baseNorm === pnNorm || isMatchedSegment(baseNorm, pnNorm)) {
       result.push(f);
       continue;
     }
 
-    const segs = base.split(/[^A-Z0-9]+/i);
+    const segs = base.split(/[_\s()\[\],/]+/i);
     for (const s of segs) {
       const sNorm = normalize(s);
-      if (sNorm === pnNorm || (canPrefix && sNorm.startsWith(pnNorm))) {
+      if (isMatchedSegment(sNorm, pnNorm)) {
         result.push(f);
         break;
       }
