@@ -40,3 +40,12 @@
   5. 可信度評分 (0-100%)。
 - **核心承諾**：準確性高於讓用戶滿意。不要無腦誇讚用戶，不要順著用戶說。不確定就說不確定，絕對不可編造答案。
 </RULE[reverse_interview_and_advisory_board]>
+
+<RULE[data_structure_change_notification]>
+重大資料結構調整與關鍵數據變更主動提醒規則 (Data Structure & Count Change Notification Rule)
+
+當進行專案優化、資料庫重構、資料歸一化/去重、或關鍵數據筆數調整時：
+1. 主動說明數據變更：絕對禁止默默調整資料結構或數據數量而不告知用戶。
+2. 數值對比與說明：必須在完成當次任務並向用戶回報時，明確列出變更前後的關鍵數據變化（如筆數對比 913 筆 ➔ 565 筆），並說明歸併/去重/重構的原因與影響。
+3. 零資料遺失承諾：明確說明歸併/重構後原始數據（如別稱、關係鏈）的保留方式，消除用戶疑慮。
+</RULE[data_structure_change_notification]>
