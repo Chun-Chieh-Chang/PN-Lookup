@@ -37,8 +37,9 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 py-3 space-y-3">
-      {/* Search Row */}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full">
+      <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3.5 sm:p-4 shadow-2xs space-y-3">
+        {/* Search Row */}
       <form onSubmit={handleSubmit} className="flex items-center gap-3">
         <div className="relative flex-1 max-w-lg">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -186,7 +187,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
           </button>
         )}
       </div>
-
+    </div>
     </div>
   );
 };

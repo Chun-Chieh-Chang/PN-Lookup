@@ -165,101 +165,101 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 text-gray-900">
-      
-      {/* Table Toolbar / Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white border-b border-gray-200 text-sm">
-        <div className="flex items-center space-x-3">
-          <span className="text-gray-500">
-            顯示 <strong className="text-gray-900">{sortedItems.length}</strong> 筆結果
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 w-full flex-1 flex flex-col">
+      <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col flex-1">
+        
+        {/* Table Toolbar / Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50/70 border-b border-slate-200/80 text-xs sm:text-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-slate-600 font-medium">
+              顯示 <strong className="text-slate-900 font-bold font-mono">{sortedItems.length}</strong> 筆結果
+              {selectedIds.length > 0 && (
+                <span className="ml-2 text-indigo-600 font-bold">
+                  (已選取 {selectedIds.length} 筆)
+                </span>
+              )}
+            </span>
+
             {selectedIds.length > 0 && (
-              <span className="ml-2 text-indigo-600 font-medium">
-                (已選取 {selectedIds.length} 筆)
+              <button
+                onClick={handleCopySelected}
+                className="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                <span>複製所選品號清單</span>
+              </button>
+            )}
+
+            {!imageLib && (
+              <span className="text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 text-xs font-medium shadow-2xs">
+                未指定圖檔資料夾 — 點右上角「圖檔資料夾」可讓品號直接開啟圖檔
               </span>
             )}
-          </span>
 
-          {selectedIds.length > 0 && (
-            <button
-              onClick={handleCopySelected}
-              className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors cursor-pointer"
-            >
-              <ClipboardCheck className="w-3.5 h-3.5" />
-              <span>複製所選品號清單</span>
-            </button>
-          )}
+            {imageLib && (
+              <span
+                className="text-slate-500 text-xs cursor-help bg-slate-100/80 border border-slate-200/80 rounded-lg px-2.5 py-1 font-mono"
+                title={
+                  `圖檔資料夾：${imageLib.folderName}\n` +
+                  `掃描檔案：${imageLib.debug.totalFiles} 個（副檔名不支援的會被略過）\n` +
+                  `收錄圖檔：${imageLib.count} 個（含 PDF）\n` +
+                  `檔名範例：\n${imageLib.debug.sampleNames.map((n) => '  · ' + n).join('\n')}\n` +
+                  `本頁品號對應：${resolvedCount} 筆`
+                }
+              >
+                圖檔 <strong className="text-slate-800 font-bold">{imageLib.count}</strong> 檔 · 本頁對應{' '}
+                <strong className="text-teal-700 font-bold">{resolvedCount}</strong> 筆
+              </span>
+            )}
 
-          {!imageLib && (
-            <span className="ml-2 text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 text-xs">
-              未指定圖檔資料夾 — 點右上角「圖檔」按鈕可讓品號直接開啟圖檔
-            </span>
-          )}
-
-          {imageLib && (
-            <span
-              className="ml-2 text-gray-500 text-xs cursor-help"
-              title={
-                `圖檔資料夾：${imageLib.folderName}\n` +
-                `掃描檔案：${imageLib.debug.totalFiles} 個（副檔名不支援的會被略過）\n` +
-                `收錄圖檔：${imageLib.count} 個（含 PDF）\n` +
-                `檔名範例：\n${imageLib.debug.sampleNames.map((n) => '  · ' + n).join('\n')}\n` +
-                `本頁品號對應：${resolvedCount} 筆`
-              }
-            >
-              圖檔 {imageLib.count} 個 · 品號對應{' '}
-              <strong className="text-gray-700">{resolvedCount}</strong>{' '}
-              筆
-            </span>
-          )}
-
-          {ocrProgress && ocrProgress.total > 0 && (
-            <span className="ml-2 text-violet-600 bg-violet-50 border border-violet-200 rounded-md px-2 py-1 text-xs">
-              OCR 內容辨識中 {ocrProgress.done}/{ocrProgress.total}…
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {/* Density toggle */}
-          <div className="flex items-center space-x-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => setIsCompact(false)}
-              className={`px-2 py-0.5 rounded text-sm cursor-pointer ${
-                !isCompact ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              舒適
-            </button>
-            <button
-              onClick={() => setIsCompact(true)}
-              className={`px-2 py-0.5 rounded text-sm cursor-pointer ${
-                isCompact ? 'bg-white text-gray-800 font-medium shadow-sm' : 'text-gray-500'
-              }`}
-            >
-              緊湊
-            </button>
+            {ocrProgress && ocrProgress.total > 0 && (
+              <span className="text-violet-700 bg-violet-50 border border-violet-200/80 rounded-lg px-2.5 py-1 text-xs font-semibold">
+                OCR 辨識中 {ocrProgress.done}/{ocrProgress.total}…
+              </span>
+            )}
           </div>
 
-          {/* Page size dropdown */}
-          <div className="flex items-center space-x-1.5 text-gray-500">
-            <span>每頁顯示:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-white border border-gray-300 rounded px-2 py-1 text-gray-800 focus:outline-none focus:border-blue-500"
-            >
-              <option value={10}>10 筆</option>
-              <option value={25}>25 筆</option>
-              <option value={50}>50 筆</option>
-              <option value={100}>100 筆</option>
-              <option value={500}>全部</option>
-            </select>
+          <div className="flex items-center space-x-3">
+            {/* Density toggle */}
+            <div className="hidden sm:flex items-center space-x-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 text-xs">
+              <button
+                onClick={() => setIsCompact(false)}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-medium ${
+                  !isCompact ? 'bg-white text-slate-800 shadow-xs font-bold' : 'text-slate-600'
+                }`}
+              >
+                舒適
+              </button>
+              <button
+                onClick={() => setIsCompact(true)}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-medium ${
+                  isCompact ? 'bg-white text-slate-800 shadow-xs font-bold' : 'text-slate-600'
+                }`}
+              >
+                緊湊
+              </button>
+            </div>
+
+            {/* Page size dropdown */}
+            <div className="flex items-center space-x-1.5 text-slate-600 text-xs">
+              <span className="font-medium hidden sm:inline">每頁:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono font-semibold focus:outline-none focus:border-indigo-500 shadow-2xs"
+              >
+                <option value={10}>10 筆</option>
+                <option value={25}>25 筆</option>
+                <option value={50}>50 筆</option>
+                <option value={100}>100 筆</option>
+                <option value={500}>全部</option>
+              </select>
+            </div>
           </div>
         </div>
-      </div>
 
       {/* Main Table Container */}
       <div className="overflow-x-auto flex-1">
@@ -607,6 +607,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
         </div>
       )}
 
+      </div>
     </div>
   );
 };

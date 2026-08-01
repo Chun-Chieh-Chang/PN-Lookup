@@ -16,40 +16,69 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   prefixCount,
 }) => {
   return (
-    <div className="bg-white border-b border-gray-200 text-gray-600 py-2.5 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between text-sm gap-y-2 gap-x-6">
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2">
-            <Package className="w-4 h-4 text-blue-500" />
-            <span>
-              資料庫總數 <strong className="text-gray-900 font-medium">{totalCount}</strong> 筆
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-2 w-full">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+        
+        {/* Metric 1: Total & Filtered Parts */}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3 flex items-center space-x-3 shadow-2xs hover:shadow-xs transition-all">
+          <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+            <Package className="w-4 h-4 text-indigo-600" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">品號總數</div>
+            <div className="flex items-baseline space-x-1.5 mt-0.5">
+              <span className="text-base font-extrabold font-mono text-slate-900">{totalCount}</span>
               {filteredCount !== totalCount && (
-                <span className="ml-1 text-teal-600 font-medium">
-                  (符合 {filteredCount} 筆)
+                <span className="text-[11px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.2 rounded border border-teal-200/60 font-mono">
+                  篩選: {filteredCount}
                 </span>
               )}
-            </span>
+            </div>
           </div>
+        </div>
 
-          <div className="hidden sm:flex items-center space-x-2">
-            <Users className="w-4 h-4 text-indigo-500" />
-            <span>
-              涵蓋客戶 <strong className="text-gray-900 font-medium">{customerCount}</strong> 家
-            </span>
+        {/* Metric 2: Customers Count */}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3 flex items-center space-x-3 shadow-2xs hover:shadow-xs transition-all">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <Users className="w-4 h-4 text-blue-600" />
           </div>
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">涵蓋客戶</div>
+            <div className="flex items-baseline space-x-1 mt-0.5">
+              <span className="text-base font-extrabold font-mono text-slate-900">{customerCount}</span>
+              <span className="text-[11px] text-slate-400 font-medium">家廠商</span>
+            </div>
+          </div>
+        </div>
 
-          <div className="hidden md:flex items-center space-x-2">
+        {/* Metric 3: Prefix Categories */}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3 flex items-center space-x-3 shadow-2xs hover:shadow-xs transition-all">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
             <Tag className="w-4 h-4 text-emerald-600" />
-            <span>
-              品號字頭類別 <strong className="text-gray-900 font-medium">{prefixCount}</strong> 種
-            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">字頭分類</div>
+            <div className="flex items-baseline space-x-1 mt-0.5">
+              <span className="text-base font-extrabold font-mono text-slate-900">{prefixCount}</span>
+              <span className="text-[11px] text-slate-400 font-medium">種料號類別</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 text-gray-400">
-          <Clock className="w-3.5 h-3.5 text-gray-400" />
-          <span>即時更新檢索</span>
+        {/* Metric 4: Real-time Status */}
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3 flex items-center space-x-3 shadow-2xs hover:shadow-xs transition-all">
+          <div className="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200/80 flex items-center justify-center shrink-0">
+            <Clock className="w-4 h-4 text-slate-500" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">系統狀態</div>
+            <div className="flex items-center space-x-1.5 mt-0.5 text-xs text-emerald-700 font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>即時檢索已就緒</span>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
   );
