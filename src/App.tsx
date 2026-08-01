@@ -385,6 +385,14 @@ export default function App() {
     }, [parts, filterState]);
 
 
+  const [isUnlocked, setIsUnlocked] = useState(() => route === 'admin');
+
+  useEffect(() => {
+    if (route === 'admin') {
+      setIsUnlocked(true);
+    }
+  }, [route]);
+
   if (route === 'admin') {
     return (
       <AdminPanel
@@ -415,14 +423,6 @@ export default function App() {
       />
     );
   }
-
-  const [isUnlocked, setIsUnlocked] = useState(() => route === 'admin');
-
-  useEffect(() => {
-    if (route === 'admin') {
-      setIsUnlocked(true);
-    }
-  }, [route]);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">

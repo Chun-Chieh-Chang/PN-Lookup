@@ -1,5 +1,21 @@
 # PN-Lookup 開發日誌
 
+## v3.7.7 — 防禦修復：修復條件 Return 後呼叫 Hook 導致之 `React Error #300` 運作時崩潰 (Rules of Hooks Fix & React Error #300 Prevention)
+
+### 需求內容與作業
+- **錯誤現象 (Symptom)**：
+  - 前端控制台拋出 `Uncaught Error: Minified React error #300` (Rendered fewer hooks than during the previous render)。
+- **根因分析 (RCA)**：
+  - 在 [App.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/App.tsx) 中，`isUnlocked` 的 `useState` 及對應的 `useEffect` 被放置在了 `if (route === 'admin') return <AdminPanel ... />` 的條件 return **之後**。
+  - 當切換路由至 `#admin` 時，元件遭遇 early return，導致該渲染中的 Hook 數量減少，嚴重違反 React Rules of Hooks。
+- **矯正與預防措施 (CAPA)**：
+  - 將所有 Hook 呼叫提至元件頂層 (`Top-Level`) 條件 return 之前。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v3.7.6 — 視覺直覺圖標修正：匯出與匯入圖示方向對調 (Export: Arrow-Up ⬆️, Import: Arrow-Down ⬇️)
 
 ### 需求內容與作業
