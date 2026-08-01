@@ -1,5 +1,18 @@
 # PN-Lookup 開發日誌
 
+## v3.7.6 — 視覺直覺圖標修正：匯出與匯入圖示方向對調 (Export: Arrow-Up ⬆️, Import: Arrow-Down ⬇️)
+
+### 需求內容與作業
+- **視覺心理學與直覺對齊**：
+  - 依照使用者習慣，將「匯出 (Export)」旁邊的圖示統一更換為**箭頭向上 ⬆️ (`Upload` 圖標)**。
+  - 將「匯入 (Import)」旁邊的圖示統一更換為**箭頭向下 ⬇️ (`Download` 圖標)**。
+  - 涵蓋 [ExportImportModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ExportImportModal.tsx) 與 [AdminPanel.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/AdminPanel.tsx) 所有匯出/匯入按鈕與標題區塊。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 成功通過。
+
+---
+
 ## v3.7.5 — 介面極簡實用化重構：移除花俏折疊選單與多餘切換鈕，回歸工廠現場直覺極速檢索 (Zero-Fluff UI & Minimalist Search Controls)
 
 ### 需求內容與作業

@@ -793,7 +793,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               onClick={handleExportFullBackup}
               className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium rounded-lg flex items-center space-x-1.5 border border-emerald-200 cursor-pointer"
             >
-              <Download className="w-4 h-4" />
+              <Upload className="w-4 h-4" />
               <span>匯出完整備份</span>
             </button>
             <input
@@ -811,7 +811,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               onClick={() => fullBackupFileRef.current?.click()}
               className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium rounded-lg flex items-center space-x-1.5 border border-emerald-200 cursor-pointer"
             >
-              <Upload className="w-4 h-4" />
+              <Download className="w-4 h-4" />
               <span>匯入完整備份</span>
             </button>
             <span className="text-xs text-gray-400">

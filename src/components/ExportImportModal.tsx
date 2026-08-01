@@ -309,7 +309,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           {/* Import Section (placed above Export per user request) */}
           <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
             <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Upload className="w-4 h-4 text-blue-500" />
+              <Download className="w-4 h-4 text-blue-500" />
               <span>匯入自訂資料</span>
             </h3>
 
@@ -374,7 +374,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           {/* Export Section */}
           <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
             <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Download className="w-4 h-4 text-emerald-500" />
+              <Upload className="w-4 h-4 text-emerald-500" />
               <span>匯出目前資料庫 ({parts.length} 筆)</span>
             </h3>
             <div className="flex items-center space-x-4 text-sm">
@@ -424,7 +424,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 onClick={handleDownload}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Upload className="w-3.5 h-3.5" />
                 <span>下載 {exportFormat.toUpperCase()} 檔</span>
               </button>
               <button
