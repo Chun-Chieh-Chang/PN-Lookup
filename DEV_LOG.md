@@ -1,5 +1,24 @@
 # PN-Lookup 開發日誌
 
+## v5.0.0 — 重大版本更新：重構雙軸心多維全瀏覽頁面產品知識圖譜 (Dual-Axis Full-Viewport Product Knowledge Graph)
+
+### 需求內容與作業
+- **全瀏覽頁面 Layout (100vw × 100vh Full Viewport)**：
+  - 取消彈窗邊框與內縮限制，圖譜無縫滿版佔據 100% 視窗螢幕。
+  - 頂部導覽列新增 **`[✕ 返回主檢視系統]`** 快捷按鈕，可一鍵流暢切回品號表格主畫面。
+- **廠內 MindMap 心智圖與客戶雙軸心知識庫重構 ([productKnowledgeGraph.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/productKnowledgeGraph.ts))**：
+  - **廠內軸心 (Factory MindMap Branch)**：整合 `rawdata/產品識別/廠內` 下的心智圖與品號分類代碼：
+    - `Set 系統組合套件`、`組件分類 (SA/SB/SC/SD)`、`零件分類 (射出/矽膠/金屬)`、`原料分類 (PVC/Silicone/PC/PP)`、`尺寸特性`、`顏色區分`。
+  - **客戶軸心 (Customer Branch)**：整合 `rawdata/產品識別/客戶` 下的圖檔對照：
+    - `ICU 重症醫用客戶體系` 與 `OEM/ODM 合作夥伴客戶體系`。
+- **多維視角過濾器 (Axis Switcher)**：
+  - 提供 **`[🏭 廠內 MindMap 視角]`**、**`[🏢 客戶採購視角]`** 與 **`[🌐 全景整合總圖譜]`** 視角切換器。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v4.1.0 — 互動體驗升級：導入 3D 軌道球自由視角控制 (3D Trackball Orbit) 與 Tool-Calling 科技感圖譜系統
 
 ### 需求內容與作業

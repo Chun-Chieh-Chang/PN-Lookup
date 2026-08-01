@@ -1,13 +1,25 @@
 import { PartItem } from '../types';
 import { getItemType, getBOMChildren } from './bomEngine';
 
+export type NodeGroup =
+  | 'category_root'
+  | 'factory_set'        // Set 系統組合
+  | 'factory_assembly'   // 組件分類 (SA/SB/SC/SD)
+  | 'factory_part'       // 零件分類 (射出/矽膠/金屬)
+  | 'factory_material'   // 原料屬性 (PVC/Silicone/PC/PP)
+  | 'factory_spec'       // 尺寸特性 (ID/OD/15M/22M)
+  | 'factory_color'      // 顏色屬性 (Blue/Clear/Green)
+  | 'customer_icu'       // ICU 重症客戶體系
+  | 'customer_oem';      // OEM/ODM 客戶體系
+
 export interface GraphNode {
   id: string;
   name: string;
-  group: 'category' | 'coding' | 'assembly' | 'part' | 'customer';
+  group: NodeGroup;
   val: number;
   color: string;
   description?: string;
+  axis: 'factory' | 'customer' | 'both';
   details?: {
     partNo?: string;
     customer?: string;
@@ -20,6 +32,9 @@ export interface GraphNode {
   x?: number;
   y?: number;
   z?: number;
+  x3d?: number;
+  y3d?: number;
+  z3d?: number;
 }
 
 export interface GraphLink {
@@ -34,60 +49,112 @@ export interface GraphData {
   links: GraphLink[];
 }
 
-// Morandi 專業調色盤
-export const GROUP_COLORS: Record<GraphNode['group'], string> = {
-  category: '#6366F1', // 靛藍 - 產品總類
-  coding: '#8B5CF6',   // 紫色 - 編碼規則
-  assembly: '#0EA5E9', // 天藍 - SA/SB/SC/SD 組立
-  part: '#10B981',     // 翡翠綠 - 實體單品零件
-  customer: '#F59E0B', // 琥珀黃 - 客戶對照料號
+// Taste-Skill Morandi 雙軸心調色盤
+export const GROUP_COLORS: Record<NodeGroup, string> = {
+  category_root: '#6366F1',   // 靛藍 - 總架構
+  factory_set: '#8B5CF6',      // 炫紫 - Set 系統組合
+  factory_assembly: '#0EA5E9', // 天藍 - SA/SB/SC/SD 組立
+  factory_part: '#10B981',     // 翡翠綠 - 單品零件
+  factory_material: '#EC4899', // 粉紫 - 原料分類
+  factory_spec: '#14B8A6',     // 青綠 - 尺寸特性
+  factory_color: '#F43F5E',    // 玫瑰紅 - 顏色區分
+  customer_icu: '#F59E0B',     // 琥珀金 - ICU 專業客戶
+  customer_oem: '#EAB308',     // 鵝黃 - OEM/ODM 客戶
 };
 
-// 《產品識別教育訓練》與《編碼記憶》之系統化知識架構
-const CODING_RULES = [
+// 廠內 MindMap 核心架構節點
+const FACTORY_MINDMAP_NODES = [
   {
-    id: 'rule-sa',
-    name: 'SA 系列 (呼吸迴路/管路組立)',
-    group: 'coding' as const,
+    id: 'mindmap-set',
+    name: 'Set 系統組合套件 (Breathing Set Kits)',
+    group: 'factory_set' as const,
+    val: 20,
+    color: GROUP_COLORS.factory_set,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - Set】包含完整的呼吸迴路包、麻醉管組與加溫加濕套件組裝。',
+  },
+  {
+    id: 'mindmap-sa',
+    name: 'SA 組件 (呼吸迴路/次組合管路)',
+    group: 'factory_assembly' as const,
     val: 18,
-    color: GROUP_COLORS.coding,
-    description: '【編碼規則】SA 開頭為呼吸迴路、急救甦醒器與次組合管路。下含 SA-001 至 SA-132 等主力配件。',
+    color: GROUP_COLORS.factory_assembly,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - SA】呼吸管路、蛇木管、雙平滑管與蛇管配件次組合。',
   },
   {
-    id: 'rule-sb',
-    name: 'SB 系列 (醫用轉接頭/閥門組立)',
-    group: 'coding' as const,
+    id: 'mindmap-sb',
+    name: 'SB 組件 (醫用轉接頭/閥門組裝)',
+    group: 'factory_assembly' as const,
+    val: 17,
+    color: GROUP_COLORS.factory_assembly,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - SB】三通轉接頭、吐氣閥、PEEP 閥與壓力監測介面。',
+  },
+  {
+    id: 'mindmap-sc',
+    name: 'SC 組件 (面罩/鼻罩/呼吸組件)',
+    group: 'factory_assembly' as const,
     val: 16,
-    color: GROUP_COLORS.coding,
-    description: '【編碼規則】SB 開頭為直通/三通轉接頭、吐氣閥、壓力監測閥等連接組件。',
+    color: GROUP_COLORS.factory_assembly,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - SC】氣墊面罩、無氣墊面罩、鼻罩與固定頭帶組裝。',
   },
   {
-    id: 'rule-sc',
-    name: 'SC 系列 (面罩/鼻罩/呼吸組件)',
-    group: 'coding' as const,
-    val: 14,
-    color: GROUP_COLORS.coding,
-    description: '【編碼規則】SC 開頭為各式麻醉面罩、氧氣面罩與鼻罩配件組裝。',
-  },
-  {
-    id: 'rule-sd',
-    name: 'SD 系列 (濕化水瓶/集水杯組立)',
-    group: 'coding' as const,
-    val: 12,
-    color: GROUP_COLORS.coding,
-    description: '【編碼規則】SD 開頭為濕化瓶、集水杯、過濾器等液體防護與加熱配件。',
-  },
-  {
-    id: 'rule-inj',
-    name: '基礎單品射出配件 (Injection Components)',
-    group: 'coding' as const,
+    id: 'mindmap-sd',
+    name: 'SD 組件 (濕化水瓶/集水杯組裝)',
+    group: 'factory_assembly' as const,
     val: 15,
-    color: GROUP_COLORS.coding,
-    description: '【編碼規則】未歸類為 SA/SB/SC/SD 之基礎射出件、管材、矽膠閥片與橡膠配件。',
+    color: GROUP_COLORS.factory_assembly,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - SD】加熱水瓶、自動給水水瓶與集水杯模組。',
+  },
+  {
+    id: 'mindmap-material',
+    name: '廠內原料屬性分類 (Material Matrix)',
+    group: 'factory_material' as const,
+    val: 16,
+    color: GROUP_COLORS.factory_material,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - 原料】PVC 軟硬管材、Silicone 矽膠閥片、PC 耐熱聚碳酸酯、PP 聚丙烯。',
+  },
+  {
+    id: 'mindmap-spec',
+    name: '尺寸規格屬性分類 (Dimension Specs)',
+    group: 'factory_spec' as const,
+    val: 14,
+    color: GROUP_COLORS.factory_spec,
+    axis: 'factory' as const,
+    description: '【廠內 MindMap - 尺寸】國際標準 15mm/22mm 接頭、外徑 ID/OD 與長度規格。',
   },
 ];
 
-export function buildProductKnowledgeGraph(parts: PartItem[]): GraphData {
+// 客戶採購體系架構節點
+const CUSTOMER_SYSTEM_NODES = [
+  {
+    id: 'cust-icu-system',
+    name: 'ICU 重症醫用客戶體系 (ICU Specialty)',
+    group: 'customer_icu' as const,
+    val: 18,
+    color: GROUP_COLORS.customer_icu,
+    axis: 'customer' as const,
+    description: '【客戶體系 - ICU】針對 ICU 呼吸重症醫學中心之專用編碼與對照料號。',
+  },
+  {
+    id: 'cust-oem-system',
+    name: 'OEM / ODM 合作客戶體系 (OEM/ODM Partners)',
+    group: 'customer_oem' as const,
+    val: 17,
+    color: GROUP_COLORS.customer_oem,
+    axis: 'customer' as const,
+    description: '【客戶體系 - OEM/ODM】海內外醫療品牌代工與特規客戶圖檔對照號。',
+  },
+];
+
+export function buildProductKnowledgeGraph(
+  parts: PartItem[],
+  axisFilter: 'all' | 'factory' | 'customer' = 'all'
+): GraphData {
   const nodesMap = new Map<string, GraphNode>();
   const linksMap = new Map<string, GraphLink>();
 
@@ -99,49 +166,71 @@ export function buildProductKnowledgeGraph(parts: PartItem[]): GraphData {
     }
   };
 
-  // 1. 加入總分類頂點 (Root Category Node)
-  const rootNode: GraphNode = {
-    id: 'root-product-knowledge',
-    name: '凱益醫療產品知識總圖譜',
-    group: 'category',
-    val: 28,
-    color: GROUP_COLORS.category,
-    description: '全景醫療器材產品分類、編碼記憶規則與 BOM 階層結構點對點關係圖。',
+  // 1. 廠內軸心 Root
+  const factoryRoot: GraphNode = {
+    id: 'root-factory',
+    name: '🏭 廠內權威分類體系 (Factory MindMap)',
+    group: 'category_root',
+    val: 26,
+    color: GROUP_COLORS.category_root,
+    axis: 'factory',
+    description: '依據廠內 MindMap 心智圖與品號分類代碼建構之權威物料體系。',
   };
-  nodesMap.set(rootNode.id, rootNode);
 
-  // 2. 加入編碼記憶規則節點
-  for (const rule of CODING_RULES) {
-    nodesMap.set(rule.id, rule);
-    addLink(rootNode.id, rule.id, '包含分類', 3);
+  // 2. 客戶軸心 Root
+  const customerRoot: GraphNode = {
+    id: 'root-customer',
+    name: '🏢 客戶採購與對照體系 (Customer Networks)',
+    group: 'category_root',
+    val: 24,
+    color: GROUP_COLORS.category_root,
+    axis: 'customer',
+    description: '依據 ICU 重症編碼與 OEM/ODM 客戶需求劃分之採購與料號對照體系。',
+  };
+
+  if (axisFilter === 'all' || axisFilter === 'factory') {
+    nodesMap.set(factoryRoot.id, factoryRoot);
+    for (const node of FACTORY_MINDMAP_NODES) {
+      nodesMap.set(node.id, node);
+      addLink(factoryRoot.id, node.id, '廠內結構', 3);
+    }
   }
 
-  // 取得全域 BOM 階層樹
+  if (axisFilter === 'all' || axisFilter === 'customer') {
+    nodesMap.set(customerRoot.id, customerRoot);
+    for (const node of CUSTOMER_SYSTEM_NODES) {
+      nodesMap.set(node.id, node);
+      addLink(customerRoot.id, node.id, '客戶體系', 3);
+    }
+  }
+
   const bomChildren = getBOMChildren();
 
-  // 3. 加入品號與 BOM 關係
+  // 3. 掛載實體品號與雙軸心連結
   for (const item of parts) {
     const itemType = getItemType(item);
     const isAssembly = itemType === 'assembly';
-    const isCust = item.category?.includes('客戶特規');
-    
-    let group: GraphNode['group'] = 'part';
-    let targetRuleId = 'rule-inj';
+    const isICU = item.customer?.toUpperCase().includes('ICU') || item.partNo.includes('ICU');
+
+    let group: NodeGroup = 'factory_part';
+    let targetMindMapId = 'mindmap-sa';
+    let targetCustId = isICU ? 'cust-icu-system' : 'cust-oem-system';
 
     if (item.partNo.startsWith('SA-')) {
-      group = 'assembly';
-      targetRuleId = 'rule-sa';
+      group = 'factory_assembly';
+      targetMindMapId = 'mindmap-sa';
     } else if (item.partNo.startsWith('SB-')) {
-      group = 'assembly';
-      targetRuleId = 'rule-sb';
+      group = 'factory_assembly';
+      targetMindMapId = 'mindmap-sb';
     } else if (item.partNo.startsWith('SC-')) {
-      group = 'assembly';
-      targetRuleId = 'rule-sc';
+      group = 'factory_assembly';
+      targetMindMapId = 'mindmap-sc';
     } else if (item.partNo.startsWith('SD-')) {
-      group = 'assembly';
-      targetRuleId = 'rule-sd';
-    } else if (isCust) {
-      group = 'customer';
+      group = 'factory_assembly';
+      targetMindMapId = 'mindmap-sd';
+    } else if (item.category?.includes('Set') || item.category?.includes('套件')) {
+      group = 'factory_set';
+      targetMindMapId = 'mindmap-set';
     }
 
     const children = bomChildren[item.partNo] || [];
@@ -150,9 +239,10 @@ export function buildProductKnowledgeGraph(parts: PartItem[]): GraphData {
       id: item.partNo,
       name: `${item.partNo} (${item.customer || '通用'})`,
       group,
-      val: isAssembly ? 14 : 8,
+      val: isAssembly ? 13 : 8,
       color: GROUP_COLORS[group],
-      description: `${item.name} | 客戶: ${item.customer || '通用'} | 分類: ${item.category || '未分類'}`,
+      axis: 'both',
+      description: `${item.name} | 客戶: ${item.customer || '通用'} | 原料: ${item.material || '標淮'} | 顏色: ${item.color || '自然色'}`,
       details: {
         partNo: item.partNo,
         customer: item.customer,
@@ -163,33 +253,44 @@ export function buildProductKnowledgeGraph(parts: PartItem[]): GraphData {
       },
     };
 
-    nodesMap.set(node.id, node);
-    addLink(targetRuleId, node.id, '歸屬類別', 2);
-
-    // 掛載 BOM 結構邊
-    for (const childPartNo of children) {
-      addLink(node.id, childPartNo, 'BOM 組成', 1);
+    if (axisFilter === 'all' || axisFilter === 'factory') {
+      nodesMap.set(node.id, node);
+      addLink(targetMindMapId, node.id, '歸屬 MindMap', 2);
     }
 
-    // 掛載別稱/替代品號節點
+    if (axisFilter === 'all' || axisFilter === 'customer') {
+      if (!nodesMap.has(node.id)) nodesMap.set(node.id, node);
+      addLink(targetCustId, node.id, '採購對照', 2);
+    }
+
+    // BOM 組成關聯邊
+    for (const childPartNo of children) {
+      if (nodesMap.has(node.id)) {
+        addLink(node.id, childPartNo, 'BOM 組成', 1);
+      }
+    }
+
+    // 掛載別名節點
     if (item.alternates && item.alternates.length > 0) {
       for (const alt of item.alternates) {
         const altId = `alt-${alt}`;
-        if (!nodesMap.has(altId)) {
+        const altGroup: NodeGroup = isICU ? 'customer_icu' : 'customer_oem';
+        if (!nodesMap.has(altId) && (axisFilter === 'all' || axisFilter === 'customer')) {
           nodesMap.set(altId, {
             id: altId,
             name: `別名: ${alt}`,
-            group: 'customer',
+            group: altGroup,
             val: 6,
-            color: GROUP_COLORS.customer,
-            description: `品號 ${item.partNo} 之客戶或供應商別稱品號`,
+            color: GROUP_COLORS[altGroup],
+            axis: 'customer',
+            description: `品號 ${item.partNo} 之客戶/供應商別稱對照號`,
             details: {
               partNo: alt,
               customer: item.customer,
             },
           });
+          addLink(node.id, altId, '別名對照', 1);
         }
-        addLink(node.id, altId, '別名對照', 1);
       }
     }
   }

@@ -7,13 +7,14 @@ import {
   Sparkles,
   ZoomIn,
   ZoomOut,
-  Maximize2,
-  Minimize2,
   Eye,
   Layers,
-  Move,
   Play,
   Pause,
+  ArrowLeft,
+  Building2,
+  Factory,
+  Globe,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import {
@@ -21,6 +22,7 @@ import {
   GraphNode,
   GraphLink,
   GROUP_COLORS,
+  NodeGroup,
 } from '../utils/productKnowledgeGraph';
 
 interface ProductGraphModalProps {
@@ -31,6 +33,7 @@ interface ProductGraphModalProps {
 }
 
 type ViewMode = '2D' | '3D';
+type AxisFilterMode = 'all' | 'factory' | 'customer';
 
 export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
   isOpen,
@@ -39,6 +42,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
   onSelectPart,
 }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('3D');
+  const [axisFilter, setAxisFilter] = useState<AxisFilterMode>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [autoRotate, setAutoRotate] = useState(true);
@@ -55,10 +59,10 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 建構圖譜數據
+  // 建構雙軸心圖譜數據
   const graphData = useMemo(() => {
-    return buildProductKnowledgeGraph(parts);
-  }, [parts]);
+    return buildProductKnowledgeGraph(parts, axisFilter);
+  }, [parts, axisFilter]);
 
   // 重置視角與軌道歸位
   const handleResetView = useCallback(() => {
@@ -104,13 +108,13 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
     return graphData.nodes.map((node, idx) => {
       const phi = Math.acos(-1 + (2 * idx) / total);
       const theta = Math.sqrt(total * Math.PI) * phi;
-      const radius = 240 + node.val * 3.5;
+      const radius = 260 + node.val * 3.5;
 
       return {
         ...node,
-        x: (Math.random() - 0.5) * 450,
-        y: (Math.random() - 0.5) * 450,
-        z: (Math.random() - 0.5) * 450,
+        x: (Math.random() - 0.5) * 500,
+        y: (Math.random() - 0.5) * 500,
+        z: (Math.random() - 0.5) * 500,
         x3d: radius * Math.cos(theta) * Math.sin(phi),
         y3d: radius * Math.sin(theta) * Math.sin(phi),
         z3d: radius * Math.cos(phi),
@@ -187,10 +191,10 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
       ctx.clearRect(0, 0, width, height);
 
       // 深邃星空背景
-      ctx.fillStyle = '#0B0F17';
+      ctx.fillStyle = '#080C14';
       ctx.fillRect(0, 0, width, height);
 
-      const currentRotY = autoRotate && !isDragging && viewMode === '3D' ? rotY + 0.003 : rotY;
+      const currentRotY = autoRotate && !isDragging && viewMode === '3D' ? rotY + 0.0025 : rotY;
       if (autoRotate && !isDragging && viewMode === '3D') {
         setRotY(currentRotY);
       }
@@ -242,8 +246,8 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
           : isMatched
           ? '#F59E0B'
           : isDimmed
-          ? 'rgba(148, 163, 184, 0.05)'
-          : 'rgba(148, 163, 184, 0.18)';
+          ? 'rgba(148, 163, 184, 0.04)'
+          : 'rgba(148, 163, 184, 0.16)';
 
         ctx.beginPath();
         ctx.moveTo(cx + sx, cy + sy);
@@ -341,241 +345,274 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-5">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-7xl h-[92vh] flex flex-col overflow-hidden text-slate-100 relative select-none">
-        
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              <Compass className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold flex items-center gap-2 font-sans">
-                <span>凱益醫療產品知識與 BOM 網絡圖譜</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  {graphData.nodes.length} 節點 · {graphData.links.length} 關聯
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                可自由拖曳 360 度旋轉 3D 觀察視角 · 滾輪縮放 · 點擊節點高亮關聯
-              </p>
-            </div>
+    <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-950 flex flex-col overflow-hidden text-slate-100 select-none">
+      
+      {/* Header Bar (Full Viewport) */}
+      <div className="flex flex-wrap items-center justify-between px-6 py-3.5 border-b border-slate-800/80 bg-slate-900/90 gap-4 shrink-0 shadow-lg z-20">
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={onClose}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer mr-2 shadow-xs active:scale-95"
+            title="離開圖譜並返回品號檢索主畫面"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>返回主檢視系統</span>
+          </button>
+
+          <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <Compass className="w-5 h-5 animate-pulse" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2 font-sans">
+              <span>雙軸心醫療產品知識與 BOM 網絡圖譜 (v5.0.0)</span>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                {graphData.nodes.length} 節點 · {graphData.links.length} 關聯
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400">
+              融合【廠內 MindMap 6 大分類】與【客戶採購體系】雙軸心 · 全瀏覽頁面 · 滑鼠 360 度旋轉
+            </p>
+          </div>
+        </div>
+
+        {/* 視角軸心與 2D/3D 切換器 */}
+        <div className="flex flex-wrap items-center space-x-3 gap-y-2">
+          {/* 軸心篩選 Mode */}
+          <div className="flex items-center bg-slate-800/90 rounded-xl p-1 border border-slate-700/80">
+            <button
+              onClick={() => setAxisFilter('all')}
+              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'all'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>全景總圖譜</span>
+            </button>
+            <button
+              onClick={() => setAxisFilter('factory')}
+              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'factory'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Factory className="w-3.5 h-3.5" />
+              <span>廠內 MindMap 視角</span>
+            </button>
+            <button
+              onClick={() => setAxisFilter('customer')}
+              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'customer'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>客戶採購視角</span>
+            </button>
           </div>
 
-          <div className="flex items-center space-x-3">
-            {/* 2D / 3D Mode Switcher */}
-            <div className="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700">
-              <button
-                onClick={() => setViewMode('2D')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === '2D'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                2D 繪圖視圖
-              </button>
-              <button
-                onClick={() => setViewMode('3D')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  viewMode === '3D'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                3D 軌道立體視圖
-              </button>
-            </div>
-
+          {/* 2D / 3D Mode */}
+          <div className="flex items-center bg-slate-800/90 rounded-xl p-1 border border-slate-700/80">
             <button
-              onClick={onClose}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              onClick={() => setViewMode('2D')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === '2D'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
-              <X className="w-5 h-5" />
+              2D 繪圖
+            </button>
+            <button
+              onClick={() => setViewMode('3D')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === '3D'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              3D 軌道
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Search Toolbar */}
-        <div className="px-6 py-2.5 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="relative flex-1 max-w-md">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜尋品號、SA/SB/SC/SD 前綴或編碼名稱..."
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* Color Legend */}
-            <div className="hidden sm:flex items-center space-x-3 text-slate-300">
-              <div className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]"></span>
-                <span>編碼規則</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E9]"></span>
-                <span>SA/SB/SC/SD 組立</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
-                <span>單品零件</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
-                <span>客戶別名</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Interactive Canvas Viewport */}
-        <div className="flex-1 relative overflow-hidden bg-slate-950 flex">
-          <canvas
-            ref={canvasRef}
-            width={1300}
-            height={750}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onWheel={handleWheel}
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={(e) => {
-              if (isDragging) return;
-              const rect = canvasRef.current?.getBoundingClientRect();
-              if (!rect || !canvasRef.current) return;
-              const x = e.clientX - rect.left;
-              const y = e.clientY - rect.top;
-              const cx = canvasRef.current.width / 2 + panOffset.x;
-              const cy = canvasRef.current.height / 2 + panOffset.y;
-
-              const hit = nodesWithPos.find((n) => {
-                const drawScale = viewMode === '3D' ? (400 / (400 + (n.z3d ?? 0) + 220)) * zoom : zoom;
-                const r = Math.max(3.5, n.val * 0.45 * drawScale);
-                const screenX = cx + (viewMode === '3D' ? (n.x3d ?? 0) * drawScale : (n.x ?? 0) * zoom);
-                const screenY = cy + (viewMode === '3D' ? (n.y3d ?? 0) * drawScale : (n.y ?? 0) * zoom);
-                return Math.hypot(screenX - x, screenY - y) <= (r + 8);
-              });
-              setSelectedNode(hit || null);
-            }}
-            className="w-full h-full cursor-grab active:cursor-grabbing"
+      {/* Toolbar & Filter */}
+      <div className="px-6 py-2 border-b border-slate-800/80 bg-slate-900/40 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 z-20">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜尋品號、SA/SB/SC/SD 前綴、廠內分類或客戶名稱..."
+            className="w-full pl-9 pr-4 py-1.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
           />
+        </div>
 
-          {/* Floating Tool-Calling Dock Bar (視角控制面板) */}
-          <div className="absolute left-6 bottom-6 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1.5 space-x-1 shadow-2xl z-20">
-            <button
-              onClick={() => setZoom((prev) => Math.min(4.5, prev * 1.25))}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="放大視角 (Zoom In)"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setZoom((prev) => Math.max(0.3, prev * 0.8))}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="縮小視角 (Zoom Out)"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <div className="w-px h-5 bg-slate-700 mx-1" />
-            <button
-              onClick={handleResetView}
-              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              title="重置視角與軌道 (Reset Camera Orbit)"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            {viewMode === '3D' && (
-              <button
-                onClick={() => setAutoRotate(!autoRotate)}
-                className={`p-2 rounded-xl transition-colors cursor-pointer ${
-                  autoRotate
-                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-                title={autoRotate ? '定格目前視角' : '開啟 3D 自動微軌道旋轉'}
-              >
-                {autoRotate ? <Pause className="w-4 h-4 text-indigo-400" /> : <Play className="w-4 h-4" />}
-              </button>
-            )}
+        {/* Color Legend */}
+        <div className="hidden lg:flex items-center space-x-3 text-slate-300 text-[11px]">
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]"></span>
+            <span>Set 組合</span>
           </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#0EA5E9]"></span>
+            <span>組件 (SA/SB/SC/SD)</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
+            <span>單品零件</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EC4899]"></span>
+            <span>原料屬性</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
+            <span>ICU 重症客戶</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EAB308]"></span>
+            <span>OEM/ODM 客戶</span>
+          </div>
+        </div>
+      </div>
 
-          {/* Node Details Floating Panel */}
-          {selectedNode && (
-            <div className="absolute right-6 top-6 w-84 bg-slate-900/95 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-100 z-30 animate-in fade-in slide-in-from-right-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span
-                    className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase"
-                    style={{ backgroundColor: `${selectedNode.color}25`, color: selectedNode.color, borderColor: `${selectedNode.color}50` }}
-                  >
-                    {selectedNode.group}
-                  </span>
-                  <h3 className="text-base font-bold text-white mt-1.5 font-mono">{selectedNode.name}</h3>
-                </div>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+      {/* Main Full Viewport Canvas */}
+      <div className="flex-1 relative overflow-hidden bg-slate-950 flex">
+        <canvas
+          ref={canvasRef}
+          width={window.innerWidth}
+          height={window.innerHeight - 110}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+          onContextMenu={(e) => e.preventDefault()}
+          onClick={(e) => {
+            if (isDragging) return;
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect || !canvasRef.current) return;
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = canvasRef.current.width / 2 + panOffset.x;
+            const cy = canvasRef.current.height / 2 + panOffset.y;
 
-              <div className="text-xs text-slate-300 space-y-2.5 border-t border-slate-800 pt-3">
-                <p className="leading-relaxed text-slate-300">{selectedNode.description || '暫無詳細說明'}</p>
+            const hit = nodesWithPos.find((n) => {
+              const drawScale = viewMode === '3D' ? (400 / (400 + (n.z3d ?? 0) + 220)) * zoom : zoom;
+              const r = Math.max(3.5, n.val * 0.45 * drawScale);
+              const screenX = cx + (viewMode === '3D' ? (n.x3d ?? 0) * drawScale : (n.x ?? 0) * zoom);
+              const screenY = cy + (viewMode === '3D' ? (n.y3d ?? 0) * drawScale : (n.y ?? 0) * zoom);
+              return Math.hypot(screenX - x, screenY - y) <= (r + 8);
+            });
+            setSelectedNode(hit || null);
+          }}
+          className="w-full h-full cursor-grab active:cursor-grabbing"
+        />
 
-                {selectedNode.details && (
-                  <div className="bg-slate-950/80 rounded-xl p-3 space-y-1.5 font-mono border border-slate-800/90 text-[11px]">
-                    {selectedNode.details.customer && (
-                      <p><span className="text-slate-400">客戶名稱:</span> {selectedNode.details.customer}</p>
-                    )}
-                    {selectedNode.details.category && (
-                      <p><span className="text-slate-400">物料類別:</span> {selectedNode.details.category}</p>
-                    )}
-                    {selectedNode.details.material && (
-                      <p><span className="text-slate-400">原料成分:</span> {selectedNode.details.material}</p>
-                    )}
-                    {selectedNode.details.componentsCount !== undefined && (
-                      <p><span className="text-slate-400">BOM 零件個數:</span> <strong className="text-indigo-400">{selectedNode.details.componentsCount} 件</strong></p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {selectedNode.details?.partNo && onSelectPart && (
-                <button
-                  onClick={() => {
-                    if (selectedNode.details?.partNo) {
-                      onSelectPart(selectedNode.details.partNo);
-                      onClose();
-                    }
-                  }}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-lg cursor-pointer active:scale-95"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>跳轉查看此料號與 BOM ➔</span>
-                </button>
-              )}
-            </div>
+        {/* Floating Tool-Calling Control Dock */}
+        <div className="absolute left-6 bottom-6 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1.5 space-x-1 shadow-2xl z-20">
+          <button
+            onClick={() => setZoom((prev) => Math.min(4.5, prev * 1.25))}
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="放大視角 (Zoom In)"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setZoom((prev) => Math.max(0.3, prev * 0.8))}
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="縮小視角 (Zoom Out)"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <div className="w-px h-5 bg-slate-700 mx-1" />
+          <button
+            onClick={handleResetView}
+            className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="重置視角與軌道 (Reset Camera Orbit)"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          {viewMode === '3D' && (
+            <button
+              onClick={() => setAutoRotate(!autoRotate)}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                autoRotate
+                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+              title={autoRotate ? '定格目前視角' : '開啟 3D 自動微軌道旋轉'}
+            >
+              {autoRotate ? <Pause className="w-4 h-4 text-indigo-400" /> : <Play className="w-4 h-4" />}
+            </button>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-2.5 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs text-slate-400 font-mono">
-          <span>提示：左鍵拖曳 360 度旋轉 3D 視角 · 滾輪縮放 · 右鍵/Shift 鍵拖曳平移</span>
-          <button
-            onClick={onClose}
-            className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium transition-colors cursor-pointer"
-          >
-            關閉圖譜
-          </button>
-        </div>
+        {/* Node Details Floating Panel */}
+        {selectedNode && (
+          <div className="absolute right-6 top-6 w-88 bg-slate-900/95 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-100 z-30 animate-in fade-in slide-in-from-right-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <span
+                  className="px-2.5 py-0.5 rounded-md text-[11px] font-mono font-bold uppercase"
+                  style={{ backgroundColor: `${selectedNode.color}25`, color: selectedNode.color, borderColor: `${selectedNode.color}50` }}
+                >
+                  {selectedNode.group}
+                </span>
+                <h3 className="text-base font-bold text-white mt-1.5 font-mono">{selectedNode.name}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedNode(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
+            <div className="text-xs text-slate-300 space-y-2.5 border-t border-slate-800 pt-3">
+              <p className="leading-relaxed text-slate-300">{selectedNode.description || '暫無詳細說明'}</p>
+
+              {selectedNode.details && (
+                <div className="bg-slate-950/80 rounded-xl p-3 space-y-1.5 font-mono border border-slate-800/90 text-[11px]">
+                  {selectedNode.details.customer && (
+                    <p><span className="text-slate-400">客戶體系:</span> {selectedNode.details.customer}</p>
+                  )}
+                  {selectedNode.details.category && (
+                    <p><span className="text-slate-400">物料類別:</span> {selectedNode.details.category}</p>
+                  )}
+                  {selectedNode.details.material && (
+                    <p><span className="text-slate-400">原料成分:</span> {selectedNode.details.material}</p>
+                  )}
+                  {selectedNode.details.componentsCount !== undefined && (
+                    <p><span className="text-slate-400">BOM 零件個數:</span> <strong className="text-indigo-400">{selectedNode.details.componentsCount} 件</strong></p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {selectedNode.details?.partNo && onSelectPart && (
+              <button
+                onClick={() => {
+                  if (selectedNode.details?.partNo) {
+                    onSelectPart(selectedNode.details.partNo);
+                    onClose();
+                  }
+                }}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-lg cursor-pointer active:scale-95"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>跳轉查看此料號與 BOM ➔</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
+
     </div>
   );
 };
