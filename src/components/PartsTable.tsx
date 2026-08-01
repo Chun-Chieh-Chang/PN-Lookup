@@ -29,6 +29,7 @@ interface PartsTableProps {
   ocrProgress?: { done: number; total: number } | null;
   onBindClick?: (item: PartItem) => void;
   onCustomerClick: (customerName: string) => void;
+  isAdmin?: boolean;
 }
 
 type SortField = 'customer' | 'partNo' | 'category' | 'name';
@@ -45,6 +46,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   ocrProgress,
   onBindClick,
   onCustomerClick,
+  isAdmin = false,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedFullId, setCopiedFullId] = useState<string | null>(null);
@@ -527,13 +529,15 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         <Eye className="w-3.5 h-3.5" />
                       </button>
 
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-                        title="編輯此項"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => onEdit(item)}
+                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          title="編輯此項（管理員權限）"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
 
                     </div>
                   </td>

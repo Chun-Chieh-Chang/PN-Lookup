@@ -401,6 +401,7 @@ export default function App() {
         imageFolderName={imageLib?.folderName ?? null}
         imageCount={imageLib?.count ?? 0}
         onPickImageFolder={handlePickImageFolder}
+        isAdminMode={route === 'admin'}
       />
 
       {/* Stats Summary Bar */}
@@ -446,6 +447,7 @@ export default function App() {
               selectedCustomers: [customerName],
             });
           }}
+          isAdmin={route === 'admin'}
         />
       </main>
 

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon, Lock, Unlock } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
@@ -14,6 +14,7 @@ interface HeaderProps {
   orphanCount?: number;
   onPickImageFolder?: () => void;
   onOpenOrphansModal?: () => void;
+  isAdminMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   orphanCount = 0,
   onPickImageFolder,
   onOpenOrphansModal,
+  isAdminMode = false,
 }) => {
   const versionClickCount = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,11 +61,32 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">凱益品號檢索系統</h1>
                 <span
                   onClick={handleVersionClick}
-                  title="五擊解鎖後台管理面板"
+                  title="五擊解鎖管理員編輯權限"
                   className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
-                  v3.4.0
+                  v3.4.1
                 </span>
+
+                {/* Read-Only / Admin Lock Badge */}
+                {isAdminMode ? (
+                  <span
+                    onClick={onEnterAdmin}
+                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
+                    title="點擊進入後台管理面板"
+                  >
+                    <Unlock className="w-3 h-3 text-amber-600" />
+                    <span>管理員解鎖權限</span>
+                  </span>
+                ) : (
+                  <span
+                    onClick={handleVersionClick}
+                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-medium cursor-pointer"
+                    title="一般用戶唯讀查詢模式（連續五擊版號可解鎖管理權限）"
+                  >
+                    <Lock className="w-3 h-3 text-emerald-600" />
+                    <span>唯讀管制模式</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span>醫療器材與 BOM 階層規格料號即時對照平台</span>

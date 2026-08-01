@@ -1,5 +1,17 @@
 # PN-Lookup 開發日誌
 
+## v3.5.0 — 品質與權限管制：一般用戶「全頁面強制唯讀」與 ISO/GMP 數據防呆機制 (Strict Read-Only Access Control & Data Protection)
+
+### 需求內容與作業
+- **第一性原理與醫療器材數據管制 (ISO 13485 / GMP Audit Trail)**：
+  - 針對使用者提出的嚴重品質警示（若任何現場用戶均可隨意編輯品號，主數據必將混亂），本版本實施嚴格的**角色權限管制 (Role-Based Access Control)**。
+- **預設全面唯讀防護 (Default Read-Only Enforcer)**：
+  - **一般用戶 (Operator / General User)**：預設進入「唯讀管制模式 (`Lock` 標籤)」。允許即時檢索、BOM 展算、圖檔開啓與報表匯出，但**隱藏全數品號編輯 (Edit2) 與手動綁定按鈕**，徹底防範未授權的資料纂改。
+  - **管理者解鎖機制 (Admin Mode)**：僅當管理員完成 5 擊連點認證解鎖後（顯示 `Unlock` 解鎖標籤），系統方才釋放編輯按鈕與 `#admin` 後台權限。
+- **確效驗證**：`npx tsc --noEmit` 0 錯誤與 Vite 4.11s 生產打包通過。
+
+---
+
 ## v3.4.1 — 品牌標題更新與作者資訊標示 (Title & Author Credit)
 
 ### 需求內容與作業
