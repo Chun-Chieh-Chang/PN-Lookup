@@ -38,13 +38,16 @@ export async function idbGetAll(store: string): Promise<Array<{ key: string; val
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(store, 'readonly');
-    const req = tx.objectStore(store).getAll();
-    const keysReq = tx.objectStore(store).getAllKeys();
-    req.onsuccess = () => {
-      const values = req.result as unknown[];
+    const objStore = tx.objectStore(store);
+    const valuesReq = objStore.getAll();
+    const keysReq = objStore.getAllKeys();
+
+    // Wait for the entire transaction to complete — guarantees both requests are finished.
+    tx.oncomplete = () => {
+      const values = valuesReq.result as unknown[];
       const keys = keysReq.result as IDBValidKey[];
       resolve(values.map((value, i) => ({ key: String(keys[i]), value })));
     };
-    req.onerror = () => reject(req.error);
+    tx.onerror = () => reject(tx.error);
   });
 }
