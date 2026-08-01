@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon, Lock, Unlock } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Layers, Image as ImageIcon, ShieldAlert, ExternalLink } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
@@ -61,30 +61,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">凱益品號檢索系統</h1>
                 <span
                   onClick={handleVersionClick}
-                  title="五擊解鎖管理員編輯權限"
+                  title="五擊解鎖前端「修訂」與後台「增刪」管理權限"
                   className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
-                  v3.4.1
+                  v3.6.0
                 </span>
 
-                {/* Read-Only / Admin Lock Badge */}
-                {isAdminMode ? (
+                {/* Show Unlocked Status Pill when unlocked */}
+                {isAdminMode && (
                   <span
                     onClick={onEnterAdmin}
                     className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
-                    title="點擊進入後台管理面板"
+                    title="點擊直接跳轉後台進行資料「增刪」"
                   >
-                    <Unlock className="w-3 h-3 text-amber-600" />
-                    <span>管理員解鎖權限</span>
-                  </span>
-                ) : (
-                  <span
-                    onClick={handleVersionClick}
-                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-xs font-medium cursor-pointer"
-                    title="一般用戶唯讀查詢模式（連續五擊版號可解鎖管理權限）"
-                  >
-                    <Lock className="w-3 h-3 text-emerald-600" />
-                    <span>唯讀管制模式</span>
+                    <span>修訂已解鎖</span>
                   </span>
                 )}
               </div>
@@ -98,6 +88,19 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+
+            {/* Jump to Back-end Admin Button (Appears when unlocked) */}
+            {isAdminMode && onEnterAdmin && (
+              <button
+                onClick={onEnterAdmin}
+                className="inline-flex items-center px-3.5 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95 border border-amber-300 shadow-amber-500/20"
+                title="前往後台管理頁面執行『增刪』（新增與刪除數據）"
+              >
+                <ShieldAlert className="w-4 h-4 text-slate-950" />
+                <span>後台管理 (增刪)</span>
+                <ExternalLink className="w-3 h-3 text-slate-800" />
+              </button>
+            )}
             
             <button
               onClick={onOpenBatchSearch}

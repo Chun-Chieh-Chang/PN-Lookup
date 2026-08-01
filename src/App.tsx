@@ -386,6 +386,14 @@ export default function App() {
     );
   }
 
+  const [isUnlocked, setIsUnlocked] = useState(() => route === 'admin');
+
+  useEffect(() => {
+    if (route === 'admin') {
+      setIsUnlocked(true);
+    }
+  }, [route]);
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       
@@ -397,11 +405,14 @@ export default function App() {
         onOpenCustomerStats={() => setIsCustomerStatsOpen(true)}
         onOpenExportImport={() => setIsExportImportOpen(true)}
         onResetData={handleResetData}
-        onEnterAdmin={() => { window.location.hash = 'admin'; }}
+        onEnterAdmin={() => {
+          setIsUnlocked(true);
+          window.location.hash = 'admin';
+        }}
         imageFolderName={imageLib?.folderName ?? null}
         imageCount={imageLib?.count ?? 0}
         onPickImageFolder={handlePickImageFolder}
-        isAdminMode={route === 'admin'}
+        isAdminMode={isUnlocked || route === 'admin'}
       />
 
       {/* Stats Summary Bar */}
@@ -447,7 +458,7 @@ export default function App() {
               selectedCustomers: [customerName],
             });
           }}
-          isAdmin={route === 'admin'}
+          isAdmin={isUnlocked || route === 'admin'}
         />
       </main>
 

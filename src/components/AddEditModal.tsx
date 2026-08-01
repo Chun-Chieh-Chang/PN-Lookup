@@ -79,10 +79,10 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
               {initialItem ? <Edit3 className="w-5 h-5" /> : <PlusCircle className="w-5 h-5" />}
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">
-                {initialItem ? '編輯品號資料' : '新增品號資料'}
+              <h2 className="text-lg font-extrabold text-slate-900 font-sans">
+                {initialItem ? '修訂品號資料' : '新增品號資料'}
               </h2>
-              <p className="text-sm text-gray-500">建立或更正資料庫中的醫療配件品號</p>
+              <p className="text-xs text-slate-500 font-medium">修訂既有醫療配件品號屬性、備註與對照別名</p>
             </div>
           </div>
           <button

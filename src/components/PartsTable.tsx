@@ -533,7 +533,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         <button
                           onClick={() => onEdit(item)}
                           className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          title="編輯此項（管理員權限）"
+                          title="修訂此料號（既有數據修改）"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>

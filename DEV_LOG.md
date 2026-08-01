@@ -1,5 +1,19 @@
 # PN-Lookup 開發日誌
 
+## v3.6.0 — 數據維護權責分工：「修訂」與「增刪」邏輯重構與雙通道設計 (Data Maintenance Governance: Revision vs Add/Delete Separation)
+
+### 需求內容與作業
+- **權責明確分工 (Revision vs. Addition/Deletion)**：
+  - **修訂 (Revision)**：專指「既有數據的修改」，落實於**前端檢索頁面**（保留點擊單列「編輯 / Pencil」按鈕彈窗更正）。
+  - **增刪 (Addition & Deletion)**：包含「新增」與「刪除」，專屬於**後台管理頁面 (`AdminPanel.tsx`)**，防範現場誤刪品號與破壞 BOM 樹。
+- **解鎖流與 UI 介面優化**：
+  - **移除前端「唯讀管制模式」標籤**：保持前台視覺乾淨無雜訊。
+  - **5 擊解鎖釋放前端「修訂」**：連續五擊版號解鎖後，前端表格單列「編輯 / Pencil」按鈕方才出現。
+  - **後台跳轉按鈕 (Admin Navigation)**：解鎖後 Header 自動呈現醒目的 **「後台管理 (增刪)」** 按鈕 (`ShieldAlert` + `ExternalLink` 樣式)，方便授權管理員一鍵切換至後台進行重度資料增刪與 BOM 重構。
+- **確效驗證**：通過 `npx tsc --noEmit` 0 錯誤與 Vite 4.03s 生產打包測試。
+
+---
+
 ## v3.5.0 — 品質與權限管制：一般用戶「全頁面強制唯讀」與 ISO/GMP 數據防呆機制 (Strict Read-Only Access Control & Data Protection)
 
 ### 需求內容與作業
