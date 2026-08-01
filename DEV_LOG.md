@@ -1086,6 +1086,22 @@ pn-lookup/
    * 將 `D3Tree` 的 `nodeSize` 與 `separation` 調校為垂直與水平合理的留白比例，確保展開後卡片不重疊。
 3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.8.6 — 互動功能升級：思維導圖雙擊與單擊雙向開展/收合機制 (MindMap Double Click & Click Collapsing Feature)
+
+### 需求內容
+回應使用者需求，為思維導圖補全末端品號卡片與樹狀分類卡片的雙擊 (`onDoubleClick`) 與單擊標題/箭頭折疊功能，解決開展後無法快速收合的問題。
+
+### 實現架構與邏輯
+1. **末端品號卡片 (Leaf Category Cards)**：
+   * 導入 `collapsedLeafIds` React State 進行狀態開關。
+   * **單擊標題/箭頭** 或 **雙擊卡片任一處** 均可即時切換「48px 精簡膠囊卡片 (含 `﹀` 箭頭)」與「280px 全功能卷軸清單 (含 `︿` 箭頭)」。
+2. **父類別節點 (Parent Category Nodes)**：
+   * **單擊** 或 **雙擊卡片** 均可切換展開/收合下層子類別分支 (`toggleNode()`)。
+3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 

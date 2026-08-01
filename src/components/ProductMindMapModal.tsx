@@ -399,13 +399,24 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
   const [treeKey, setTreeKey]         = useState(0);
+  const [collapsedLeafIds, setCollapsedLeafIds] = useState<Set<string>>(new Set());
   const containerRef                  = useRef<HTMLDivElement>(null);
   // react-d3-tree translate：等容器掛載後取真實高度置中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 300 });
 
+  const toggleLeafCollapsed = useCallback((id: string) => {
+    setCollapsedLeafIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
   const handleResetDefault = useCallback(() => {
     setSearchQuery('');
     setThumbnail(null);
+    setCollapsedLeafIds(new Set());
     setTreeKey(prev => prev + 1);
     if (containerRef.current) {
       setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
@@ -547,6 +558,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     const isRoot = mm.depth === 0;
     const hasParts = mm.parts.length > 0;
     const isLeafCategory = hasParts && (!nodeDatum.children || nodeDatum.children.length === 0);
+    const isLeafCollapsed = collapsedLeafIds.has(mm.id);
 
     const displayedParts = q && hasParts
       ? mm.parts.filter(p =>
@@ -563,9 +575,158 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
 
-    const listH = isLeafCategory ? Math.min(displayedParts.length * 42 + 10, 220) : 0;
+    // 品號葉卡片特化邏輯
+    if (isLeafCategory) {
+      const listH = isLeafCollapsed ? 0 : Math.min(displayedParts.length * 42 + 10, 220);
+      const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+      const nodeH = isLeafCollapsed ? baseHeaderH : (baseHeaderH + listH + 24);
+
+      return (
+        <foreignObject
+          width={cardW}
+          height={nodeH + 12}
+          x={0}
+          y={-(nodeH + 12) / 2}
+          style={{ overflow: 'visible' }}
+        >
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            onDoubleClick={(e) => { e.stopPropagation(); toggleLeafCollapsed(mm.id); }}
+            title="點擊標題或雙擊卡片可收合/展開品號清單"
+            style={{
+              position: 'relative',
+              display: 'flex', flexDirection: 'column',
+              background: mm.color, border: `2px solid ${mm.borderColor}`,
+              borderRadius: 16, padding: `${padV}px ${padH}px`,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              opacity: isDimmed ? 0.3 : 1,
+              outline: isHighlighted ? '2px solid #FBBF24' : 'none',
+              outlineOffset: 2,
+              width: cardW, minWidth: cardW, maxWidth: CARD.maxW,
+              boxSizing: 'border-box',
+              transition: 'all 0.15s',
+              userSelect: 'none',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.98)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.filter = ''; }}
+          >
+            {/* Header Bar */}
+            <div
+              onClick={() => toggleLeafCollapsed(mm.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+            >
+              <div style={{ flex: 1, fontSize, fontWeight: 700, color: mm.textColor, lineHeight: 1.3 }}>
+                {highlight(mm.label)}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, background: `${mm.borderColor}25`, color: mm.textColor, fontWeight: 700 }}>
+                  {mm.parts.length} 件
+                </span>
+                <div style={{ color: mm.textColor, opacity: 0.85, flexShrink: 0 }}>
+                  {isLeafCollapsed
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"/></svg>
+                  }
+                </div>
+              </div>
+            </div>
+
+            {mm.sublabel && (
+              <div style={{ fontSize: subFontSize, color: mm.textColor, opacity: 0.6, marginTop: 3, lineHeight: 1.3 }}>
+                {mm.sublabel}
+              </div>
+            )}
+
+            {/* 卷軸品號清單區塊 */}
+            {!isLeafCollapsed && (
+              <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${mm.borderColor}40` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>
+                    品號列表 ({displayedParts.length} / {mm.parts.length}) · 點擊/雙擊標題收合
+                  </span>
+                </div>
+                <div
+                  className="custom-scrollbar"
+                  onWheel={(e) => e.stopPropagation()}
+                  style={{
+                    maxHeight: 220,
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                    paddingRight: 2,
+                  }}
+                >
+                  {displayedParts.length === 0 ? (
+                    <div style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>
+                      無匹配品號
+                    </div>
+                  ) : (
+                    displayedParts.map((part) => (
+                      <div
+                        key={part.id || part.partNo}
+                        onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#FFFFFF',
+                          border: '1px solid #CBD5E1',
+                          borderRadius: 8,
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.12s',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = '#EEF2FF';
+                          (e.currentTarget as HTMLDivElement).style.borderColor = '#818CF8';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.currentTarget as HTMLDivElement).style.background = '#FFFFFF';
+                          (e.currentTarget as HTMLDivElement).style.borderColor = '#CBD5E1';
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+                          <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {highlight(part.partNo)}
+                          </div>
+                          <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
+                            title="預覽圖檔"
+                            style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#4945FF', cursor: 'pointer' }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleNavigatePart(part.partNo); }}
+                            title="跳轉至 BOM 主頁"
+                            style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#059669', cursor: 'pointer' }}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </foreignObject>
+      );
+    }
+
+    // 一般父分類卡片
+    const listH = 0;
     const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
-    const nodeH = isLeafCategory ? (baseHeaderH + listH + 24) : baseHeaderH;
+    const nodeH = baseHeaderH;
 
     return (
       <foreignObject
@@ -578,6 +739,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         <div
           xmlns="http://www.w3.org/1999/xhtml"
           onClick={() => hasChildren && toggleNode()}
+          onDoubleClick={(e) => { e.stopPropagation(); if (hasChildren) toggleNode(); }}
           style={{
             position: 'relative',
             display: 'flex', flexDirection: 'column',
@@ -612,87 +774,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           {mm.sublabel && (
             <div style={{ fontSize: subFontSize, color: mm.textColor, opacity: 0.6, marginTop: 3, lineHeight: 1.3 }}>
               {mm.sublabel}
-            </div>
-          )}
-
-          {/* 卷軸品號清單區塊 (Scrollable Part List Container) */}
-          {isLeafCategory && (
-            <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${mm.borderColor}40` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>
-                  品號列表 ({displayedParts.length} / {mm.parts.length})
-                </span>
-              </div>
-              <div
-                className="custom-scrollbar"
-                onWheel={(e) => e.stopPropagation()}
-                style={{
-                  maxHeight: 220,
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 4,
-                  paddingRight: 2,
-                }}
-              >
-                {displayedParts.length === 0 ? (
-                  <div style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>
-                    無匹配品號
-                  </div>
-                ) : (
-                  displayedParts.map((part) => (
-                    <div
-                      key={part.id || part.partNo}
-                      onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        background: '#FFFFFF',
-                        border: '1px solid #CBD5E1',
-                        borderRadius: 8,
-                        padding: '4px 8px',
-                        cursor: 'pointer',
-                        transition: 'all 0.12s',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.background = '#EEF2FF';
-                        (e.currentTarget as HTMLDivElement).style.borderColor = '#818CF8';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLDivElement).style.background = '#FFFFFF';
-                        (e.currentTarget as HTMLDivElement).style.borderColor = '#CBD5E1';
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
-                        <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {highlight(part.partNo)}
-                        </div>
-                        <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
-                          title="預覽圖檔"
-                          style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#4945FF', cursor: 'pointer' }}
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleNavigatePart(part.partNo); }}
-                          title="跳轉至 BOM 主頁"
-                          style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#059669', cursor: 'pointer' }}
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
             </div>
           )}
 
