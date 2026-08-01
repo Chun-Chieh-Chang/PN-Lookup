@@ -185,7 +185,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 w-full flex-1 flex flex-col">
+    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-3 w-full flex-1 flex flex-col">
 
       {/* ── 懸停縮圖 popup ── */}
       {hoverThumb && (() => {

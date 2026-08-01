@@ -30,7 +30,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 w-full">
+    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-2 w-full">
       <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/80 p-3 sm:p-3.5 shadow-2xs">
         {/* Main Search Row */}
         <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
