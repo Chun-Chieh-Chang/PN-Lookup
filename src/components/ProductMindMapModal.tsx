@@ -381,14 +381,18 @@ const ConnectorTree: React.FC<ConnectorTreeProps> = ({
     Array(count).fill(defaultHalfH * 2)
   );
 
-  const handleCardHeight = React.useCallback((idx: number, h: number) => {
-    setCardHeights((prev) => {
-      if (prev[idx] === h) return prev;
-      const next = [...prev];
-      next[idx] = h;
-      return next;
+  // 用 useRef 穩定 callback，避免 cloneElement 產生新函式觸發無限 re-render
+  const callbacksRef = React.useRef<((h: number) => void)[]>([]);
+  if (callbacksRef.current.length !== count) {
+    callbacksRef.current = Array.from({ length: count }, (_, i) => (h: number) => {
+      setCardHeights((prev) => {
+        if (prev[i] === h) return prev;
+        const next = [...prev];
+        next[i] = h;
+        return next;
+      });
     });
-  }, []);
+  }
 
   const GAP = 10;
 
@@ -441,7 +445,7 @@ const ConnectorTree: React.FC<ConnectorTreeProps> = ({
           />
           {/* 把 onCardHeight 注入子節點 */}
           {React.cloneElement(child, {
-            onCardHeight: (h: number) => handleCardHeight(idx, h),
+            onCardHeight: callbacksRef.current[idx],
           } as Partial<NodeProps>)}
         </div>
       ))}
@@ -486,6 +490,7 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
     const part = node.parts[0];
     return (
       <div
+        ref={(el) => { if (el && onCardHeight) onCardHeight(el.offsetHeight); }}
         className={`
           group relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 cursor-pointer select-none shadow-sm
           transition-all duration-150 hover:bg-indigo-50 hover:border-indigo-400 hover:shadow-indigo-200/60 active:scale-[0.98]
@@ -528,10 +533,17 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
     <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
       <div
         ref={(el) => {
-          if (el && onCardHeight) {
-            // 量測卡片 wrapper 的實際高度，包含 padding/border，回傳給父層
-            onCardHeight(el.offsetHeight);
-          }
+          if (!el) return;
+          // 初次掛載立即回傳
+          if (onCardHeight) onCardHeight(el.offsetHeight);
+          // 用 ResizeObserver 追蹤後續高度變化（卡片展開/縮合時）
+          const ro = new ResizeObserver(() => {
+            if (onCardHeight) onCardHeight(el.offsetHeight);
+          });
+          ro.observe(el);
+          // cleanup 掛在 el 上，避免 React 多次 ref 呼叫時洩漏
+          (el as HTMLDivElement & { _ro?: ResizeObserver })._ro?.disconnect();
+          (el as HTMLDivElement & { _ro?: ResizeObserver })._ro = ro;
         }}
         className="flex flex-col items-stretch"
         style={{ minWidth: minW }}
