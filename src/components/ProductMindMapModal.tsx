@@ -11,22 +11,39 @@ import {
   ChevronRight,
   ChevronDown,
   ArrowLeft,
-  Package,
-  Users,
-  Cpu,
   Layers,
-  Boxes,
-  Syringe,
-  FlaskConical,
-  TriangleAlert,
   Eye,
-  ZoomIn,
-  ZoomOut,
   RotateCcw,
   Info,
+  Image as ImageIcon,
+  ExternalLink,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from '../utils/mindmapClassifier';
+import { loadBindings } from '../utils/imageResolver';
+
+// ────────────────────────────────────────────────────────────────────────────
+// Constants – 1.5× baseline vs v5.0.0
+// ────────────────────────────────────────────────────────────────────────────
+
+// Card width / padding multiplied ×1.5
+const CARD = {
+  rootMinW:  360,   // 240 × 1.5
+  d1MinW:    300,   // 200 × 1.5
+  d2MinW:    255,   // 170 × 1.5
+  d3MinW:    225,   // 150 × 1.5
+  maxW:      420,   // 280 × 1.5
+  rootPad:   '18px 24px',  // 12/16 × 1.5
+  nodePad:   '12px 18px',  // 8/12  × 1.5
+  leafPad:   '9px 15px',   // 6/10  × 1.5
+};
+
+// Connector geometry (px)
+const CONN = {
+  horizontalLen: 24,   // horizontal branch length
+  lineW: 2,
+  nodeHeaderH: 24,     // approximate half-height of a node header (for connector y-offset)
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -36,14 +53,22 @@ interface MindMapNode {
   id: string;
   label: string;
   sublabel?: string;
-  icon?: React.ReactNode;
-  color: string;         // Tailwind bg color class
-  textColor: string;     // Tailwind text color class
-  borderColor: string;   // Tailwind border color class
+  color: string;
+  textColor: string;
+  borderColor: string;
   children: MindMapNode[];
-  parts: PartItem[];     // 掛載的品號
+  parts: PartItem[];
   category?: MindMapCategory;
   depth: number;
+}
+
+interface ThumbnailState {
+  partNo: string;
+  partName: string;
+  customer: string;
+  imageUrl: string | null;
+  anchorX: number;
+  anchorY: number;
 }
 
 interface ProductMindMapModalProps {
@@ -54,29 +79,27 @@ interface ProductMindMapModalProps {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 顏色系統 (Morandi Palette)
+// Colour palette (Morandi Dark)
 // ────────────────────────────────────────────────────────────────────────────
 
 const PALETTE = {
-  root:       { bg: '#3B4A6B', border: '#6B7A9E', text: '#F0F4FF' },
-  level1:     { bg: '#1E3A5F', border: '#3B82F6', text: '#93C5FD' },
-  factoryPart:{ bg: '#134E4A', border: '#14B8A6', text: '#5EEAD4' },
-  factoryAsm: { bg: '#1E3A5F', border: '#60A5FA', text: '#BFDBFE' },
-  factorySet: { bg: '#3B0764', border: '#8B5CF6', text: '#C4B5FD' },
-  icuBag:     { bg: '#7C2D12', border: '#F97316', text: '#FED7AA' },
-  icuVial:    { bg: '#701A75', border: '#E879F9', text: '#F5D0FE' },
-  customerBD: { bg: '#1C3144', border: '#38BDF8', text: '#BAE6FD' },
+  root:          { bg: '#3B4A6B', border: '#6B7A9E', text: '#F0F4FF' },
+  level1:        { bg: '#1E3A5F', border: '#3B82F6', text: '#93C5FD' },
+  factoryPart:   { bg: '#134E4A', border: '#14B8A6', text: '#5EEAD4' },
+  factoryAsm:    { bg: '#1E3A5F', border: '#60A5FA', text: '#BFDBFE' },
+  factorySet:    { bg: '#3B0764', border: '#8B5CF6', text: '#C4B5FD' },
+  icuBag:        { bg: '#7C2D12', border: '#F97316', text: '#FED7AA' },
+  icuVial:       { bg: '#701A75', border: '#E879F9', text: '#F5D0FE' },
+  customerBD:    { bg: '#1C3144', border: '#38BDF8', text: '#BAE6FD' },
   customerOther: { bg: '#1F2937', border: '#6B7280', text: '#D1D5DB' },
   unclassified:  { bg: '#2D2D2D', border: '#6B7280', text: '#9CA3AF' },
-  partNode:   { bg: '#0F172A', border: '#334155', text: '#94A3B8' },
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// 建構 MindMap 樹狀結構
+// Tree builder (unchanged logic, colour references only)
 // ────────────────────────────────────────────────────────────────────────────
 
 function buildMindMapTree(parts: PartItem[]): MindMapNode {
-  // 依分類收集品號
   const buckets = new Map<MindMapCategory, PartItem[]>();
   const catList: MindMapCategory[] = [
     'factory_part_t_connector', 'factory_part_y_connector', 'factory_part_mll',
@@ -93,169 +116,176 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
   ];
   for (const cat of catList) buckets.set(cat, []);
   for (const part of parts) {
-    const result = classifyPart(part);
-    buckets.get(result.category)!.push(part);
+    const r = classifyPart(part);
+    buckets.get(r.category)!.push(part);
   }
 
-  const makeNode = (
+  const n = (
     id: string, label: string, sublabel: string | undefined,
-    palette: typeof PALETTE.root, depth: number,
-    children: MindMapNode[], parts: PartItem[],
-    cat?: MindMapCategory, icon?: React.ReactNode,
-  ): MindMapNode => ({
-    id, label, sublabel, icon,
-    color: palette.bg, textColor: palette.text, borderColor: palette.border,
-    children, parts, category: cat, depth,
-  });
+    palette: { bg: string; border: string; text: string }, depth: number,
+    children: MindMapNode[], parts: PartItem[], cat?: MindMapCategory,
+  ): MindMapNode => ({ id, label, sublabel, color: palette.bg, textColor: palette.text, borderColor: palette.border, children, parts, category: cat, depth });
 
-  // 零件子節點
-  const partLeaf = (id: string, label: string, sublabel: string, cat: MindMapCategory): MindMapNode =>
-    makeNode(id, label, sublabel, PALETTE.factoryPart, 3, [], buckets.get(cat)!, cat);
+  const leaf = (id: string, label: string, sub: string, cat: MindMapCategory): MindMapNode =>
+    n(id, label, sub, PALETTE.factoryPart, 3, [], buckets.get(cat)!, cat);
 
-  // 廠內零件群
-  const factoryPartNodes: MindMapNode[] = [
-    partLeaf('ft-t', 'T接頭', 'A01 / A02 / A03', 'factory_part_t_connector'),
-    partLeaf('ft-y', 'Y管', 'B05 / B06', 'factory_part_y_connector'),
-    partLeaf('ft-mll', '針基/轉式 (MLL)', 'C09 / C11', 'factory_part_mll'),
-    partLeaf('ft-fll', '針基/滑式 (FLL)', 'D09 / D10', 'factory_part_fll'),
-    partLeaf('ft-cap', '針基蓋', 'E09 / E10 / E11', 'factory_part_cap'),
-    partLeaf('ft-clamp', '夾具', 'F17 切斷器 / F18 夾緊器', 'factory_part_clamp'),
-    partLeaf('ft-k', '連接管 K系列', 'K07 U型 / K08 三通 / K27 四通', 'factory_part_k_connector'),
-    partLeaf('ft-q', '倒鉤式連接器 Q系列', 'Q09 MLL / Q10 FLL', 'factory_part_q_barbed'),
-    partLeaf('ft-other', '其他', 'G05 針筒蓋 / G13 插入針 / H00 螺帽', 'factory_part_other'),
+  const factoryParts: MindMapNode[] = [
+    leaf('ft-t',   'T接頭',              'A01 / A02 / A03',               'factory_part_t_connector'),
+    leaf('ft-y',   'Y管',               'B05 / B06',                     'factory_part_y_connector'),
+    leaf('ft-mll', '針基/轉式 (MLL)',   'C09 / C11',                     'factory_part_mll'),
+    leaf('ft-fll', '針基/滑式 (FLL)',   'D09 / D10',                     'factory_part_fll'),
+    leaf('ft-cap', '針基蓋',            'E09 / E10 / E11',               'factory_part_cap'),
+    leaf('ft-clamp','夾具',             'F17 切斷器 / F18 夾緊器',       'factory_part_clamp'),
+    leaf('ft-k',   '連接管 K系列',      'K07 U型 / K08 三通 / K27 四通', 'factory_part_k_connector'),
+    leaf('ft-q',   '倒鉤式連接器 Q系列','Q09 MLL / Q10 FLL',            'factory_part_q_barbed'),
+    leaf('ft-other','其他',             'G05 針筒蓋 / G13 插入針 / H00 螺帽','factory_part_other'),
+  ];
+  const factoryAsm: MindMapNode[] = [
+    n('fa-sa','SA 系列','2 pcs 組合',PALETTE.factoryAsm,3,[],buckets.get('factory_asm_sa')!,'factory_asm_sa'),
+    n('fa-sb','SB 系列','3 pcs 組合',PALETTE.factoryAsm,3,[],buckets.get('factory_asm_sb')!,'factory_asm_sb'),
+    n('fa-sc','SC 系列','4 pcs 組合',PALETTE.factoryAsm,3,[],buckets.get('factory_asm_sc')!,'factory_asm_sc'),
+    n('fa-sd','SD 系列','5 pcs 組合',PALETTE.factoryAsm,3,[],buckets.get('factory_asm_sd')!,'factory_asm_sd'),
+    n('fa-sp','特殊品號','如 3M41459',PALETTE.factoryAsm,3,[],buckets.get('factory_asm_special')!,'factory_asm_special'),
+  ];
+  const factorySet: MindMapNode[] = [
+    n('fs-mdxe','MDXE','Extension set（不含插入針）',PALETTE.factorySet,3,[],buckets.get('factory_set_mdxe')!,'factory_set_mdxe'),
+    n('fs-mdxi','MDXI','I.V. set（含插入針）',       PALETTE.factorySet,3,[],buckets.get('factory_set_mdxi')!,'factory_set_mdxi'),
   ];
 
-  const factoryAsmNodes: MindMapNode[] = [
-    makeNode('fa-sa', 'SA 系列', '2 pcs 組合', PALETTE.factoryAsm, 3, [], buckets.get('factory_asm_sa')!, 'factory_asm_sa'),
-    makeNode('fa-sb', 'SB 系列', '3 pcs 組合', PALETTE.factoryAsm, 3, [], buckets.get('factory_asm_sb')!, 'factory_asm_sb'),
-    makeNode('fa-sc', 'SC 系列', '4 pcs 組合', PALETTE.factoryAsm, 3, [], buckets.get('factory_asm_sc')!, 'factory_asm_sc'),
-    makeNode('fa-sd', 'SD 系列', '5 pcs 組合', PALETTE.factoryAsm, 3, [], buckets.get('factory_asm_sd')!, 'factory_asm_sd'),
-    makeNode('fa-sp', '特殊品號', '如 3M41459', PALETTE.factoryAsm, 3, [], buckets.get('factory_asm_special')!, 'factory_asm_special'),
-  ];
+  const icuBagSpike = n('icu-bag','插袋針 (Bag spike)','插入點滴袋，皆加 R1-8112 針蓋',PALETTE.icuBag,3,[
+    n('icu-bag-vp','透氣-透氣口 (Side port)','常見: R1-8026, R1-8027, R1-15460',PALETTE.icuBag,4,[],buckets.get('customer_icu_bag_vented_port')!,'customer_icu_bag_vented_port'),
+    n('icu-bag-vc','透氣-有鼻子 (Clave)',    'R1-8028, R1-15456, RAW0000335',    PALETTE.icuBag,4,[],buckets.get('customer_icu_bag_vented_clave')!,'customer_icu_bag_vented_clave'),
+    n('icu-bag-nv','不透氣 (僅握把)',        '常見: R1-8029, R1-8030, R1-8577',  PALETTE.icuBag,4,[],buckets.get('customer_icu_bag_nonvented')!,'customer_icu_bag_nonvented'),
+    n('icu-bag-cap','插袋針蓋 R1-8112',     '防止針尖撞傷',                      PALETTE.icuBag,4,[],buckets.get('customer_icu_bag_cap')!,'customer_icu_bag_cap'),
+  ],[]);
+  const icuVialSpike = n('icu-vial','採藥針 (Vial spike)','插入藥瓶，皆加 R1-15853 針蓋',PALETTE.icuVial,3,[
+    n('icu-vial-nip',   '奶嘴 (圓盤型)',      '常見: R1-8391, R1-15951',          PALETTE.icuVial,4,[],buckets.get('customer_icu_vial_nipple')!,'customer_icu_vial_nipple'),
+    n('icu-vial-9035',  '9035 (兩個翅膀)',    'R1-9035 / 組件 R1-15935',          PALETTE.icuVial,4,[],buckets.get('customer_icu_vial_9035')!,'customer_icu_vial_9035'),
+    n('icu-vial-flower','花系列 (四個爪子)', '小花 20mm / 中花 28mm / 大花 32mm', PALETTE.icuVial,4,[],buckets.get('customer_icu_vial_flower')!,'customer_icu_vial_flower'),
+    n('icu-vial-cap',   '採藥針蓋 R1-15853', '防止針尖撞傷',                      PALETTE.icuVial,4,[],buckets.get('customer_icu_vial_cap')!,'customer_icu_vial_cap'),
+  ],[]);
 
-  const factorySetNodes: MindMapNode[] = [
-    makeNode('fs-mdxe', 'MDXE', 'Extension set（不含插入針）', PALETTE.factorySet, 3, [], buckets.get('factory_set_mdxe')!, 'factory_set_mdxe'),
-    makeNode('fs-mdxi', 'MDXI', 'I.V. set（含插入針）', PALETTE.factorySet, 3, [], buckets.get('factory_set_mdxi')!, 'factory_set_mdxi'),
-  ];
-
-  // ICU 插袋針子類
-  const icuBagSpike = makeNode(
-    'icu-bag', '插袋針 (Bag spike)', '插入點滴袋使用，皆加 R1-8112 針蓋',
-    PALETTE.icuBag, 3,
-    [
-      makeNode('icu-bag-vp', '透氣-透氣口 (Side port)', '常見: R1-8026, R1-8027, R1-15460', PALETTE.icuBag, 4, [], buckets.get('customer_icu_bag_vented_port')!, 'customer_icu_bag_vented_port'),
-      makeNode('icu-bag-vc', '透氣-有鼻子 (Clave)', '常見: R1-8028, R1-15456, RAW0000335', PALETTE.icuBag, 4, [], buckets.get('customer_icu_bag_vented_clave')!, 'customer_icu_bag_vented_clave'),
-      makeNode('icu-bag-nv', '不透氣 (僅握把)', '常見: R1-8029, R1-8030, R1-8577', PALETTE.icuBag, 4, [], buckets.get('customer_icu_bag_nonvented')!, 'customer_icu_bag_nonvented'),
-      makeNode('icu-bag-cap', '插袋針蓋 R1-8112', '防止針尖撞傷', PALETTE.icuBag, 4, [], buckets.get('customer_icu_bag_cap')!, 'customer_icu_bag_cap'),
-    ],
-    [], 'customer_icu_bag_vented_port',
-  );
-
-  // ICU 採藥針子類
-  const icuVialSpike = makeNode(
-    'icu-vial', '採藥針 (Vial spike)', '插入藥瓶使用，皆加 R1-15853 針蓋',
-    PALETTE.icuVial, 3,
-    [
-      makeNode('icu-vial-nip', '奶嘴 (圓盤型)', '常見: R1-8391, R1-15951', PALETTE.icuVial, 4, [], buckets.get('customer_icu_vial_nipple')!, 'customer_icu_vial_nipple'),
-      makeNode('icu-vial-9035', '9035 (兩個翅膀)', '零件 R1-9035 / 組件 R1-15935', PALETTE.icuVial, 4, [], buckets.get('customer_icu_vial_9035')!, 'customer_icu_vial_9035'),
-      makeNode('icu-vial-flower', '花系列 (四個爪子)', '小花 20mm / 中花 28mm / 大花 32mm', PALETTE.icuVial, 4, [], buckets.get('customer_icu_vial_flower')!, 'customer_icu_vial_flower'),
-      makeNode('icu-vial-cap', '採藥針蓋 R1-15853', '防止針尖撞傷', PALETTE.icuVial, 4, [], buckets.get('customer_icu_vial_cap')!, 'customer_icu_vial_cap'),
-    ],
-    [], 'customer_icu_vial_nipple',
-  );
-
-  // ICU 節點
-  const icuNode = makeNode(
-    'icu', 'ICU', '常見品號開頭: R1-, 27-, 75-, CIV-, RAW-',
-    { bg: '#7C2D12', border: '#F97316', text: '#FED7AA' }, 2,
-    [icuBagSpike, icuVialSpike],
-    [],
-  );
-
-  // 廠內品號 Level-1 節點
-  const factoryNode = makeNode(
-    'factory', '廠內品號編碼介紹', 'Mouldex 自有品號體系',
-    PALETTE.level1, 1,
-    [
-      makeNode('factory-part', '零件 (Component)', '九類基礎零件', PALETTE.factoryPart, 2, factoryPartNodes, []),
-      makeNode('factory-asm', '組件 (Sub-assembly)', 'SA / SB / SC / SD 系列', PALETTE.factoryAsm, 2, factoryAsmNodes, []),
-      makeNode('factory-set', 'Set', 'MDXE / MDXI 成套產品', PALETTE.factorySet, 2, factorySetNodes, []),
-    ],
-    [],
-  );
-
-  // 客戶品號 Level-1 節點
-  const customerNode = makeNode(
-    'customer', '客戶品號編碼介紹', 'ICU / BD / MPS / Biometrix / Vivus',
-    PALETTE.level1, 1,
-    [
-      icuNode,
-      makeNode('bd', 'BD', '購買 Set 及零件，以 BD 品號為主', PALETTE.customerBD, 2, [], buckets.get('customer_bd')!, 'customer_bd'),
-      makeNode('mps', 'MPS', 'Set 以 MPS 品號下單，零件用廠內品號', PALETTE.customerBD, 2, [], buckets.get('customer_mps')!, 'customer_mps'),
-      makeNode('biometrix', 'Biometrix', '購買 Set MDXE-093-01，需依標準製作標籤包裝', PALETTE.customerBD, 2, [], buckets.get('customer_biometrix')!, 'customer_biometrix'),
-      makeNode('vivus', 'Vivus (動物使用)', '以廠內品號下單 MDXE-XXX，出貨用 Animalcare 品號', PALETTE.customerOther, 2, [], buckets.get('customer_vivus')!, 'customer_vivus'),
-    ],
-    [],
-  );
-
-  // 未分類節點
-  const unclassifiedParts = buckets.get('unclassified')!;
-  const unclassifiedNode = makeNode(
-    'unclassified', '待人工分類', `${unclassifiedParts.length} 件品號等待對應`,
-    PALETTE.unclassified, 1, [], unclassifiedParts, 'unclassified',
-  );
-
-  // 根節點
-  return makeNode(
-    'root',
-    '凱益股份有限公司 產品識別教育訓練',
-    '點擊節點展開/收合 · 點擊品號跳轉查詢',
-    PALETTE.root, 0,
-    [factoryNode, customerNode, unclassifiedNode],
-    [],
-  );
+  return n('root','凱益股份有限公司 產品識別教育訓練','點擊節點展開/收合 · 點擊品號查看縮圖',PALETTE.root,0,[
+    n('factory','廠內品號編碼介紹','Mouldex 自有品號體系',PALETTE.level1,1,[
+      n('factory-part','零件 (Component)','九類基礎零件',        PALETTE.factoryPart,2,factoryParts,[]),
+      n('factory-asm', '組件 (Sub-assembly)','SA/SB/SC/SD 系列', PALETTE.factoryAsm,2,factoryAsm,[]),
+      n('factory-set', 'Set','MDXE / MDXI 成套產品',            PALETTE.factorySet,2,factorySet,[]),
+    ],[]),
+    n('customer','客戶品號編碼介紹','ICU / BD / MPS / Biometrix / Vivus',PALETTE.level1,1,[
+      n('icu','ICU','常見前綴: R1-, 27-, 75-, CIV-, RAW-',{ bg:'#7C2D12',border:'#F97316',text:'#FED7AA'},2,[icuBagSpike,icuVialSpike],[]),
+      n('bd',       'BD',        '購買 Set 及零件，BD 品號下單',             PALETTE.customerBD,2,[],buckets.get('customer_bd')!,'customer_bd'),
+      n('mps',      'MPS',       'Set 以 MPS 品號下單，零件廠內品號',        PALETTE.customerBD,2,[],buckets.get('customer_mps')!,'customer_mps'),
+      n('biometrix','Biometrix', '購買 Set MDXE-093-01，依標準製作標籤包裝', PALETTE.customerBD,2,[],buckets.get('customer_biometrix')!,'customer_biometrix'),
+      n('vivus',    'Vivus (動物使用)','廠內品號下單 MDXE-XXX，Animalcare 品號出貨',PALETTE.customerOther,2,[],buckets.get('customer_vivus')!,'customer_vivus'),
+    ],[]),
+    n('unclassified','待人工分類',`${buckets.get('unclassified')!.length} 件品號等待對應`,PALETTE.unclassified,1,[],buckets.get('unclassified')!,'unclassified'),
+  ],[]);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 遞迴收集所有節點 ID (用於搜尋展開路徑)
+// Search helpers
 // ────────────────────────────────────────────────────────────────────────────
 
-function collectMatchingIds(
-  node: MindMapNode,
-  query: string,
-  ancestorIds: string[],
-  result: Set<string>,
-) {
+function collectMatchingIds(node: MindMapNode, query: string, ancestors: string[], result: Set<string>) {
   const q = query.toLowerCase();
   const selfMatch =
     node.label.toLowerCase().includes(q) ||
     node.sublabel?.toLowerCase().includes(q) ||
-    node.parts.some(
-      (p) =>
-        p.partNo.toLowerCase().includes(q) ||
-        p.name.toLowerCase().includes(q) ||
-        (p.customer || '').toLowerCase().includes(q),
-    );
-
-  if (selfMatch) {
-    result.add(node.id);
-    for (const id of ancestorIds) result.add(id);
-  }
-
-  for (const child of node.children) {
-    collectMatchingIds(child, query, [...ancestorIds, node.id], result);
-  }
+    node.parts.some(p => p.partNo.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.customer||'').toLowerCase().includes(q));
+  if (selfMatch) { result.add(node.id); ancestors.forEach(id => result.add(id)); }
+  node.children.forEach(c => collectMatchingIds(c, query, [...ancestors, node.id], result));
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// 遞迴計算節點下的品號總數
-// ────────────────────────────────────────────────────────────────────────────
 function countParts(node: MindMapNode): number {
-  return node.parts.length + node.children.reduce((acc, c) => acc + countParts(c), 0);
+  return node.parts.length + node.children.reduce((s, c) => s + countParts(c), 0);
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// 單個 MindMap 節點組件
+// Thumbnail popup component
+// ────────────────────────────────────────────────────────────────────────────
+
+interface ThumbnailPopupProps {
+  thumbnail: ThumbnailState;
+  onClose: () => void;
+  onNavigate: () => void;
+}
+
+const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onNavigate }) => {
+  const [imgError, setImgError] = useState(false);
+  const hasImage = !!thumbnail.imageUrl && !imgError;
+
+  // Position: appear to the right of anchor, clamped to viewport
+  const style: React.CSSProperties = {
+    position: 'fixed',
+    left: Math.min(thumbnail.anchorX + 12, window.innerWidth - 240),
+    top:  Math.max(Math.min(thumbnail.anchorY - 60, window.innerHeight - 280), 8),
+    zIndex: 200,
+    width: 220,
+    animation: 'fadeInScale 0.18s ease-out forwards',
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes fadeInScale {
+          from { opacity: 0; transform: scale(0.92) translateY(4px); }
+          to   { opacity: 1; transform: scale(1)    translateY(0px); }
+        }
+      `}</style>
+      <div style={style} className="rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-800/60">
+          <span className="text-[11px] font-mono font-bold text-slate-200 truncate flex-1 mr-2">{thumbnail.partNo}</span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onNavigate}
+              title="跳轉查詢"
+              className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </button>
+            <button
+              onClick={onClose}
+              title="關閉"
+              className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Image area */}
+        <div className="w-full h-40 flex items-center justify-center bg-slate-950 relative overflow-hidden">
+          {hasImage ? (
+            <img
+              src={thumbnail.imageUrl!}
+              alt={thumbnail.partNo}
+              className="max-w-full max-h-full object-contain p-2"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-slate-600">
+              <ImageIcon className="w-10 h-10 opacity-40" />
+              <span className="text-[10px]">尚無圖片</span>
+              <span className="text-[9px] opacity-60">可在主系統綁定圖檔後顯示</span>
+            </div>
+          )}
+        </div>
+
+        {/* Part info */}
+        <div className="px-3 py-2 bg-slate-900 border-t border-slate-800">
+          <div className="text-[10px] text-slate-300 leading-relaxed line-clamp-2">{thumbnail.partName || '—'}</div>
+          {thumbnail.customer && (
+            <div className="text-[10px] text-slate-500 mt-0.5">客戶：{thumbnail.customer}</div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// MindMap node component  (1.5× sizing + proper L-connector + thumbnail trigger)
 // ────────────────────────────────────────────────────────────────────────────
 
 interface NodeProps {
@@ -264,86 +294,78 @@ interface NodeProps {
   expandedIds: Set<string>;
   highlightIds: Set<string>;
   onToggle: (id: string) => void;
+  onShowThumbnail: (part: PartItem, e: React.MouseEvent) => void;
   onSelectPart?: (partNo: string) => void;
-  scale: number;
 }
 
 const MindMapNodeComponent: React.FC<NodeProps> = ({
-  node,
-  searchQuery,
-  expandedIds,
-  highlightIds,
-  onToggle,
-  onSelectPart,
-  scale,
+  node, searchQuery, expandedIds, highlightIds, onToggle, onShowThumbnail, onSelectPart,
 }) => {
-  const isExpanded = expandedIds.has(node.id);
+  const isExpanded  = expandedIds.has(node.id);
   const isHighlighted = highlightIds.size > 0 && highlightIds.has(node.id);
   const hasChildren = node.children.length > 0;
-  const hasParts = node.parts.length > 0;
-  const totalParts = countParts(node);
-  const isRoot = node.depth === 0;
-  const isDimmed = highlightIds.size > 0 && !isHighlighted && !highlightIds.has(node.id);
+  const hasParts    = node.parts.length > 0;
+  const totalParts  = countParts(node);
+  const isRoot      = node.depth === 0;
+  const isDimmed    = highlightIds.size > 0 && !isHighlighted;
+  const q           = searchQuery.trim().toLowerCase();
 
-  const q = searchQuery.trim().toLowerCase();
-
-  const highlight = (text: string) => {
+  const highlight = (text: string): React.ReactNode => {
     if (!q || !text.toLowerCase().includes(q)) return text;
     const idx = text.toLowerCase().indexOf(q);
-    return (
-      <>
-        {text.slice(0, idx)}
-        <mark className="bg-amber-400/70 text-black rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>
-        {text.slice(idx + q.length)}
-      </>
-    );
+    return <>{text.slice(0, idx)}<mark className="bg-amber-400/70 text-black rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</>;
   };
 
-  // 字體大小按深度
-  const labelSize = isRoot ? 'text-base font-bold' : node.depth === 1 ? 'text-sm font-bold' : 'text-xs font-semibold';
+  // 1.5× font sizes vs original
+  const labelClass = isRoot
+    ? 'text-lg font-bold leading-snug'
+    : node.depth === 1 ? 'text-base font-bold leading-snug'
+    : node.depth === 2 ? 'text-sm font-semibold leading-snug'
+    : 'text-[13px] font-semibold leading-snug';
+
+  const sublabelClass = isRoot ? 'text-xs' : 'text-[11px]';
+
+  const minW = isRoot ? CARD.rootMinW : node.depth === 1 ? CARD.d1MinW : node.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
+  const padding = isRoot ? CARD.rootPad : node.depth <= 2 ? CARD.nodePad : CARD.leafPad;
+
+  // Connector geometry for children
+  const connColor = node.borderColor + '90';
 
   return (
-    <div className={`flex items-start gap-0 transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
-      {/* 節點本體 */}
-      <div className="flex flex-col items-center">
-        {/* 節點盒子 */}
+    <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
+
+      {/* ── Node body column ── */}
+      <div className="flex flex-col items-stretch" style={{ minWidth: minW }}>
+
+        {/* Node card */}
         <div
           className={`
-            relative flex flex-col rounded-xl border-2 cursor-pointer select-none
-            transition-all duration-200 hover:brightness-125 active:scale-95 shadow-lg
-            ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-1 ring-offset-slate-950' : ''}
+            relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-xl
+            transition-all duration-150 hover:brightness-125 active:scale-[0.98]
+            ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950' : ''}
           `}
-          style={{
-            backgroundColor: node.color,
-            borderColor: node.borderColor,
-            minWidth: isRoot ? '240px' : node.depth === 1 ? '200px' : node.depth === 2 ? '170px' : '150px',
-            maxWidth: isRoot ? '300px' : '240px',
-            padding: isRoot ? '12px 16px' : node.depth <= 2 ? '8px 12px' : '6px 10px',
-          }}
+          style={{ backgroundColor: node.color, borderColor: node.borderColor, maxWidth: CARD.maxW, padding }}
           onClick={() => (hasChildren || hasParts) && onToggle(node.id)}
         >
           <div className="flex items-center gap-2">
-            <div className={`flex-1 ${labelSize}`} style={{ color: node.textColor }}>
+            <div className={`flex-1 ${labelClass}`} style={{ color: node.textColor }}>
               {highlight(node.label)}
             </div>
             {(hasChildren || hasParts) && (
-              <div className="shrink-0 opacity-70" style={{ color: node.textColor }}>
-                {isExpanded
-                  ? <ChevronDown className="w-3.5 h-3.5" />
-                  : <ChevronRight className="w-3.5 h-3.5" />
-                }
+              <div className="shrink-0 opacity-75" style={{ color: node.textColor }}>
+                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
               </div>
             )}
           </div>
           {node.sublabel && (
-            <div className="text-[10px] opacity-60 mt-0.5 leading-tight" style={{ color: node.textColor }}>
+            <div className={`${sublabelClass} opacity-60 mt-1 leading-tight`} style={{ color: node.textColor }}>
               {node.sublabel}
             </div>
           )}
-          {/* 品號計數標籤 */}
+          {/* Part count badge */}
           {totalParts > 0 && (
             <div
-              className="absolute -top-2 -right-2 min-w-[22px] h-[22px] rounded-full flex items-center justify-center text-[10px] font-bold shadow-md"
+              className="absolute -top-2.5 -right-2.5 min-w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold shadow-lg"
               style={{ backgroundColor: node.borderColor, color: '#fff' }}
             >
               {totalParts}
@@ -351,40 +373,31 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
           )}
         </div>
 
-        {/* 展開後品號列表 */}
+        {/* Parts list (expanded) */}
         {isExpanded && hasParts && (
           <div
-            className="mt-2 rounded-xl border overflow-hidden w-full"
+            className="mt-2 rounded-xl border overflow-hidden"
             style={{ borderColor: node.borderColor + '60', backgroundColor: '#0B1120' }}
           >
-            <div className="max-h-72 overflow-y-auto">
+            <div className="max-h-80 overflow-y-auto">
               {node.parts
-                .filter((p) =>
-                  !q ||
-                  p.partNo.toLowerCase().includes(q) ||
-                  p.name.toLowerCase().includes(q) ||
-                  (p.customer || '').toLowerCase().includes(q),
-                )
-                .map((part) => (
+                .filter(p => !q || p.partNo.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.customer||'').toLowerCase().includes(q))
+                .map(part => (
                   <div
                     key={part.partNo}
-                    className="group flex items-start gap-2 px-3 py-2 hover:bg-white/5 transition-colors cursor-pointer border-b border-slate-800/50 last:border-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectPart?.(part.partNo);
-                    }}
-                    title={`點擊查看 ${part.partNo} 詳情與 BOM`}
+                    className="group flex items-start gap-2 px-3 py-2.5 hover:bg-white/5 transition-colors cursor-pointer border-b border-slate-800/50 last:border-0"
+                    onClick={e => { e.stopPropagation(); onShowThumbnail(part, e); }}
+                    title={`點擊查看 ${part.partNo} 縮圖`}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-mono font-bold text-slate-200 truncate">
+                      <div className="text-[12px] font-mono font-bold text-slate-200 truncate">
                         {highlight(part.partNo)}
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate leading-tight">
-                        {highlight(part.name)}
-                        {part.customer ? ` · ${highlight(part.customer)}` : ''}
+                      <div className="text-[11px] text-slate-400 truncate leading-tight">
+                        {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
                       </div>
                     </div>
-                    <Eye className="w-3 h-3 text-slate-600 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
+                    <Eye className="w-3.5 h-3.5 text-slate-600 group-hover:text-indigo-400 shrink-0 mt-0.5 transition-colors" />
                   </div>
                 ))}
             </div>
@@ -392,138 +405,163 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
         )}
       </div>
 
-      {/* 子節點 */}
-      {isExpanded && hasChildren && (
-        <div className="flex flex-col gap-2 ml-3 mt-0 pl-3 border-l-2 border-dashed" style={{ borderColor: node.borderColor + '60' }}>
-          {node.children.map((child) => (
-            <MindMapNodeComponent
-              key={child.id}
-              node={child}
-              searchQuery={searchQuery}
-              expandedIds={expandedIds}
-              highlightIds={highlightIds}
-              onToggle={onToggle}
-              onSelectPart={onSelectPart}
-              scale={scale}
-            />
-          ))}
-        </div>
-      )}
+      {/* ── Children with proper L-connectors ── */}
+      {isExpanded && hasChildren && (() => {
+        const childCount = node.children.length;
+        return (
+          <div
+            className="flex flex-col"
+            style={{ marginLeft: CONN.horizontalLen + 8, position: 'relative' }}
+          >
+            {/* Vertical spine: from first child midpoint to last child midpoint */}
+            {childCount > 1 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: -CONN.horizontalLen,
+                  top: CONN.nodeHeaderH,
+                  // height spans from first to last connector y; we use 100% minus the tail padding
+                  bottom: CONN.nodeHeaderH,
+                  width: CONN.lineW,
+                  backgroundColor: connColor,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
+
+            {node.children.map((child, idx) => (
+              <div
+                key={child.id}
+                className="relative flex items-start"
+                style={{ marginBottom: idx < childCount - 1 ? 10 : 0 }}
+              >
+                {/* Horizontal branch from spine to child */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: -CONN.horizontalLen,
+                    top: CONN.nodeHeaderH,
+                    width: CONN.horizontalLen,
+                    height: CONN.lineW,
+                    backgroundColor: connColor,
+                    pointerEvents: 'none',
+                  }}
+                />
+                <MindMapNodeComponent
+                  node={child}
+                  searchQuery={searchQuery}
+                  expandedIds={expandedIds}
+                  highlightIds={highlightIds}
+                  onToggle={onToggle}
+                  onShowThumbnail={onShowThumbnail}
+                  onSelectPart={onSelectPart}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// 主組件
+// Main modal
 // ────────────────────────────────────────────────────────────────────────────
 
 export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
-  isOpen,
-  onClose,
-  parts,
-  onSelectPart,
+  isOpen, onClose, parts, onSelectPart,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(['root', 'factory', 'customer']));
-  const [scale, setScale] = useState(1);
-  const [panX, setPanX] = useState(0);
-  const [panY, setPanY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const lastPan = useRef<{ x: number; y: number } | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery]     = useState('');
+  const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set(['root', 'factory', 'customer']));
+  const [panX, setPanX]                   = useState(0);
+  const [panY, setPanY]                   = useState(0);
+  const [isDragging, setIsDragging]       = useState(false);
+  const [thumbnail, setThumbnail]         = useState<ThumbnailState | null>(null);
+  const lastPan                           = useRef<{ x: number; y: number } | null>(null);
+  const containerRef                      = useRef<HTMLDivElement>(null);
+
+  // Load image bindings from localStorage (read-only snapshot)
+  const imageBindings = useMemo<Record<string, string>>(() => loadBindings(), []);
 
   const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
 
   const [unclassifiedCount, classifiedCount] = useMemo(() => {
-    let unclassified = 0;
-    let classified = 0;
-    for (const p of parts) {
-      const r = classifyPart(p);
-      if (r.category === 'unclassified') unclassified++;
-      else classified++;
-    }
-    return [unclassified, classified];
+    let u = 0, c = 0;
+    for (const p of parts) { if (classifyPart(p).category === 'unclassified') u++; else c++; }
+    return [u, c];
   }, [parts]);
 
-  // 搜尋命中的展開路徑
   const highlightIds = useMemo(() => {
     const q = searchQuery.trim();
     if (!q) return new Set<string>();
-    const result = new Set<string>();
-    collectMatchingIds(mindMapTree, q, [], result);
-    return result;
+    const r = new Set<string>();
+    collectMatchingIds(mindMapTree, q, [], r);
+    return r;
   }, [mindMapTree, searchQuery]);
 
-  // 有搜尋時，自動展開命中路徑
   useEffect(() => {
     if (highlightIds.size > 0) {
-      setExpandedIds((prev) => {
-        const next = new Set(prev);
-        for (const id of highlightIds) next.add(id);
-        return next;
-      });
+      setExpandedIds(prev => { const n = new Set(prev); highlightIds.forEach(id => n.add(id)); return n; });
     }
   }, [highlightIds]);
 
-  const handleToggle = useCallback((id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const handleExpandAll = useCallback(() => {
-    const allIds = new Set<string>();
-    const collect = (node: MindMapNode) => {
-      allIds.add(node.id);
-      node.children.forEach(collect);
-    };
-    collect(mindMapTree);
-    setExpandedIds(allIds);
-  }, [mindMapTree]);
-
-  const handleCollapseAll = useCallback(() => {
-    setExpandedIds(new Set(['root']));
-  }, []);
-
-  const handleResetView = useCallback(() => {
-    setScale(1);
-    setPanX(0);
-    setPanY(0);
-  }, []);
-
-  // 拖曳 Pan
+  // Close thumbnail when clicking outside (canvas drag start)
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
+    setThumbnail(null);
     setIsDragging(true);
     lastPan.current = { x: e.clientX - panX, y: e.clientY - panY };
   };
-
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging || !lastPan.current) return;
     setPanX(e.clientX - lastPan.current.x);
     setPanY(e.clientY - lastPan.current.y);
   };
+  const handleMouseUp = () => { setIsDragging(false); lastPan.current = null; };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    lastPan.current = null;
-  };
+  // Thumbnail handler
+  const handleShowThumbnail = useCallback((part: PartItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const imageUrl = imageBindings[part.partNo] ?? null;
+    setThumbnail({
+      partNo: part.partNo,
+      partName: part.name,
+      customer: part.customer || '',
+      imageUrl,
+      anchorX: rect.right,
+      anchorY: rect.top + rect.height / 2,
+    });
+  }, [imageBindings]);
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setScale((prev) => Math.max(0.3, Math.min(3, prev * delta)));
-  };
+  const handleToggle = useCallback((id: string) => {
+    setExpandedIds(prev => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }, []);
+
+  const handleExpandAll = useCallback(() => {
+    const ids = new Set<string>();
+    const walk = (node: MindMapNode) => { ids.add(node.id); node.children.forEach(walk); };
+    walk(mindMapTree);
+    setExpandedIds(ids);
+  }, [mindMapTree]);
+
+  const handleCollapseAll = useCallback(() => setExpandedIds(new Set(['root'])), []);
+  const handleResetView    = useCallback(() => { setPanX(0); setPanY(0); }, []);
 
   if (!isOpen) return null;
 
-  const handleSelectPart = (partNo: string) => {
+  const handleNavigatePart = (partNo: string) => {
     onSelectPart?.(partNo);
     onClose();
   };
+
+  // Fixed scale = 1.5 (no zoom UI, no wheel zoom)
+  const FIXED_SCALE = 1.5;
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-950 flex flex-col overflow-hidden text-slate-100 select-none">
@@ -535,68 +573,47 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           <button
             onClick={onClose}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer active:scale-95"
-            title="返回主系統"
           >
             <ArrowLeft className="w-4 h-4" />
             返回主系統
           </button>
-
           <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
             <Layers className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                v5.0.0
-              </span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v5.1.0</span>
             </h2>
             <p className="text-[11px] text-slate-400">
-              已分類 <span className="text-emerald-400 font-bold">{classifiedCount}</span> 件 · 待分類 <span className="text-amber-400 font-bold">{unclassifiedCount}</span> 件 · 共 {parts.length} 件
+              已分類 <span className="text-emerald-400 font-bold">{classifiedCount}</span> 件 ·
+              待分類 <span className="text-amber-400 font-bold">{unclassifiedCount}</span> 件 ·
+              共 {parts.length} 件
             </p>
           </div>
         </div>
 
-        {/* Right Controls */}
+        {/* Right controls – NO zoom */}
         <div className="flex items-center gap-2">
-          {/* 搜尋 */}
+          {/* Search */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder="搜尋品號或名稱..."
               className="pl-8 pr-4 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-48"
             />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
-              >
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* 展開/收合 */}
-          <button onClick={handleExpandAll} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">
-            全部展開
-          </button>
-          <button onClick={handleCollapseAll} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">
-            全部收合
-          </button>
-
-          {/* 縮放 */}
-          <div className="flex items-center gap-1 bg-slate-800 border border-slate-700 rounded-xl p-1">
-            <button onClick={() => setScale((p) => Math.min(3, p * 1.2))} className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer transition-colors">
-              <ZoomIn className="w-3.5 h-3.5" />
-            </button>
-            <span className="text-[11px] font-mono text-slate-400 w-10 text-center">{Math.round(scale * 100)}%</span>
-            <button onClick={() => setScale((p) => Math.max(0.3, p * 0.83))} className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-700 cursor-pointer transition-colors">
-              <ZoomOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          <button onClick={handleExpandAll}  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">全部展開</button>
+          <button onClick={handleCollapseAll} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">全部收合</button>
 
           <button onClick={handleResetView} className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all" title="重置視角">
             <RotateCcw className="w-4 h-4" />
@@ -604,18 +621,16 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         </div>
       </div>
 
-      {/* ── 操作提示 ── */}
+      {/* ── Hint bar ── */}
       <div className="px-5 py-1.5 bg-slate-900/60 border-b border-slate-800/60 flex items-center gap-4 text-[11px] text-slate-500 shrink-0">
         <Info className="w-3 h-3 shrink-0" />
-        <span>🖱️ 左鍵拖曳移動畫面 · 滾輪縮放 · 點擊節點展開/收合 · 點擊品號跳轉查詢</span>
+        <span>🖱️ 左鍵拖曳移動畫面 · 點擊節點展開/收合 · 點擊品號查看縮圖</span>
         {searchQuery && highlightIds.size > 0 && (
-          <span className="text-amber-400">
-            找到 {highlightIds.size} 個匹配節點
-          </span>
+          <span className="text-amber-400">找到 {highlightIds.size} 個匹配節點</span>
         )}
       </div>
 
-      {/* ── Canvas Area ── */}
+      {/* ── Canvas ── */}
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden relative"
@@ -624,11 +639,11 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
+        // Wheel zoom intentionally removed
       >
         <div
           style={{
-            transform: `translate(${panX}px, ${panY}px) scale(${scale})`,
+            transform: `translate(${panX}px, ${panY}px) scale(${FIXED_SCALE})`,
             transformOrigin: '0 0',
             display: 'inline-block',
             padding: '40px 60px',
@@ -640,11 +655,20 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
             expandedIds={expandedIds}
             highlightIds={highlightIds}
             onToggle={handleToggle}
-            onSelectPart={handleSelectPart}
-            scale={scale}
+            onShowThumbnail={handleShowThumbnail}
+            onSelectPart={partNo => handleNavigatePart(partNo)}
           />
         </div>
       </div>
+
+      {/* ── Thumbnail popup (rendered at fixed position in viewport) ── */}
+      {thumbnail && (
+        <ThumbnailPopup
+          thumbnail={thumbnail}
+          onClose={() => setThumbnail(null)}
+          onNavigate={() => { handleNavigatePart(thumbnail.partNo); setThumbnail(null); }}
+        />
+      )}
     </div>
   );
 };
