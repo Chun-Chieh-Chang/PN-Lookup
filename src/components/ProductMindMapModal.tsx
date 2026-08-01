@@ -399,13 +399,13 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
   const [treeKey, setTreeKey]         = useState(0);
-  const [collapsedLeafIds, setCollapsedLeafIds] = useState<Set<string>>(new Set());
+  const [expandedLeafIds, setExpandedLeafIds] = useState<Set<string>>(new Set());
   const containerRef                  = useRef<HTMLDivElement>(null);
   // react-d3-tree translate：等容器掛載後取真實高度置中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 300 });
 
-  const toggleLeafCollapsed = useCallback((id: string) => {
-    setCollapsedLeafIds(prev => {
+  const toggleLeafExpanded = useCallback((id: string) => {
+    setExpandedLeafIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -416,7 +416,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const handleResetDefault = useCallback(() => {
     setSearchQuery('');
     setThumbnail(null);
-    setCollapsedLeafIds(new Set());
+    setExpandedLeafIds(new Set());
     setTreeKey(prev => prev + 1);
     if (containerRef.current) {
       setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
@@ -558,7 +558,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     const isRoot = mm.depth === 0;
     const hasParts = mm.parts.length > 0;
     const isLeafCategory = hasParts && (!nodeDatum.children || nodeDatum.children.length === 0);
-    const isLeafCollapsed = collapsedLeafIds.has(mm.id);
 
     const displayedParts = q && hasParts
       ? mm.parts.filter(p =>
@@ -569,17 +568,19 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         )
       : mm.parts;
 
+    const isLeafExpanded = q ? (displayedParts.length > 0) : expandedLeafIds.has(mm.id);
+
     const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
     const subFontSize = isRoot ? 10 : 9;
     const cardW = isLeafCategory ? 320 : getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
 
-    // 品號葉卡片特化邏輯
+    // 品號葉卡片特化邏輯 (預設呈收合 mini 膠囊狀態)
     if (isLeafCategory) {
-      const listH = isLeafCollapsed ? 0 : Math.min(displayedParts.length * 42 + 10, 220);
+      const listH = isLeafExpanded ? Math.min(displayedParts.length * 42 + 10, 220) : 0;
       const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
-      const nodeH = isLeafCollapsed ? baseHeaderH : (baseHeaderH + listH + 24);
+      const nodeH = isLeafExpanded ? (baseHeaderH + listH + 24) : baseHeaderH;
 
       return (
         <foreignObject
@@ -591,8 +592,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         >
           <div
             xmlns="http://www.w3.org/1999/xhtml"
-            onDoubleClick={(e) => { e.stopPropagation(); toggleLeafCollapsed(mm.id); }}
-            title="點擊標題或雙擊卡片可收合/展開品號清單"
+            onDoubleClick={(e) => { e.stopPropagation(); toggleLeafExpanded(mm.id); }}
+            title="點擊標題或雙擊卡片可展開/收合品號清單"
             style={{
               position: 'relative',
               display: 'flex', flexDirection: 'column',
@@ -613,7 +614,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           >
             {/* Header Bar */}
             <div
-              onClick={() => toggleLeafCollapsed(mm.id)}
+              onClick={() => toggleLeafExpanded(mm.id)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
             >
               <div style={{ flex: 1, fontSize, fontWeight: 700, color: mm.textColor, lineHeight: 1.3 }}>
@@ -624,9 +625,9 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
                   {mm.parts.length} 件
                 </span>
                 <div style={{ color: mm.textColor, opacity: 0.85, flexShrink: 0 }}>
-                  {isLeafCollapsed
-                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
-                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"/></svg>
+                  {isLeafExpanded
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="18 15 12 9 6 15"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
                   }
                 </div>
               </div>
@@ -638,8 +639,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               </div>
             )}
 
-            {/* 卷軸品號清單區塊 */}
-            {!isLeafCollapsed && (
+            {/* 卷軸品號清單區塊 (僅在展開狀態下顯現) */}
+            {isLeafExpanded && (
               <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${mm.borderColor}40` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>

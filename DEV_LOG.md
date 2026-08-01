@@ -1120,6 +1120,22 @@ pn-lookup/
    * 在 [.agents/AGENTS.md](file:///d:/Self-developed_Apps/PN-Lookup/.agents/AGENTS.md) 中建立 `<RULE[explicit_file_path_prompt_rule]>`：規定所有匯入匯出必須提供顯性 OS 另存新檔/檔案選擇對話框 (`window.showSaveFilePicker`)。
 3. **驗證確效**：`npx tsc --noEmit` 0 錯誤，`npm run build` 打包成功。
 
+---
+
+## v3.9.1 — UI 體驗升級：末端品號分類卡片預設一律呈精簡膠囊收合狀態 (MindMap Leaf Category Cards Default Collapsed Mini State)
+
+### 需求內容
+修復展開父類別（如「零件」或「組件」）時，下層 9 個子類別卡片（`針基蓋`, `夾具`, `T接頭` ...）同時開展 220px 巨型卷軸框導致畫面嚴重堆疊與視覺擠壓的問題。
+
+### 矯正與預防措施 (CAPA)
+1. **預設呈收合 Mini 膠囊卡片 (`expandedLeafIds`)**：
+   重構 [ProductMindMapModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductMindMapModal.tsx)。改用 `expandedLeafIds` 追蹤展開狀態。
+   * **預設狀態 (Default View)**：所有末端卡片一律呈 48px 精簡膠囊標籤（顯示如 `針基蓋 128件 ﹀`），畫面 100% 乾淨簡潔。
+   * **按需點擊/雙擊展開**：點擊該卡片標題或雙擊卡片時，才展開該類別的 220px 卷軸品號清單（帶有 `︿` 箭頭）。
+   * **搜尋自動展開**：當輸入關鍵字時，包含匹配品號的卡片會自動展開呈現搜尋結果。
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 
