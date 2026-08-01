@@ -304,7 +304,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
       <div className="overflow-x-auto flex-1">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-gray-100 text-gray-500 border-b border-gray-200 text-sm font-semibold uppercase tracking-wider sticky top-0 z-10">
+            <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 text-sm font-semibold uppercase tracking-wider sticky top-0 z-10">
               <th className="p-3 w-10 text-center">
                 <input
                   type="checkbox"
@@ -313,13 +313,13 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     selectedIds.length === paginatedItems.length
                   }
                   onChange={handleSelectAll}
-                  className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                 />
               </th>
 
               <th
                 onClick={() => handleSort('customer')}
-                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center space-x-1">
                   <span>客戶名稱</span>
@@ -329,7 +329,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
               <th
                 onClick={() => handleSort('partNo')}
-                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center space-x-1">
                   <span>品號 (Part No)</span>
@@ -339,7 +339,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
               <th
                 onClick={() => handleSort('category')}
-                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center space-x-1">
                   <span>物料類別</span>
@@ -349,7 +349,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
               <th
                 onClick={() => handleSort('name')}
-                className="p-3 cursor-pointer hover:text-gray-800 transition-colors"
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center space-x-1">
                   <span>品名規格 (Part Name)</span>
@@ -363,7 +363,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             </tr>
           </thead>
 
-          <tbody className="divide-y divide-gray-200 text-sm">
+          <tbody className="divide-y divide-slate-100 text-sm">
             {paginatedItems.map((item) => {
               const isSelected = selectedIds.includes(item.id);
               const isCopied = copiedId === item.id;
@@ -380,7 +380,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   className={`group transition-colors ${
                     isSelected
                       ? 'bg-indigo-50 hover:bg-indigo-100'
-                      : 'hover:bg-gray-100'
+                      : 'hover:bg-slate-50'
                   }`}
                 >
                   {/* Checkbox */}
@@ -389,7 +389,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleSelectRow(item.id)}
-                      className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </td>
 
@@ -488,9 +488,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Part Name */}
-                  <td className="p-3 text-gray-600 max-w-md py-3.5">
+                  <td className="p-3 text-slate-600 max-w-md py-3.5">
                     <div className="flex flex-col gap-1">
-                      <div className="truncate font-medium text-gray-800" title={item.name}>
+                      <div className="truncate font-medium text-slate-800" title={item.name}>
                         {highlightText(item.name, searchKeyword)}
                       </div>
                       {(item.color || item.material) && (
@@ -518,7 +518,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         onMouseEnter={(e) => handleImageMouseEnter(allImages[0].url, allImages[0].name, e)}
                         onMouseMove={handleImageMouseMove}
                         onMouseLeave={handleImageMouseLeave}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:underline transition-colors cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs hover:shadow-xs"
                         title={
                           `開啟圖檔：${item.partNo} → ${allImages[0].name}\n` +
                           (allImages[0].via === 'file'
@@ -538,7 +538,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                             e.stopPropagation();
                             setOpenMultiId(openMultiId === item.id ? null : item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                           title={`此品號對應 ${allImages.length} 張圖檔，點擊展開選擇`}
                         >
                           <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
@@ -549,10 +549,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {openMultiId === item.id && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-40 py-2 text-xs"
+                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-40 py-2 text-xs"
                           >
-                            <div className="px-3 py-1.5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                              <span className="font-bold text-gray-700">對應圖檔 ({allImages.length} 張)</span>
+                            <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                              <span className="font-bold text-slate-700">對應圖檔 ({allImages.length} 張)</span>
                               <button
                                 onClick={() => {
                                   allImages.forEach((img) => openImage(img.url));
@@ -564,7 +564,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                 ⚡ 一鍵開啟全部
                               </button>
                             </div>
-                            <div className="max-h-48 overflow-y-auto divide-y divide-gray-100">
+                            <div className="max-h-48 overflow-y-auto divide-y divide-slate-100">
                               {allImages.map((img, idx) => (
                                 <button
                                   key={`${img.name}-${idx}`}
@@ -578,14 +578,14 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                   className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 flex items-center justify-between group transition-colors cursor-pointer"
                                 >
                                   <div className="min-w-0 pr-2">
-                                    <p className="font-mono font-bold text-gray-800 group-hover:text-indigo-700 truncate" title={img.name}>
+                                    <p className="font-mono font-bold text-slate-800 group-hover:text-indigo-700 truncate" title={img.name}>
                                       {img.name}
                                     </p>
-                                    <span className="text-[10px] text-gray-400">
+                                    <span className="text-[10px] text-slate-400">
                                       {img.via === 'file' ? '檔名比對命中' : img.via === 'binding' ? '手動綁定' : 'OCR 內容辨識'}
                                     </span>
                                   </div>
-                                  <ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-600 shrink-0" />
+                                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 shrink-0" />
                                 </button>
                               ))}
                             </div>
@@ -595,7 +595,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     ) : (
                       <div className="flex items-center space-x-1.5">
                         <span
-                          className="text-sm text-gray-300"
+                          className="text-sm text-slate-300"
                           title={imageLib ? `找不到「${item.partNo}」的圖檔，可點「綁定」手動指定` : '未指定圖檔資料夾'}
                         >
                           —
@@ -603,7 +603,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {imageLib && onBindClick && (
                           <button
                             onClick={() => onBindClick(item)}
-                            className="text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded px-1.5 py-0.5 border border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+                            className="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-1.5 py-0.5 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer"
                             title="手動指定此品號對應的圖檔"
                           >
                             綁定
@@ -619,10 +619,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       
                       <button
                         onClick={() => handleCopyFullRow(item)}
-                        className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
+                        className={`p-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
                           isCopiedFull
                             ? 'text-emerald-600 bg-emerald-100'
-                            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
                         }`}
                         title="複製完整列資訊"
                       >
@@ -635,7 +635,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                       <button
                         onClick={() => onViewDetail(item)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer flex items-center space-x-1"
+                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
                         title="檢視 BOM 與詳細資料"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -659,11 +659,11 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
             {paginatedItems.length === 0 && (
               <tr>
-                <td colSpan={7} className="py-16 text-center text-gray-400">
+                <td colSpan={7} className="py-16 text-center text-slate-400">
                   <div className="max-w-xs mx-auto space-y-2">
-                    <Layers className="w-10 h-10 mx-auto text-gray-300" />
-                    <p className="text-sm font-medium text-gray-500">查無符合條件的品號</p>
-                    <p className="text-sm text-gray-400">請嘗試調整搜尋關鍵字、切換搜尋欄位或清除過濾條件。</p>
+                    <Layers className="w-10 h-10 mx-auto text-slate-300" />
+                    <p className="text-sm font-medium text-slate-500">查無符合條件的品號</p>
+                    <p className="text-sm text-slate-400">請嘗試調整搜尋關鍵字、切換搜尋欄位或清除過濾條件。</p>
                   </div>
                 </td>
               </tr>
@@ -674,8 +674,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-gray-200 text-sm">
-          <span className="text-gray-500">
+        <div className="flex items-center justify-between px-6 py-3 bg-white border-t border-slate-200 text-sm">
+          <span className="text-slate-500">
             第 {validPage} / {totalPages} 頁 (共 {sortedItems.length} 筆)
           </span>
 
@@ -683,7 +683,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             <button
               disabled={validPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -702,8 +702,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     onClick={() => setCurrentPage(pNum)}
                     className={`px-3 py-1 rounded-lg text-sm font-mono font-medium transition-colors cursor-pointer ${
                       validPage === pNum
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white text-gray-600 hover:text-gray-800 border border-gray-200'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-slate-600 hover:text-slate-800 border border-slate-200'
                     }`}
                   >
                     {pNum}
@@ -715,7 +715,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             <button
               disabled={validPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

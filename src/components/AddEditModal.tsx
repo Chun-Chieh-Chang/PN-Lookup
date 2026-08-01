@@ -69,8 +69,8 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white border border-gray-200 rounded-2xl max-w-lg w-full flex flex-col shadow-xl text-gray-900 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto">
+      <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl max-w-lg w-full flex flex-col shadow-2xl text-slate-900 my-8">
         
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white">

@@ -87,21 +87,21 @@ interface ProductMindMapModalProps {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Colour palette (Morandi Dark)
+// Colour palette (Light mode)
 // ────────────────────────────────────────────────────────────────────────────
 
 const PALETTE = {
-  root:          { bg: '#3B4A6B', border: '#6B7A9E', text: '#F0F4FF' },
-  level1:        { bg: '#1E3A5F', border: '#3B82F6', text: '#93C5FD' },
-  factoryPart:   { bg: '#134E4A', border: '#14B8A6', text: '#5EEAD4' },
-  factoryAsm:    { bg: '#1E3A5F', border: '#60A5FA', text: '#BFDBFE' },
-  factorySet:    { bg: '#3B0764', border: '#8B5CF6', text: '#C4B5FD' },
-  icuBag:        { bg: '#7C2D12', border: '#F97316', text: '#FED7AA' },
-  icuVial:       { bg: '#701A75', border: '#E879F9', text: '#F5D0FE' },
-  customerBD:    { bg: '#1C3144', border: '#38BDF8', text: '#BAE6FD' },
-  customerOther: { bg: '#1F2937', border: '#6B7280', text: '#D1D5DB' },
-  unclassified:  { bg: '#2D2D2D', border: '#6B7280', text: '#9CA3AF' },
-  partNode:      { bg: '#0F172A', border: '#334155', text: '#38BDF8' },
+  root:          { bg: '#EEF2FF', border: '#6366F1', text: '#1E1B4B' },   // 靛藍
+  level1:        { bg: '#F0F9FF', border: '#0EA5E9', text: '#0C4A6E' },   // 天藍
+  factoryPart:   { bg: '#F0FDF4', border: '#16A34A', text: '#14532D' },   // 翠綠
+  factoryAsm:    { bg: '#EFF6FF', border: '#3B82F6', text: '#1E3A8A' },   // 藍
+  factorySet:    { bg: '#FAF5FF', border: '#9333EA', text: '#3B0764' },   // 紫
+  icuBag:        { bg: '#FFF7ED', border: '#F97316', text: '#7C2D12' },   // 橙
+  icuVial:       { bg: '#FDF4FF', border: '#C026D3', text: '#701A75' },   // 洋紅
+  customerBD:    { bg: '#F0F9FF', border: '#0284C7', text: '#0C4A6E' },   // 深天藍
+  customerOther: { bg: '#F8FAFC', border: '#94A3B8', text: '#334155' },   // 灰藍
+  unclassified:  { bg: '#F8FAFC', border: '#CBD5E1', text: '#64748B' },   // 淺灰
+  partNode:      { bg: '#F8FAFC', border: '#CBD5E1', text: '#1E40AF' },   // 品號葉節點
 };
 
 function createPartLeafNodes(partsList: PartItem[], depth: number): MindMapNode[] {
@@ -225,7 +225,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
       n('factory-set',  'Set', 'MDXE / MDXI 成套產品',            PALETTE.factorySet, 2, factorySet, []),
     ], []),
     n('customer', '客戶品號編碼介紹', 'ICU / BD / MPS / Biometrix / Vivus', PALETTE.level1, 1, [
-      n('icu',       'ICU', '常見前綴: R1-, 27-, 75-, CIV-, RAW-', { bg: '#7C2D12', border: '#F97316', text: '#FED7AA' }, 2, [icuBagSpike, icuVialSpike], []),
+      n('icu',       'ICU', '常見前綴: R1-, 27-, 75-, CIV-, RAW-', { bg: '#FFF7ED', border: '#F97316', text: '#7C2D12' }, 2, [icuBagSpike, icuVialSpike], []),
       custLeaf('bd',       'BD',        '購買 Set 及零件，BD 品號下單',             'customer_bd'),
       custLeaf('mps',      'MPS',       'Set 以 MPS 品號下單，零件廠內品號',        'customer_mps'),
       custLeaf('biometrix','Biometrix', '購買 Set MDXE-093-01，依標準製作標籤包裝', 'customer_biometrix'),
@@ -284,13 +284,13 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
           to   { opacity: 1; transform: scale(1)    translateY(0px); }
         }
       `}</style>
-      <div style={style} className="rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl overflow-hidden">
+      <div style={style} className="rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800 bg-slate-800/80">
+        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[12px] font-mono font-bold text-indigo-300 truncate">{thumbnail.partNo}</span>
+            <span className="text-[12px] font-mono font-bold text-indigo-700 truncate">{thumbnail.partNo}</span>
             {viaBadge && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                 {viaBadge}
               </span>
             )}
@@ -299,14 +299,14 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
             <button
               onClick={onNavigate}
               title="跳轉至主頁查詢此品號 BOM"
-              className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-indigo-400 transition-colors cursor-pointer"
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={onClose}
               title="關閉縮圖"
-              className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -314,7 +314,7 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
         </div>
 
         {/* Image area */}
-        <div className="w-full h-48 flex items-center justify-center bg-slate-950 relative overflow-hidden">
+        <div className="w-full h-48 flex items-center justify-center bg-slate-100 relative overflow-hidden">
           {hasImage ? (
             <div className="relative w-full h-full p-2 flex items-center justify-center">
               {isPdf ? (
@@ -333,16 +333,16 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
                 />
               )}
               {thumbnail.imageName && (
-                <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-500 bg-slate-950/80 px-1.5 py-0.5 rounded border border-slate-800 truncate maxWidth-[200px]">
+                <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-400 bg-white/90 px-1.5 py-0.5 rounded border border-slate-200 truncate maxWidth-[200px]">
                   {thumbnail.imageName}
                 </div>
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 text-slate-600 px-4 text-center">
-              <ImageIcon className="w-10 h-10 opacity-40 text-slate-500" />
-              <span className="text-[11px] text-slate-400 font-medium">尚無對應圖檔</span>
-              <span className="text-[9.5px] text-slate-500 leading-tight">
+            <div className="flex flex-col items-center gap-2 px-4 text-center">
+              <ImageIcon className="w-10 h-10 opacity-30 text-slate-400" />
+              <span className="text-[11px] text-slate-500 font-medium">尚無對應圖檔</span>
+              <span className="text-[9.5px] text-slate-400 leading-tight">
                 請在主系統點擊右上角「圖檔資料夾」選擇本機圖檔資料夾，或進行圖片手動綁定。
               </span>
             </div>
@@ -350,10 +350,10 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
         </div>
 
         {/* Part info */}
-        <div className="px-3 py-2 bg-slate-900 border-t border-slate-800">
-          <div className="text-[11px] text-slate-200 font-medium leading-tight line-clamp-2">{thumbnail.partName || '—'}</div>
+        <div className="px-3 py-2 bg-white border-t border-slate-200">
+          <div className="text-[11px] text-slate-800 font-medium leading-tight line-clamp-2">{thumbnail.partName || '—'}</div>
           {thumbnail.customer && (
-            <div className="text-[10px] text-slate-400 mt-1">客戶：<span className="text-slate-300 font-semibold">{thumbnail.customer}</span></div>
+            <div className="text-[10px] text-slate-500 mt-1">客戶：<span className="text-slate-700 font-semibold">{thumbnail.customer}</span></div>
           )}
         </div>
       </div>
@@ -397,24 +397,24 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
     return (
       <div
         className={`
-          group relative flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/95 px-3 py-2 cursor-pointer select-none shadow-md
-          transition-all duration-150 hover:bg-slate-800 hover:border-indigo-500 hover:shadow-indigo-500/20 active:scale-[0.98]
+          group relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 cursor-pointer select-none shadow-sm
+          transition-all duration-150 hover:bg-indigo-50 hover:border-indigo-400 hover:shadow-indigo-200/60 active:scale-[0.98]
           ${isDimmed ? 'opacity-30' : 'opacity-100'}
-          ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950' : ''}
+          ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-100' : ''}
         `}
         style={{ minWidth: CARD.partMinW, maxWidth: CARD.maxW }}
         onClick={(e) => onShowThumbnail(part, e)}
         title={`點擊彈出 ${part.partNo} 縮圖`}
       >
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-mono font-bold text-sky-300 truncate group-hover:text-indigo-300 transition-colors">
+          <div className="text-[11px] font-mono font-bold text-indigo-700 truncate group-hover:text-indigo-900 transition-colors">
             {highlight(part.partNo)}
           </div>
-          <div className="text-[9px] text-slate-400 truncate leading-tight mt-0.5">
+          <div className="text-[9px] text-slate-500 truncate leading-tight mt-0.5">
             {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
           </div>
         </div>
-        <div className="p-1 rounded-lg bg-slate-800 group-hover:bg-indigo-500/20 text-slate-500 group-hover:text-indigo-400 transition-colors shrink-0">
+        <div className="p-1 rounded-lg bg-slate-100 group-hover:bg-indigo-100 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0">
           <Eye className="w-3.5 h-3.5" />
         </div>
       </div>
@@ -437,9 +437,9 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
       <div className="flex flex-col items-stretch" style={{ minWidth: minW }}>
         <div
           className={`
-            relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-xl
-            transition-all duration-150 hover:brightness-125 active:scale-[0.98]
-            ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-950' : ''}
+            relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-md
+            transition-all duration-150 hover:brightness-95 active:scale-[0.98]
+            ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-100' : ''}
           `}
           style={{ backgroundColor: node.color, borderColor: node.borderColor, maxWidth: CARD.maxW, padding }}
           onClick={() => hasChildren && onToggle(node.id)}
@@ -630,30 +630,30 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const FIXED_SCALE = 1.2;
 
   return (
-    <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-950 flex flex-col overflow-hidden text-slate-100 select-none">
+    <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-50 flex flex-col overflow-hidden text-slate-900 select-none">
 
       {/* ── Header ── */}
-      <div className="flex flex-wrap items-center justify-between px-5 py-3 border-b border-slate-800 bg-slate-900/90 gap-3 shrink-0 shadow-lg z-20 backdrop-blur-sm">
+      <div className="flex flex-wrap items-center justify-between px-5 py-3 border-b border-slate-200 bg-white gap-3 shrink-0 shadow-sm z-20">
         {/* Left */}
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-bold transition-all cursor-pointer active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             返回主系統
           </button>
-          <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200">
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">v5.3.0</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.3.0</span>
             </h2>
-            <p className="text-[11px] text-slate-400">
-              已分類 <span className="text-emerald-400 font-bold">{classifiedCount}</span> 件 ·
-              待分類 <span className="text-amber-400 font-bold">{unclassifiedCount}</span> 件 ·
+            <p className="text-[11px] text-slate-500">
+              已分類 <span className="text-emerald-600 font-bold">{classifiedCount}</span> 件 ·
+              待分類 <span className="text-amber-600 font-bold">{unclassifiedCount}</span> 件 ·
               共 {parts.length} 件
             </p>
           </div>
@@ -669,35 +669,35 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="搜尋品號或名稱..."
-              className="pl-8 pr-4 py-1.5 bg-slate-800 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-48"
+              className="pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 w-48 transition-all"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer">
+              <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          <button onClick={handleExpandAll}  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">全部展開</button>
-          <button onClick={handleCollapseAll} className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 cursor-pointer transition-all">全部收合</button>
+          <button onClick={handleExpandAll}  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs text-slate-700 font-semibold cursor-pointer transition-all">全部展開</button>
+          <button onClick={handleCollapseAll} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs text-slate-700 font-semibold cursor-pointer transition-all">全部收合</button>
 
-          <button onClick={handleResetView} className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white cursor-pointer transition-all" title="重置視角">
+          <button onClick={handleResetView} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 cursor-pointer transition-all" title="重置視角">
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* ── Hint bar ── */}
-      <div className="px-5 py-1.5 bg-slate-900/60 border-b border-slate-800/60 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+      <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
         <div className="flex items-center gap-4">
-          <Info className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+          <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
           <span>🖱️ 左鍵拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖與跳轉 BOM</span>
           {searchQuery && highlightIds.size > 0 && (
-            <span className="text-amber-400 font-medium">找到 {highlightIds.size} 個匹配節點</span>
+            <span className="text-amber-600 font-semibold">找到 {highlightIds.size} 個匹配節點</span>
           )}
         </div>
         {!imageLib && (
-          <div className="flex items-center gap-1.5 text-amber-400/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 text-[10.5px]">
+          <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10.5px]">
             <Sparkles className="w-3 h-3 shrink-0" />
             <span>提示：請回主頁右上角「圖檔資料夾」載入本機圖片以顯示縮圖</span>
           </div>
