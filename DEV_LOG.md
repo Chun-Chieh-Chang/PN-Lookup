@@ -1046,6 +1046,27 @@ pn-lookup/
    * 若後續字元為**非數字**（如 `v1`, `RevA` 或無後續）：判定為版本修飾符，允許匹配！
 2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.8.4 — 效能與 UI 重構：思維導圖最深層分類卡片導入獨立卷軸容器 (MindMap Scrollable Leaf Category Container Refactoring)
+
+### 需求內容
+修復思維導圖展開至末端品號時，過往將數百筆品號直接展算為獨立 SVG 樹節點導致垂直分佈跨度過大（超過 35,000px）、極度影響拖曳檢索與佈局效能的問題。恢復分類卡片內嵌入品號列表獨立卷軸 (Scrollbar Container) 的高效率檢索設計。
+
+### 根因分析 (RCA)
+之前在從舊版切換至 `react-d3-tree` 樹狀佈局時，`createPartLeafNodes` 誤將全數 565+ 筆品號各自獨立轉化為 D3 樹的終點子節點。這導致 D3 佈局計算在垂直方向被拉伸超過 35,000 像素，造成畫布過度龐大、滑鼠拖曳與搜尋檢索效能下降。
+
+### 矯正與預防措施 (CAPA)
+1. **收合品號至子類別卷軸容器 (Scrollable Leaf Category Container)**：
+   重構 [ProductMindMapModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductMindMapModal.tsx)。停止將品號分裂為數百個獨立 D3 樹節點，而是將品號列表收納於所屬子類別卡片（如 `T接頭`, `SA系列`, `BD`, `待人工分類` ...）的內部。
+2. **嵌入高質感 Morandi 卷軸與二級按鈕**：
+   子類別卡片內部提供高度 `max-h-[220px]` 的獨立滾輪容器 (`custom-scrollbar`)：
+   * 包含品號即時搜尋過濾與關鍵字高亮。
+   * 包含單品獨立 **👁️ 圖檔預覽** 與 **🔗 跳轉至 BOM 主頁** 按鈕。
+   * 全樹 D3 節點數大幅縮減為極簡 15 個分類節點，畫布高度縮小為近千像素，拖曳極速順暢！
+3. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 

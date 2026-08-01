@@ -146,8 +146,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const leaf = (id: string, label: string, sub: string, cat: MindMapCategory, depth = 3): MindMapNode => {
     const catParts = buckets.get(cat)!;
-    const partChildren = createPartLeafNodes(catParts, depth + 1);
-    return n(id, label, sub, PALETTE.factoryPart, depth, partChildren, catParts, cat);
+    return n(id, label, sub, PALETTE.factoryPart, depth, [], catParts, cat);
   };
 
   const factoryParts: MindMapNode[] = [
@@ -164,7 +163,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const asmLeaf = (id: string, label: string, sub: string, cat: MindMapCategory) => {
     const pList = buckets.get(cat)!;
-    return n(id, label, sub, PALETTE.factoryAsm, 3, createPartLeafNodes(pList, 4), pList, cat);
+    return n(id, label, sub, PALETTE.factoryAsm, 3, [], pList, cat);
   };
 
   const factoryAsm: MindMapNode[] = [
@@ -177,7 +176,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const setLeaf = (id: string, label: string, sub: string, cat: MindMapCategory) => {
     const pList = buckets.get(cat)!;
-    return n(id, label, sub, PALETTE.factorySet, 3, createPartLeafNodes(pList, 4), pList, cat);
+    return n(id, label, sub, PALETTE.factorySet, 3, [], pList, cat);
   };
 
   const factorySet: MindMapNode[] = [
@@ -187,7 +186,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const icuLeaf = (id: string, label: string, sub: string, cat: MindMapCategory) => {
     const pList = buckets.get(cat)!;
-    return n(id, label, sub, PALETTE.icuBag, 4, createPartLeafNodes(pList, 5), pList, cat);
+    return n(id, label, sub, PALETTE.icuBag, 4, [], pList, cat);
   };
 
   const icuBagSpike = n('icu-bag', '插袋針 (Bag spike)', '插入點滴袋，皆加 R1-8112 針蓋', PALETTE.icuBag, 3, [
@@ -199,7 +198,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const icuVialLeaf = (id: string, label: string, sub: string, cat: MindMapCategory) => {
     const pList = buckets.get(cat)!;
-    return n(id, label, sub, PALETTE.icuVial, 4, createPartLeafNodes(pList, 5), pList, cat);
+    return n(id, label, sub, PALETTE.icuVial, 4, [], pList, cat);
   };
 
   const icuVialSpike = n('icu-vial', '採藥針 (Vial spike)', '插入藥瓶，皆加 R1-15853 針蓋', PALETTE.icuVial, 3, [
@@ -211,7 +210,7 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const custLeaf = (id: string, label: string, sub: string, cat: MindMapCategory) => {
     const pList = buckets.get(cat)!;
-    return n(id, label, sub, PALETTE.customerBD, 2, createPartLeafNodes(pList, 3), pList, cat);
+    return n(id, label, sub, PALETTE.customerBD, 2, [], pList, cat);
   };
 
   const unclassParts = buckets.get('unclassified')!;
@@ -227,9 +226,9 @@ function buildMindMapTree(parts: PartItem[]): MindMapNode {
       custLeaf('bd',       'BD',        '購買 Set 及零件，BD 品號下單',             'customer_bd'),
       custLeaf('mps',      'MPS',       'Set 以 MPS 品號下單，零件廠內品號',        'customer_mps'),
       custLeaf('biometrix','Biometrix', '購買 Set MDXE-093-01，依標準製作標籤包裝', 'customer_biometrix'),
-      n('vivus',    'Vivus (動物使用)', '廠內品號下單 MDXE-XXX，Animalcare 品號出貨', PALETTE.customerOther, 2, createPartLeafNodes(buckets.get('customer_vivus')!, 3), buckets.get('customer_vivus')!, 'customer_vivus'),
+      n('vivus',    'Vivus (動物使用)', '廠內品號下單 MDXE-XXX，Animalcare 品號出貨', PALETTE.customerOther, 2, [], buckets.get('customer_vivus')!, 'customer_vivus'),
     ], []),
-    n('unclassified', '待人工分類', `${unclassParts.length} 件品號等待對應`, PALETTE.unclassified, 1, createPartLeafNodes(unclassParts, 2), unclassParts, 'unclassified'),
+    n('unclassified', '待人工分類', `${unclassParts.length} 件品號等待對應`, PALETTE.unclassified, 1, [], unclassParts, 'unclassified'),
   ], []);
 }
 
@@ -542,22 +541,36 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       );
     }
 
-    // 分類節點
+    // 分類節點 / 含有品號的葉卡片
     const isRoot = mm.depth === 0;
+    const hasParts = mm.parts.length > 0;
+    const isLeafCategory = hasParts && (!nodeDatum.children || nodeDatum.children.length === 0);
+
+    const displayedParts = q && hasParts
+      ? mm.parts.filter(p =>
+          p.partNo.toLowerCase().includes(q) ||
+          p.name.toLowerCase().includes(q) ||
+          (p.customer || '').toLowerCase().includes(q) ||
+          (p.alternates && p.alternates.some(a => a.toLowerCase().includes(q)))
+        )
+      : mm.parts;
+
     const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
     const subFontSize = isRoot ? 10 : 9;
-    const cardW = getNodeCardWidth(mm);
+    const cardW = isLeafCategory ? 320 : getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
-    const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 7;
-    // 節點高度估算（用於 foreignObject 定位）
-    const nodeH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+    const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
+
+    const listH = isLeafCategory ? Math.min(displayedParts.length * 42 + 10, 220) : 0;
+    const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+    const nodeH = isLeafCategory ? (baseHeaderH + listH + 24) : baseHeaderH;
 
     return (
       <foreignObject
         width={cardW}
-        height={nodeH + 8}
+        height={nodeH + 12}
         x={0}
-        y={-(nodeH + 8) / 2}
+        y={-(nodeH + 12) / 2}
         style={{ overflow: 'visible' }}
       >
         <div
@@ -578,7 +591,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
             transition: 'filter 0.15s',
             userSelect: 'none',
           }}
-          onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.95)'; }}
+          onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.98)'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.filter = ''; }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -599,7 +612,89 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               {mm.sublabel}
             </div>
           )}
-          {totalParts > 0 && (
+
+          {/* 卷軸品號清單區塊 (Scrollable Part List Container) */}
+          {isLeafCategory && (
+            <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${mm.borderColor}40` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>
+                  品號列表 ({displayedParts.length} / {mm.parts.length})
+                </span>
+              </div>
+              <div
+                className="custom-scrollbar"
+                onWheel={(e) => e.stopPropagation()}
+                style={{
+                  maxHeight: 220,
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4,
+                  paddingRight: 2,
+                }}
+              >
+                {displayedParts.length === 0 ? (
+                  <div style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>
+                    無匹配品號
+                  </div>
+                ) : (
+                  displayedParts.map((part) => (
+                    <div
+                      key={part.id || part.partNo}
+                      onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        background: '#FFFFFF',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: 8,
+                        padding: '4px 8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.12s',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.background = '#EEF2FF';
+                        (e.currentTarget as HTMLDivElement).style.borderColor = '#818CF8';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLDivElement).style.background = '#FFFFFF';
+                        (e.currentTarget as HTMLDivElement).style.borderColor = '#CBD5E1';
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
+                        <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {highlight(part.partNo)}
+                        </div>
+                        <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleShowThumbnail(part, e); }}
+                          title="預覽圖檔"
+                          style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#4945FF', cursor: 'pointer' }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleNavigatePart(part.partNo); }}
+                          title="跳轉至 BOM 主頁"
+                          style={{ padding: 3, borderRadius: 5, background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#059669', cursor: 'pointer' }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {totalParts > 0 && !isLeafCategory && (
             <div style={{
               position: 'absolute', top: -8, right: -8,
               minWidth: 20, height: 20, borderRadius: '50%',
