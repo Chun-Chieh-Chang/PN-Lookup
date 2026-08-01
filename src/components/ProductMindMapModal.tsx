@@ -25,26 +25,26 @@ import { ImageLibrary } from '../utils/imageLibrary';
 import { resolveImage } from '../utils/imageResolver';
 
 // ────────────────────────────────────────────────────────────────────────────
-// Constants – 1× baseline (縮小為原 1.5× 的 1/1.5)
+// Constants – 1.2× baseline (原 1× × 1.2)
 // ────────────────────────────────────────────────────────────────────────────
 
 const CARD = {
-  rootMinW:  240,
-  d1MinW:    200,
-  d2MinW:    170,
-  d3MinW:    150,
-  partMinW:  140,
-  maxW:      280,
-  rootPad:   '12px 16px',
-  nodePad:   '8px 12px',
-  leafPad:   '6px 10px',
-  partPad:   '5px 8px',
+  rootMinW:  288,
+  d1MinW:    240,
+  d2MinW:    204,
+  d3MinW:    180,
+  partMinW:  168,
+  maxW:      336,
+  rootPad:   '14px 19px',
+  nodePad:   '10px 14px',
+  leafPad:   '7px 12px',
+  partPad:   '6px 10px',
 };
 
 const CONN = {
-  horizontalLen: 19,
+  horizontalLen: 23,
   lineW: 1,
-  nodeHeaderH: 17,
+  nodeHeaderH: 20,
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -397,10 +397,10 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
         title={`點擊彈出 ${part.partNo} 縮圖`}
       >
         <div className="flex-1 min-w-0">
-          <div className="text-[9px] font-mono font-bold text-sky-300 truncate group-hover:text-indigo-300 transition-colors">
+          <div className="text-[11px] font-mono font-bold text-sky-300 truncate group-hover:text-indigo-300 transition-colors">
             {highlight(part.partNo)}
           </div>
-          <div className="text-[7.5px] text-slate-400 truncate leading-tight mt-0.5">
+          <div className="text-[9px] text-slate-400 truncate leading-tight mt-0.5">
             {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
           </div>
         </div>
@@ -412,12 +412,12 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
   }
 
   const labelClass = isRoot
-    ? 'text-sm font-bold leading-snug'
-    : node.depth === 1 ? 'text-[11px] font-bold leading-snug'
-    : node.depth === 2 ? 'text-[10px] font-semibold leading-snug'
-    : 'text-[9px] font-semibold leading-snug';
+    ? 'text-[16px] font-bold leading-snug'
+    : node.depth === 1 ? 'text-[13px] font-bold leading-snug'
+    : node.depth === 2 ? 'text-[12px] font-semibold leading-snug'
+    : 'text-[11px] font-semibold leading-snug';
 
-  const sublabelClass = isRoot ? 'text-[8px]' : 'text-[7.5px]';
+  const sublabelClass = isRoot ? 'text-[10px]' : 'text-[9px]';
   const minW = isRoot ? CARD.rootMinW : node.depth === 1 ? CARD.d1MinW : node.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
   const padding = isRoot ? CARD.rootPad : node.depth <= 2 ? CARD.nodePad : CARD.leafPad;
   const connColor = node.borderColor + '90';
@@ -451,7 +451,7 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
           )}
           {totalParts > 0 && (
             <div
-              className="absolute -top-2 -right-2 min-w-[17px] h-[17px] rounded-full flex items-center justify-center text-[8px] font-bold shadow-lg"
+              className="absolute -top-2 -right-2 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[9px] font-bold shadow-lg"
               style={{ backgroundColor: node.borderColor, color: '#fff' }}
             >
               {totalParts}
@@ -617,7 +617,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     onClose();
   };
 
-  const FIXED_SCALE = 1.0;
+  const FIXED_SCALE = 1.2;
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-950 flex flex-col overflow-hidden text-slate-100 select-none">
