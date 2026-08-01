@@ -50,7 +50,7 @@ async function collectFromDir(dir: FileSystemDirectoryHandle, out: File[], stats
 // ---------- 品號 → 圖檔配對 ----------
 // 檔名常見命名：「品號_版本_品號別稱」或「品號別稱_版本_品號」（底線分隔）
 // 策略：整個檔名先比對，再拆成片段比對（任一片段等於品號即命中），符號一律忽略
-const NORM_RE = /[-_\s.]+/g;
+const NORM_RE = /[^A-Z0-9]+/gi;
 
 export function normalize(s: string): string {
   return s.replace(NORM_RE, '').toUpperCase();
@@ -60,16 +60,21 @@ function findForCandidate(files: File[], candidate: string): File | null {
   const pn = candidate.trim().toUpperCase();
   if (!pn) return null;
   const pnNorm = normalize(pn);
+  if (pnNorm.length < 3) return null;
   const canPrefix = pnNorm.length >= 4;
 
   for (const f of files) {
     const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
-    if (base === pn || normalize(base) === pnNorm) return f;
-    if (canPrefix && normalize(base).startsWith(pnNorm)) return f;
-    const segs = base.split(/[-_\s.]+/);
+    const baseNorm = normalize(base);
+
+    if (base === pn || baseNorm === pnNorm) return f;
+    if (canPrefix && (baseNorm.includes(pnNorm) || baseNorm.startsWith(pnNorm))) return f;
+
+    const segs = base.split(/[^A-Z0-9]+/i);
     for (const s of segs) {
-      if (s === pn || normalize(s) === pnNorm) return f;
-      if (canPrefix && normalize(s).startsWith(pnNorm)) return f;
+      const sNorm = normalize(s);
+      if (sNorm === pnNorm) return f;
+      if (canPrefix && sNorm.startsWith(pnNorm)) return f;
     }
   }
   return null;
