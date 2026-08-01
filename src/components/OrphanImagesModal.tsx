@@ -12,6 +12,11 @@ interface OrphanImagesModalProps {
   ocrIndex: Map<string, string>;
   bindings: Record<string, string>;
   onBind: (partNo: string, fileName: string) => void;
+  isOcrScanning?: boolean;
+  ocrProgress?: { done: number; total: number } | null;
+  onStartOcrScan?: (targetFiles?: string[]) => void;
+  onStopOcrScan?: () => void;
+  onSingleOcr?: (fileName: string) => void;
 }
 
 export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
@@ -23,10 +28,16 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
   ocrIndex,
   bindings,
   onBind,
+  isOcrScanning = false,
+  ocrProgress,
+  onStartOcrScan,
+  onStopOcrScan,
+  onSingleOcr,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [partQuery, setPartQuery] = useState('');
+  const [scanningSingleFile, setScanningSingleFile] = useState<string | null>(null);
 
   const filteredOrphans = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -77,8 +88,8 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
         </div>
 
         {/* Filter Toolbar */}
-        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-4">
-          <div className="relative flex-1">
+        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50 flex flex-wrap items-center justify-between gap-3">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -88,9 +99,37 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
               className="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500"
             />
           </div>
-          <span className="text-xs text-gray-500 shrink-0">
-            顯示 {filteredOrphans.length} / {orphanFiles.length} 筆
-          </span>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            {isOcrScanning ? (
+              <div className="flex items-center space-x-2 bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-violet-700">
+                <span>OCR 辨識中 {ocrProgress?.done ?? 0}/{ocrProgress?.total ?? 0}…</span>
+                {onStopOcrScan && (
+                  <button
+                    onClick={onStopOcrScan}
+                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[11px] font-bold cursor-pointer transition-colors"
+                  >
+                    停止
+                  </button>
+                )}
+              </div>
+            ) : (
+              onStartOcrScan && orphanFiles.length > 0 && (
+                <button
+                  onClick={() => onStartOcrScan(orphanFiles)}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                  title="僅對未對應的孤兒圖檔執行內容 OCR 辨識"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                  <span>批次辨識孤兒圖檔</span>
+                </button>
+              )
+            )}
+
+            <span className="text-xs text-gray-500 font-mono">
+              {filteredOrphans.length} / {orphanFiles.length} 筆
+            </span>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -136,21 +175,39 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-gray-400 mt-0.5 block">（未從 OCR 提取出符合品號）</span>
+                          <span className="text-xs text-gray-400 mt-0.5 block">（尚未執行 OCR 內文辨識）</span>
                         )}
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setSelectedFileName(isBindingThis ? null : name);
-                        setPartQuery('');
-                      }}
-                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer shrink-0"
-                    >
-                      <Link2 className="w-3.5 h-3.5" />
-                      <span>{isBindingThis ? '收起品號選單' : '連結至品號'}</span>
-                    </button>
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {!ocrText && onSingleOcr && (
+                        <button
+                          onClick={async () => {
+                            setScanningSingleFile(name);
+                            await onSingleOcr(name);
+                            setScanningSingleFile(null);
+                          }}
+                          disabled={scanningSingleFile === name}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-violet-50 hover:bg-violet-100 text-violet-700 border border-violet-200 transition-colors cursor-pointer disabled:opacity-50"
+                          title="專門對此圖檔執行內容 OCR 辨識"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-violet-600" />
+                          <span>{scanningSingleFile === name ? '辨識中…' : '辨識此圖'}</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setSelectedFileName(isBindingThis ? null : name);
+                          setPartQuery('');
+                        }}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                        <span>{isBindingThis ? '收起選單' : '連結至品號'}</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Part Selector Panel */}

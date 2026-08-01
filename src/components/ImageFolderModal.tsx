@@ -42,7 +42,7 @@ export const ImageFolderModal: React.FC<ImageFolderModalProps> = ({
               <li>檔名任一節需包含品號，例如 <code className="text-blue-700 bg-blue-50 px-1 rounded font-mono">3M41459_02_3M41459.jpg</code> 或 <code className="text-blue-700 bg-blue-50 px-1 rounded font-mono">3M-41459_01_V2.png</code>（`品號_版本_別稱` / `別稱_版本_品號` 皆可）</li>
               <li>支援 <code className="text-gray-700 font-mono">JPG / PNG / GIF / WEBP / BMP / SVG / PDF</code></li>
               <li>系統會自動遍歷所有子資料夾</li>
-              <li>檔名比對不到的檔案，會自動 OCR 辨識掃描內容找品號（首次需下載語言包，約 10 MB）</li>
+              <li>未對應的孤兒圖檔，可在「孤兒圖檔管理」中隨時點擊進行個別或批次內容 OCR 辨識（100% 手動控制，不佔用背景 CPU）</li>
               <li>選擇位置會保存在本機，下次開啟自動載入；此功能完全在本機瀏覽器內執行，圖檔不會上傳</li>
             </ul>
           </div>

@@ -120,54 +120,72 @@ export default function App() {
     }
   }, []);
 
-  // OCR 背景掃描：檔名比對不到的檔案，自動辨識內容找品號（結果存 IndexedDB）
+  // OCR 快取與手動掃描引擎（預設停止全量自動背景掃描，節省 CPU 與記憶體資源）
   const [ocrIndex, setOcrIndex] = useState<Map<string, string>>(new Map());
   const [ocrProgress, setOcrProgress] = useState<{ done: number; total: number } | null>(null);
+  const [isOcrScanning, setIsOcrScanning] = useState(false);
+  const ocrCancelledRef = useRef(false);
 
+  // 載入資料夾時僅載入快取，不自動啟動迴圈掃描
   useEffect(() => {
     if (!imageLib) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const cache = await loadOcrCache();
-        if (cancelled) return;
-        setOcrIndex(new Map(cache));
-        const queued = imageLib.fileNames.filter((f) => {
-          const file = imageLib.fileFor(f);
-          if (!file) return false;
-          return !cache.has(f) && !cache.has(ocrKeyForFile(file));
-        });
-        if (queued.length === 0) {
-          setOcrProgress(null);
-          return;
-        }
-        setOcrProgress({ done: 0, total: queued.length });
-        for (let i = 0; i < queued.length; i++) {
-          if (cancelled) return;
-          const fname = queued[i];
-          const file = imageLib.fileFor(fname);
-          if (file) {
-            try {
-              const text = await recognizeFile(file);
-              if (cancelled) return;
-              await saveOcrText(file, text);
-              setOcrIndex((prev) => {
-                const next = new Map(prev);
-                next.set(fname, text);
-                next.set(ocrKeyForFile(file), text);
-                return next;
-              });
-            } catch { /* 單檔失敗略過 */ }
-          }
-          setOcrProgress({ done: i + 1, total: queued.length });
-          await new Promise((r) => setTimeout(r, 0));
-        }
-        setOcrProgress(null);
-      } catch {
-        setOcrProgress(null);
+    loadOcrCache().then((cache) => {
+      setOcrIndex(new Map(cache));
+    });
+  }, [imageLib]);
+
+  // 手動啟動孤兒圖檔或指定的 OCR 掃描
+  const handleStartOcrScan = useCallback(async (targetFiles?: string[]) => {
+    if (!imageLib || isOcrScanning) return;
+    ocrCancelledRef.current = false;
+    setIsOcrScanning(true);
+    try {
+      const filesToScan = targetFiles || imageLib.fileNames;
+      const queued = filesToScan.filter((f) => {
+        const file = imageLib.fileFor(f);
+        return file && !ocrIndex.has(f);
+      });
+      if (queued.length === 0) {
+        setIsOcrScanning(false);
+        return;
       }
-    })();
-    return () => { cancelled = true; };
+      setOcrProgress({ done: 0, total: queued.length });
+      for (let i = 0; i < queued.length; i++) {
+        if (ocrCancelledRef.current) break;
+        const fname = queued[i];
+        const file = imageLib.fileFor(fname);
+        if (file) {
+          try {
+            const text = await recognizeFile(file);
+            if (ocrCancelledRef.current) break;
+            await saveOcrText(ocrKeyForFile(file), text);
+            setOcrIndex((prev) => new Map(prev).set(fname, text));
+          } catch { /* 單檔失敗略過 */ }
+        }
+        setOcrProgress({ done: i + 1, total: queued.length });
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    } finally {
+      setOcrProgress(null);
+      setIsOcrScanning(false);
+    }
+  }, [imageLib, isOcrScanning, ocrIndex]);
+
+  const handleStopOcrScan = useCallback(() => {
+    ocrCancelledRef.current = true;
+    setIsOcrScanning(false);
+    setOcrProgress(null);
+  }, []);
+
+  const handleSingleOcr = useCallback(async (fileName: string) => {
+    if (!imageLib) return;
+    const file = imageLib.fileFor(fileName);
+    if (!file) return;
+    try {
+      const text = await recognizeFile(file);
+      await saveOcrText(ocrKeyForFile(file), text);
+      setOcrIndex((prev) => new Map(prev).set(fileName, text));
+    } catch { /* 單檔失敗略過 */ }
   }, [imageLib]);
 
   // 手動綁定（本機限定）
@@ -423,7 +441,9 @@ export default function App() {
         }}
         imageFolderName={imageLib?.folderName ?? null}
         imageCount={imageLib?.count ?? 0}
+        orphanCount={orphanInfo.files.length}
         onPickImageFolder={handlePickImageFolder}
+        onOpenOrphansModal={() => setIsOrphansModalOpen(true)}
         isAdminMode={isUnlocked || route === 'admin'}
       />
 
@@ -527,6 +547,22 @@ export default function App() {
         onBind={handleBind}
         onUnbind={handleUnbind}
         onClose={() => setBindPartNo(null)}
+      />
+
+      <OrphanImagesModal
+        isOpen={isOrphansModalOpen}
+        onClose={() => setIsOrphansModalOpen(false)}
+        lib={imageLib}
+        parts={parts}
+        orphanFiles={orphanInfo.files}
+        ocrIndex={ocrIndex}
+        bindings={bindings}
+        onBind={handleBind}
+        isOcrScanning={isOcrScanning}
+        ocrProgress={ocrProgress}
+        onStartOcrScan={handleStartOcrScan}
+        onStopOcrScan={handleStopOcrScan}
+        onSingleOcr={handleSingleOcr}
       />
 
       {/* Footer */}

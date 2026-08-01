@@ -1,15 +1,16 @@
 # PN-Lookup 開發日誌
 
-## v3.6.3 — 修正 OCR 快取鍵值不相符與重複掃描問題 (OCR Cache Key Resolution & Repeat Scan Fix)
+## v3.7.0 — 效能防禦：取消預設背景全量 OCR 掃描，改為「用戶手動啟用與單圖點擊辨識」機制 (On-Demand OCR Engine & Performance Defense)
 
 ### 需求內容與作業
-- **問題根因分析 (RCA)**：
-  - 舊版寫入 IndexedDB 快取的 Key 為 `${file.name}|${file.size}|${file.lastModified}`，但 `imageResolver.ts` 查詢與 `loadOcrCache()` 反載入時是以單純檔名 `fname` 為 Key，造成每次開啟系統時 Map 的 Key 不相符而誤判為「未快取」，進而觸發重新 OCR 掃描。
-  - 另外 Chrome FileSystemAccess API 每次開啟時 `lastModified` 可能存在毫秒級微小偏移，導致快取命中失敗。
-- **矯正措施與防禦 (CAPA)**：
-  - 重構 `ocr.ts` 與 `App.tsx` 中的 OCR 快取機制，將檔名 `fname` 與組合 Key 一併寫入 IndexedDB 與記憶體 Map，消除了鍵值不相符與時間戳浮動問題。
-  - 已經辨識過的圖檔二次開啟時 100% 秒級命中快取，不再重複執行 OCR 背景辨識。
-- **建構與部署確效**：通過 `npx tsc --noEmit` 0 錯誤與 Vite 4.01s 生產打包測試。
+- **OCR 目的與效能問題 RCA**：
+  - **目的**：掃描圖檔/PDF 內容標題欄 (Title Block) 內文，解決檔名未含品號時的自動配對。
+  - **效能問題**：先前系統會在選定圖檔資料夾後，預設對資料夾內全數未對應檔案 (例如 1,070+ 個檔案) 自動背景連續辨識，導致大量消耗 CPU/記憶體。
+- **重構為 100% 手動控制與按需觸發 (On-Demand Control)**：
+  - **取消預設背景全量掃描**：開啟圖檔資料夾時，僅載入過往 IndexedDB 快取，零背景資源消耗。
+  - **孤兒圖檔手動批次辨識 (Batch OCR Button & Pause)**：在孤兒圖檔管理中心提供「批次辨識孤兒圖檔」按鈕，並隨時支援「暫停/停止」。
+  - **單一圖檔瞬時辨識 (Single File OCR Button)**：針對特定未對應圖檔提供「辨識此圖」按鈕，秒級精準辨識內容，不再浪費時間與效能。
+- **確效測試**：`npx tsc --noEmit` 0 錯誤、Vite 4.63s 生產打包通過。
 
 ---
 
