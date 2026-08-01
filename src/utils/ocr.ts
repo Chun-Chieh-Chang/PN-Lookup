@@ -70,7 +70,7 @@ async function ocrPdf(file: File): Promise<string> {
 }
 
 export function ocrKeyForFile(file: File): string {
-  return `${file.name}|${file.size}|${file.lastModified}`;
+  return `${file.name}|${file.size}`;
 }
 
 export async function recognizeFile(file: File): Promise<string> {
@@ -86,10 +86,18 @@ export interface OcrEntry {
 export async function loadOcrCache(): Promise<Map<string, string>> {
   const entries = await idbGetAll('ocr');
   const map = new Map<string, string>();
-  for (const e of entries) map.set(e.key, String(e.value));
+  for (const e of entries) {
+    const rawKey = String(e.key);
+    const text = String(e.value);
+    const fname = rawKey.split('|')[0];
+    map.set(fname, text);
+    map.set(rawKey, text);
+  }
   return map;
 }
 
-export async function saveOcrText(key: string, text: string): Promise<void> {
+export async function saveOcrText(file: File, text: string): Promise<void> {
+  const key = ocrKeyForFile(file);
   await idbSet('ocr', key, text);
+  await idbSet('ocr', file.name, text);
 }

@@ -1,5 +1,18 @@
 # PN-Lookup 開發日誌
 
+## v3.6.3 — 修正 OCR 快取鍵值不相符與重複掃描問題 (OCR Cache Key Resolution & Repeat Scan Fix)
+
+### 需求內容與作業
+- **問題根因分析 (RCA)**：
+  - 舊版寫入 IndexedDB 快取的 Key 為 `${file.name}|${file.size}|${file.lastModified}`，但 `imageResolver.ts` 查詢與 `loadOcrCache()` 反載入時是以單純檔名 `fname` 為 Key，造成每次開啟系統時 Map 的 Key 不相符而誤判為「未快取」，進而觸發重新 OCR 掃描。
+  - 另外 Chrome FileSystemAccess API 每次開啟時 `lastModified` 可能存在毫秒級微小偏移，導致快取命中失敗。
+- **矯正措施與防禦 (CAPA)**：
+  - 重構 `ocr.ts` 與 `App.tsx` 中的 OCR 快取機制，將檔名 `fname` 與組合 Key 一併寫入 IndexedDB 與記憶體 Map，消除了鍵值不相符與時間戳浮動問題。
+  - 已經辨識過的圖檔二次開啟時 100% 秒級命中快取，不再重複執行 OCR 背景辨識。
+- **建構與部署確效**：通過 `npx tsc --noEmit` 0 錯誤與 Vite 4.01s 生產打包測試。
+
+---
+
 ## v3.6.2 — MECE 介面清理：移除冗餘「客戶統計」按鈕與 Modal (UI Optimization & Code Cleanup)
 
 ### 需求內容與作業

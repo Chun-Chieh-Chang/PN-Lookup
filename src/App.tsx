@@ -132,8 +132,15 @@ export default function App() {
         const cache = await loadOcrCache();
         if (cancelled) return;
         setOcrIndex(new Map(cache));
-        const queued = imageLib.fileNames.filter((f) => !cache.has(ocrKeyForFile(imageLib.fileFor(f) as File)));
-        if (queued.length === 0) return;
+        const queued = imageLib.fileNames.filter((f) => {
+          const file = imageLib.fileFor(f);
+          if (!file) return false;
+          return !cache.has(f) && !cache.has(ocrKeyForFile(file));
+        });
+        if (queued.length === 0) {
+          setOcrProgress(null);
+          return;
+        }
         setOcrProgress({ done: 0, total: queued.length });
         for (let i = 0; i < queued.length; i++) {
           if (cancelled) return;
@@ -143,8 +150,13 @@ export default function App() {
             try {
               const text = await recognizeFile(file);
               if (cancelled) return;
-              await saveOcrText(ocrKeyForFile(file), text);
-              setOcrIndex((prev) => new Map(prev).set(fname, text));
+              await saveOcrText(file, text);
+              setOcrIndex((prev) => {
+                const next = new Map(prev);
+                next.set(fname, text);
+                next.set(ocrKeyForFile(file), text);
+                return next;
+              });
             } catch { /* 單檔失敗略過 */ }
           }
           setOcrProgress({ done: i + 1, total: queued.length });
