@@ -3,22 +3,19 @@ import React, {
   useMemo,
   useCallback,
   useRef,
-  useEffect,
 } from 'react';
 import {
   X,
   Search,
-  ChevronRight,
-  ChevronDown,
   ArrowLeft,
   Layers,
   Eye,
-  RotateCcw,
   Info,
   Image as ImageIcon,
   ExternalLink,
   Sparkles,
 } from 'lucide-react';
+import { Tree as D3Tree } from 'react-d3-tree';
 import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from '../utils/mindmapClassifier';
 import { ImageLibrary } from '../utils/imageLibrary';
@@ -362,254 +359,22 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// ConnectorTree – 由子節點卡片 callback 回傳精確高度後畫連接線
+// react-d3-tree 資料轉換
 // ────────────────────────────────────────────────────────────────────────────
 
-interface ConnectorTreeProps {
-  connColor: string;
-  horizontalLen: number;
-  lineW: number;
-  defaultHalfH: number;
-  children: React.ReactElement[];
+interface D3TreeNode {
+  name: string;
+  _mmNode: MindMapNode;
+  children?: D3TreeNode[];
 }
 
-const ConnectorTree: React.FC<ConnectorTreeProps> = ({
-  connColor, horizontalLen, lineW, defaultHalfH, children,
-}) => {
-  const count = children.length;
-  const [cardHeights, setCardHeights] = React.useState<number[]>(() =>
-    Array(count).fill(defaultHalfH * 2)
-  );
-
-  // 用 useRef 穩定 callback，避免 cloneElement 產生新函式觸發無限 re-render
-  const callbacksRef = React.useRef<((h: number) => void)[]>([]);
-  if (callbacksRef.current.length !== count) {
-    callbacksRef.current = Array.from({ length: count }, (_, i) => (h: number) => {
-      setCardHeights((prev) => {
-        if (prev[i] === h) return prev;
-        const next = [...prev];
-        next[i] = h;
-        return next;
-      });
-    });
-  }
-
-  const GAP = 10;
-
-  // 每個子節點水平出線點的 Y 座標（相對容器頂部）= 累積高度 + i*GAP + 本卡片高度/2
-  const midYs: number[] = [];
-  let acc = 0;
-  for (let i = 0; i < count; i++) {
-    const h = cardHeights[i] ?? defaultHalfH * 2;
-    midYs.push(acc + Math.floor(h / 2));
-    acc += h + GAP;
-  }
-  const firstMid = midYs[0] ?? defaultHalfH;
-  const lastMid  = midYs[count - 1] ?? defaultHalfH;
-
-  return (
-    <div style={{ marginLeft: horizontalLen + 8, position: 'relative', display: 'flex', flexDirection: 'column', gap: GAP }}>
-      {/* 垂直主幹：首尾子節點出線點之間 */}
-      {count > 1 && (
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: -(horizontalLen + Math.floor(lineW / 2) + 1),
-            top: firstMid,
-            height: Math.max(0, lastMid - firstMid),
-            width: lineW,
-            backgroundColor: connColor,
-            pointerEvents: 'none',
-          }}
-        />
-      )}
-
-      {children.map((child, idx) => (
-        <div
-          key={child.key ?? idx}
-          className="relative flex items-start"
-        >
-          {/* 水平橫線：從主幹到子節點左緣 */}
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              left: -(horizontalLen + Math.floor(lineW / 2) + 1),
-              top: (midYs[idx] ?? defaultHalfH) - Math.floor(lineW / 2),
-              width: horizontalLen,
-              height: lineW,
-              backgroundColor: connColor,
-              pointerEvents: 'none',
-            }}
-          />
-          {/* 把 onCardHeight 注入子節點 */}
-          {React.cloneElement(child, {
-            onCardHeight: callbacksRef.current[idx],
-          } as Partial<NodeProps>)}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// ────────────────────────────────────────────────────────────────────────────
-// MindMap node component
-// ────────────────────────────────────────────────────────────────────────────
-
-interface NodeProps {
-  node: MindMapNode;
-  searchQuery: string;
-  expandedIds: Set<string>;
-  highlightIds: Set<string>;
-  onToggle: (id: string) => void;
-  onShowThumbnail: (part: PartItem, e: React.MouseEvent) => void;
-  onSelectPart?: (partNo: string) => void;
-  /** 節點卡片掛載後回傳卡片高度（供父層 ConnectorTree 精確定位連接線） */
-  onCardHeight?: (h: number) => void;
-}
-
-const MindMapNodeComponent: React.FC<NodeProps> = ({
-  node, searchQuery, expandedIds, highlightIds, onToggle, onShowThumbnail, onSelectPart, onCardHeight,
-}) => {
-  const isExpanded    = expandedIds.has(node.id);
-  const isHighlighted = highlightIds.size > 0 && highlightIds.has(node.id);
-  const hasChildren   = node.children.length > 0;
-  const totalParts    = countParts(node);
-  const isRoot        = node.depth === 0;
-  const isDimmed      = highlightIds.size > 0 && !isHighlighted;
-  const q             = searchQuery.trim().toLowerCase();
-
-  const highlight = (text: string): React.ReactNode => {
-    if (!q || !text.toLowerCase().includes(q)) return text;
-    const idx = text.toLowerCase().indexOf(q);
-    return <>{text.slice(0, idx)}<mark className="bg-amber-400/70 text-black rounded px-0.5">{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</>;
+function toD3Tree(node: MindMapNode): D3TreeNode {
+  return {
+    name: node.id,
+    _mmNode: node,
+    children: node.children.length > 0 ? node.children.map(toD3Tree) : undefined,
   };
-
-  if (node.isPartNode && node.parts.length > 0) {
-    const part = node.parts[0];
-    return (
-      <div
-        ref={(el) => { if (el && onCardHeight) onCardHeight(el.offsetHeight); }}
-        className={`
-          group relative flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 cursor-pointer select-none shadow-sm
-          transition-all duration-150 hover:bg-indigo-50 hover:border-indigo-400 hover:shadow-indigo-200/60 active:scale-[0.98]
-          ${isDimmed ? 'opacity-30' : 'opacity-100'}
-          ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-100' : ''}
-        `}
-        style={{ minWidth: CARD.partMinW, maxWidth: CARD.maxW }}
-        onClick={(e) => onShowThumbnail(part, e)}
-        title={`點擊彈出 ${part.partNo} 縮圖`}
-      >
-        <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-mono font-bold text-indigo-700 truncate group-hover:text-indigo-900 transition-colors">
-            {highlight(part.partNo)}
-          </div>
-          <div className="text-[9px] text-slate-500 truncate leading-tight mt-0.5">
-            {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
-          </div>
-        </div>
-        <div className="p-1 rounded-lg bg-slate-100 group-hover:bg-indigo-100 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0">
-          <Eye className="w-3.5 h-3.5" />
-        </div>
-      </div>
-    );
-  }
-
-  const labelClass = isRoot
-    ? 'text-[16px] font-bold leading-snug'
-    : node.depth === 1 ? 'text-[13px] font-bold leading-snug'
-    : node.depth === 2 ? 'text-[12px] font-semibold leading-snug'
-    : 'text-[11px] font-semibold leading-snug';
-
-  const sublabelClass = isRoot ? 'text-[10px]' : 'text-[9px]';
-  const minW = isRoot ? CARD.rootMinW : node.depth === 1 ? CARD.d1MinW : node.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
-  const padding = isRoot ? CARD.rootPad : node.depth <= 2 ? CARD.nodePad : CARD.leafPad;
-  const connColor = node.borderColor + 'BB';
-  // 每個子項目列的高度中心 = 卡片上半部高度的估算（用於 CSS var 傳遞）
-  // 改用純 CSS border 方案，不需硬編碼數值
-
-  return (
-    <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
-      <div
-        ref={(el) => {
-          if (!el) return;
-          // 初次掛載立即回傳
-          if (onCardHeight) onCardHeight(el.offsetHeight);
-          // 用 ResizeObserver 追蹤後續高度變化（卡片展開/縮合時）
-          const ro = new ResizeObserver(() => {
-            if (onCardHeight) onCardHeight(el.offsetHeight);
-          });
-          ro.observe(el);
-          // cleanup 掛在 el 上，避免 React 多次 ref 呼叫時洩漏
-          (el as HTMLDivElement & { _ro?: ResizeObserver })._ro?.disconnect();
-          (el as HTMLDivElement & { _ro?: ResizeObserver })._ro = ro;
-        }}
-        className="flex flex-col items-stretch"
-        style={{ minWidth: minW }}
-      >
-        <div
-          className={`
-            relative flex flex-col rounded-2xl border-2 cursor-pointer select-none shadow-md
-            transition-all duration-150 hover:brightness-95 active:scale-[0.98]
-            ${isHighlighted ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-slate-100' : ''}
-          `}
-          style={{ backgroundColor: node.color, borderColor: node.borderColor, maxWidth: CARD.maxW, padding }}
-          onClick={() => hasChildren && onToggle(node.id)}
-        >
-          <div className="flex items-center gap-2">
-            <div className={`flex-1 ${labelClass}`} style={{ color: node.textColor }}>
-              {highlight(node.label)}
-            </div>
-            {hasChildren && (
-              <div className="shrink-0 opacity-75" style={{ color: node.textColor }}>
-                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </div>
-            )}
-          </div>
-          {node.sublabel && (
-            <div className={`${sublabelClass} opacity-60 mt-1 leading-tight`} style={{ color: node.textColor }}>
-              {node.sublabel}
-            </div>
-          )}
-          {totalParts > 0 && (
-            <div
-              className="absolute -top-2 -right-2 min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[9px] font-bold shadow-lg"
-              style={{ backgroundColor: node.borderColor, color: '#fff' }}
-            >
-              {totalParts}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {isExpanded && hasChildren && (() => {
-        const HALF_H = CONN.nodeHeaderH;
-        return (
-          <ConnectorTree
-            connColor={connColor}
-            horizontalLen={CONN.horizontalLen}
-            lineW={CONN.lineW}
-            defaultHalfH={HALF_H}
-          >
-            {node.children.map((child) => (
-              <MindMapNodeComponent
-                key={child.id}
-                node={child}
-                searchQuery={searchQuery}
-                expandedIds={expandedIds}
-                highlightIds={highlightIds}
-                onToggle={onToggle}
-                onShowThumbnail={onShowThumbnail}
-                onSelectPart={onSelectPart}
-              />
-            ))}
-          </ConnectorTree>
-        );
-      })()}
-    </div>
-  );
-};
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Main modal
@@ -618,14 +383,16 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
 export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   isOpen, onClose, parts, imageLib, bindings = {}, ocrIndex = new Map(), onSelectPart,
 }) => {
-  const [searchQuery, setSearchQuery]     = useState('');
-  const [expandedIds, setExpandedIds]     = useState<Set<string>>(new Set(['root', 'factory', 'customer', 'factory-part', 'icu', 'icu-bag', 'icu-vial']));
-  const [panX, setPanX]                   = useState(0);
-  const [panY, setPanY]                   = useState(0);
-  const [isDragging, setIsDragging]       = useState(false);
-  const [thumbnail, setThumbnail]         = useState<ThumbnailState | null>(null);
-  const lastPan                           = useRef<{ x: number; y: number } | null>(null);
-  const containerRef                      = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
+  const containerRef                  = useRef<HTMLDivElement>(null);
+  // react-d3-tree translate：等容器掛載後取真實高度置中
+  const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 300 });
+  React.useEffect(() => {
+    if (containerRef.current) {
+      setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
+    }
+  }, [isOpen]);
 
   const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
 
@@ -643,38 +410,14 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     return r;
   }, [mindMapTree, searchQuery]);
 
-  useEffect(() => {
-    if (highlightIds.size > 0) {
-      setExpandedIds(prev => { const n = new Set(prev); highlightIds.forEach(id => n.add(id)); return n; });
-    }
-  }, [highlightIds]);
+  // react-d3-tree 需要的：轉換樹狀資料
+  const d3TreeData = useMemo(() => toD3Tree(mindMapTree), [mindMapTree]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    setThumbnail(null);
-    setIsDragging(true);
-    lastPan.current = { x: e.clientX - panX, y: e.clientY - panY };
-  };
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!isDragging || !lastPan.current) return;
-    setPanX(e.clientX - lastPan.current.x);
-    setPanY(e.clientY - lastPan.current.y);
-  };
-  const handleMouseUp = () => { setIsDragging(false); lastPan.current = null; };
-
-  // 核心解圖邏輯：使用整合的 resolveImage (檔名、手動綁定、OCR 內容)
+  // 解圖縮圖
   const handleShowThumbnail = useCallback((part: PartItem, e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    
-    const res = resolveImage(
-      part.partNo,
-      part.alternates,
-      imageLib ?? null,
-      bindings,
-      ocrIndex,
-    );
-
+    const res = resolveImage(part.partNo, part.alternates, imageLib ?? null, bindings, ocrIndex);
     setThumbnail({
       partNo: part.partNo,
       partName: part.name,
@@ -687,24 +430,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     });
   }, [imageLib, bindings, ocrIndex]);
 
-  const handleToggle = useCallback((id: string) => {
-    setExpandedIds(prev => {
-      const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-  }, []);
-
-  const handleExpandAll = useCallback(() => {
-    const ids = new Set<string>();
-    const walk = (node: MindMapNode) => { ids.add(node.id); node.children.forEach(walk); };
-    walk(mindMapTree);
-    setExpandedIds(ids);
-  }, [mindMapTree]);
-
-  const handleCollapseAll = useCallback(() => setExpandedIds(new Set(['root'])), []);
-  const handleResetView    = useCallback(() => { setPanX(0); setPanY(0); }, []);
-
   if (!isOpen) return null;
 
   const handleNavigatePart = (partNo: string) => {
@@ -712,14 +437,147 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     onClose();
   };
 
-  const FIXED_SCALE = 1.2;
+  // react-d3-tree renderCustomNodeElement：每個節點渲染成自訂卡片
+  const renderNode = ({ nodeDatum, toggleNode }: {
+    nodeDatum: D3TreeNode & { __rd3t: { collapsed: boolean } };
+    toggleNode: () => void;
+  }) => {
+    const mm = nodeDatum._mmNode;
+    const isCollapsed = nodeDatum.__rd3t?.collapsed ?? false;
+    const hasChildren = (nodeDatum.children?.length ?? 0) > 0;
+    const isHighlighted = highlightIds.size > 0 && highlightIds.has(mm.id);
+    const isDimmed      = highlightIds.size > 0 && !isHighlighted;
+    const totalParts    = countParts(mm);
+    const q             = searchQuery.trim().toLowerCase();
+
+    const highlight = (text: string): React.ReactNode => {
+      if (!q || !text.toLowerCase().includes(q)) return text;
+      const idx = text.toLowerCase().indexOf(q);
+      return <>{text.slice(0, idx)}<mark style={{ background: 'rgba(251,191,36,0.7)', borderRadius: 3, padding: '0 2px' }}>{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</>;
+    };
+
+    // 品號葉節點
+    if (mm.isPartNode && mm.parts.length > 0) {
+      const part = mm.parts[0];
+      return (
+        <foreignObject
+          width={CARD.partMinW}
+          height={48}
+          x={0}
+          y={-24}
+          style={{ overflow: 'visible' }}
+        >
+          <div
+            xmlns="http://www.w3.org/1999/xhtml"
+            onClick={(e) => handleShowThumbnail(part, e)}
+            title={`點擊彈出 ${part.partNo} 縮圖`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'white', border: '1px solid #CBD5E1',
+              borderRadius: 10, padding: '6px 10px', cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              opacity: isDimmed ? 0.3 : 1,
+              outline: isHighlighted ? '2px solid #FBBF24' : 'none',
+              outlineOffset: 2,
+              minWidth: CARD.partMinW, maxWidth: CARD.maxW,
+              transition: 'background 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#EEF2FF'; (e.currentTarget as HTMLDivElement).style.borderColor = '#818CF8'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'white'; (e.currentTarget as HTMLDivElement).style.borderColor = '#CBD5E1'; }}
+          >
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {highlight(part.partNo)}
+              </div>
+              <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
+              </div>
+            </div>
+            <div style={{ padding: 4, borderRadius: 6, background: '#F1F5F9', color: '#94A3B8', flexShrink: 0 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+          </div>
+        </foreignObject>
+      );
+    }
+
+    // 分類節點
+    const isRoot = mm.depth === 0;
+    const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
+    const subFontSize = isRoot ? 10 : 9;
+    const minW = isRoot ? CARD.rootMinW : mm.depth === 1 ? CARD.d1MinW : mm.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
+    const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
+    const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 7;
+    // 節點高度估算（用於 foreignObject 定位）
+    const nodeH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+
+    return (
+      <foreignObject
+        width={Math.min(minW + 80, CARD.maxW)}
+        height={nodeH + 8}
+        x={0}
+        y={-(nodeH + 8) / 2}
+        style={{ overflow: 'visible' }}
+      >
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          onClick={() => hasChildren && toggleNode()}
+          style={{
+            position: 'relative',
+            display: 'flex', flexDirection: 'column',
+            background: mm.color, border: `2px solid ${mm.borderColor}`,
+            borderRadius: 16, padding: `${padV}px ${padH}px`,
+            cursor: hasChildren ? 'pointer' : 'default',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            opacity: isDimmed ? 0.3 : 1,
+            outline: isHighlighted ? '2px solid #FBBF24' : 'none',
+            outlineOffset: 2,
+            minWidth: minW, maxWidth: CARD.maxW,
+            transition: 'filter 0.15s',
+            userSelect: 'none',
+          }}
+          onMouseEnter={e => { if (hasChildren) (e.currentTarget as HTMLDivElement).style.filter = 'brightness(0.95)'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.filter = ''; }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, fontSize, fontWeight: isRoot ? 700 : mm.depth <= 1 ? 700 : 600, color: mm.textColor, lineHeight: 1.3 }}>
+              {highlight(mm.label)}
+            </div>
+            {hasChildren && (
+              <div style={{ color: mm.textColor, opacity: 0.75, flexShrink: 0 }}>
+                {isCollapsed
+                  ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
+                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+                }
+              </div>
+            )}
+          </div>
+          {mm.sublabel && (
+            <div style={{ fontSize: subFontSize, color: mm.textColor, opacity: 0.6, marginTop: 3, lineHeight: 1.3 }}>
+              {mm.sublabel}
+            </div>
+          )}
+          {totalParts > 0 && (
+            <div style={{
+              position: 'absolute', top: -8, right: -8,
+              minWidth: 20, height: 20, borderRadius: '50%',
+              background: mm.borderColor, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 9, fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+            }}>
+              {totalParts}
+            </div>
+          )}
+        </div>
+      </foreignObject>
+    );
+  };
 
   return (
     <div className="fixed inset-0 w-screen h-screen z-50 bg-slate-50 flex flex-col overflow-hidden text-slate-900 select-none">
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between px-5 py-3 border-b border-slate-200 bg-white gap-3 shrink-0 shadow-sm z-20">
-        {/* Left */}
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
@@ -734,7 +592,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.3.0</span>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.4.0</span>
             </h2>
             <p className="text-[11px] text-slate-500">
               已分類 <span className="text-emerald-600 font-bold">{classifiedCount}</span> 件 ·
@@ -744,9 +602,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           </div>
         </div>
 
-        {/* Right controls */}
         <div className="flex items-center gap-2">
-          {/* Search */}
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -762,13 +618,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               </button>
             )}
           </div>
-
-          <button onClick={handleExpandAll}  className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs text-slate-700 font-semibold cursor-pointer transition-all">全部展開</button>
-          <button onClick={handleCollapseAll} className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-xs text-slate-700 font-semibold cursor-pointer transition-all">全部收合</button>
-
-          <button onClick={handleResetView} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-600 hover:text-slate-900 cursor-pointer transition-all" title="重置視角">
-            <RotateCcw className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -776,7 +625,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
         <div className="flex items-center gap-4">
           <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span>🖱️ 左鍵拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖與跳轉 BOM</span>
+          <span>🖱️ 滾輪縮放 · 拖曳移動 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
           {searchQuery && highlightIds.size > 0 && (
             <span className="text-amber-600 font-semibold">找到 {highlightIds.size} 個匹配節點</span>
           )}
@@ -789,34 +638,30 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         )}
       </div>
 
-      {/* ── Canvas ── */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-hidden relative"
-        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-      >
-        <div
-          style={{
-            transform: `translate(${panX}px, ${panY}px) scale(${FIXED_SCALE})`,
-            transformOrigin: '0 0',
-            display: 'inline-block',
-            padding: '40px 60px',
-          }}
-        >
-          <MindMapNodeComponent
-            node={mindMapTree}
-            searchQuery={searchQuery}
-            expandedIds={expandedIds}
-            highlightIds={highlightIds}
-            onToggle={handleToggle}
-            onShowThumbnail={handleShowThumbnail}
-            onSelectPart={partNo => handleNavigatePart(partNo)}
-          />
-        </div>
+      {/* ── Canvas (react-d3-tree) ── */}
+      <div ref={containerRef} className="flex-1 overflow-hidden relative" onClick={() => setThumbnail(null)}>
+        <D3Tree
+          data={d3TreeData}
+          orientation="horizontal"
+          pathFunc="step"
+          separation={{ siblings: 1.2, nonSiblings: 1.6 }}
+          nodeSize={{ x: 360, y: 80 }}
+          renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
+          translate={treeTranslate}
+          zoom={0.75}
+          scaleExtent={{ min: 0.2, max: 2 }}
+          enableLegacyTransitions={false}
+          collapsible={true}
+          initialDepth={2}
+          pathClassFunc={() => 'mindmap-link'}
+          svgClassName="mindmap-svg"
+        />
+        <style>{`
+          .mindmap-svg { width: 100%; height: 100%; }
+          .mindmap-link { fill: none; stroke: #CBD5E1; stroke-width: 1.5px; }
+          .rd3t-leaf-node circle, .rd3t-branch-node circle { display: none; }
+          .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
+        `}</style>
       </div>
 
       {/* ── Thumbnail popup ── */}
