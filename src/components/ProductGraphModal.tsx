@@ -1,5 +1,20 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { X, Search, RotateCcw, Box, Compass, Sparkles, Layers, Info, Check, Eye } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import {
+  X,
+  Search,
+  RotateCcw,
+  Compass,
+  Sparkles,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Minimize2,
+  Eye,
+  Layers,
+  Move,
+  Play,
+  Pause,
+} from 'lucide-react';
 import { PartItem } from '../types';
 import {
   buildProductKnowledgeGraph,
@@ -23,10 +38,20 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
   parts,
   onSelectPart,
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('2D');
+  const [viewMode, setViewMode] = useState<ViewMode>('3D');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [autoRotate, setAutoRotate] = useState(true);
+
+  // 視角與軌道球 (Orbit & Pan & Zoom) 控制狀態
+  const [rotX, setRotX] = useState(0.3);
+  const [rotY, setRotY] = useState(0.5);
+  const [zoom, setZoom] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState<'rotate' | 'pan'>('rotate');
+  const lastMousePos = useRef<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -35,35 +60,33 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
     return buildProductKnowledgeGraph(parts);
   }, [parts]);
 
-  // 初始化節點座標與 3D 空間佈局
-  const nodesWithPos = useMemo(() => {
-    const total = graphData.nodes.length;
-    return graphData.nodes.map((node, idx) => {
-      const phi = Math.acos(-1 + (2 * idx) / total);
-      const theta = Math.sqrt(total * Math.PI) * phi;
-      const radius = 220 + (node.val * 4);
+  // 重置視角與軌道歸位
+  const handleResetView = useCallback(() => {
+    setRotX(0.3);
+    setRotY(0.5);
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+    setSelectedNode(null);
+    setSearchQuery('');
+  }, []);
 
-      return {
-        ...node,
-        x: (Math.random() - 0.5) * 400,
-        y: (Math.random() - 0.5) * 400,
-        z: (Math.random() - 0.5) * 400,
-        x3d: radius * Math.cos(theta) * Math.sin(phi),
-        y3d: radius * Math.sin(theta) * Math.sin(phi),
-        z3d: radius * Math.cos(phi),
-        vx: 0,
-        vy: 0,
-        vz: 0,
-      };
-    });
-  }, [graphData]);
+  // 鄰近對應節點 Map（用於 Tool-Calling 鄰近高亮）
+  const neighborNodeIds = useMemo(() => {
+    if (!selectedNode) return new Set<string>();
+    const set = new Set<string>([selectedNode.id]);
+    for (const link of graphData.links) {
+      if (link.source === selectedNode.id) set.add(link.target);
+      if (link.target === selectedNode.id) set.add(link.source);
+    }
+    return set;
+  }, [selectedNode, graphData.links]);
 
   // 搜尋過濾高亮節點
   const matchedNodeIds = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return new Set<string>();
     const hits = new Set<string>();
-    for (const node of nodesWithPos) {
+    for (const node of graphData.nodes) {
       if (
         node.id.toLowerCase().includes(q) ||
         node.name.toLowerCase().includes(q) ||
@@ -73,9 +96,65 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
       }
     }
     return hits;
-  }, [nodesWithPos, searchQuery]);
+  }, [graphData.nodes, searchQuery]);
 
-  // Canvas 2D / 3D 動畫繪製引擎
+  // 初始化 3D 空間幾何佈局
+  const nodesWithPos = useMemo(() => {
+    const total = graphData.nodes.length;
+    return graphData.nodes.map((node, idx) => {
+      const phi = Math.acos(-1 + (2 * idx) / total);
+      const theta = Math.sqrt(total * Math.PI) * phi;
+      const radius = 240 + node.val * 3.5;
+
+      return {
+        ...node,
+        x: (Math.random() - 0.5) * 450,
+        y: (Math.random() - 0.5) * 450,
+        z: (Math.random() - 0.5) * 450,
+        x3d: radius * Math.cos(theta) * Math.sin(phi),
+        y3d: radius * Math.sin(theta) * Math.sin(phi),
+        z3d: radius * Math.cos(phi),
+      };
+    });
+  }, [graphData]);
+
+  // 滑鼠軌道球與視角事件綁定
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    setIsDragging(true);
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    if (e.button === 2 || e.shiftKey) {
+      setDragMode('pan');
+    } else {
+      setDragMode('rotate');
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || !lastMousePos.current) return;
+    const dx = e.clientX - lastMousePos.current.x;
+    const dy = e.clientY - lastMousePos.current.y;
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+
+    if (dragMode === 'rotate') {
+      setRotY((prev) => prev + dx * 0.008);
+      setRotX((prev) => Math.max(-Math.PI / 2, Math.min(Math.PI / 2, prev + dy * 0.008)));
+    } else {
+      setPanOffset((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    lastMousePos.current = null;
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+    setZoom((prev) => Math.max(0.3, Math.min(4.5, prev * zoomFactor)));
+  };
+
+  // Canvas 2D / 3D 動畫與脈衝光流繪製引擎
   useEffect(() => {
     if (!isOpen || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -83,8 +162,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
     if (!ctx) return;
 
     let animationFrameId: number;
-    let angleX = 0;
-    let angleY = 0;
+    let pulseOffset = 0;
 
     interface NodeWith3D extends GraphNode {
       x: number;
@@ -95,126 +173,145 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
       z3d: number;
     }
 
-    // 簡單力導向迭代
     const simNodes: NodeWith3D[] = nodesWithPos.map((n) => ({ ...n }));
     const nodeMap = new Map<string, NodeWith3D>(simNodes.map((n) => [n.id, n]));
 
     const render = () => {
       const width = canvas.width;
       const height = canvas.height;
-      const cx = width / 2;
-      const cy = height / 2;
+      const cx = width / 2 + panOffset.x;
+      const cy = height / 2 + panOffset.y;
+
+      pulseOffset = (pulseOffset + 0.03) % 1;
 
       ctx.clearRect(0, 0, width, height);
 
-      // 自動背景微漩渦星空背景
-      ctx.fillStyle = '#0F172A';
+      // 深邃星空背景
+      ctx.fillStyle = '#0B0F17';
       ctx.fillRect(0, 0, width, height);
 
-      if (autoRotate && viewMode === '3D') {
-        angleY += 0.005;
-        angleX += 0.002;
+      const currentRotY = autoRotate && !isDragging && viewMode === '3D' ? rotY + 0.003 : rotY;
+      if (autoRotate && !isDragging && viewMode === '3D') {
+        setRotY(currentRotY);
       }
 
-      // 繪製連線 Links
-      ctx.lineWidth = 0.8;
+      const cosY = Math.cos(currentRotY);
+      const sinY = Math.sin(currentRotY);
+      const cosX = Math.cos(rotX);
+      const sinX = Math.sin(rotX);
+
+      // 1. 繪製連線 Links
       for (const link of graphData.links) {
         const sourceNode = nodeMap.get(link.source);
         const targetNode = nodeMap.get(link.target);
         if (!sourceNode || !targetNode) continue;
 
-        let sx = sourceNode.x;
-        let sy = sourceNode.y;
-        let tx = targetNode.x;
-        let ty = targetNode.y;
+        let sx = sourceNode.x * zoom;
+        let sy = sourceNode.y * zoom;
+        let tx = targetNode.x * zoom;
+        let ty = targetNode.y * zoom;
 
         if (viewMode === '3D') {
           // 3D 矩陣投影
-          const cosY = Math.cos(angleY);
-          const sinY = Math.sin(angleY);
-          const cosX = Math.cos(angleX);
-          const sinX = Math.sin(angleX);
-
-          // Source 3D -> 2D
           const x1 = sourceNode.x3d * cosY - sourceNode.z3d * sinY;
           const z1 = sourceNode.x3d * sinY + sourceNode.z3d * cosY;
           const y1 = sourceNode.y3d * cosX - z1 * sinX;
-          const scale1 = 400 / (400 + z1 + 250);
+          const scale1 = (400 / (400 + z1 + 220)) * zoom;
           sx = x1 * scale1;
           sy = y1 * scale1;
 
-          // Target 3D -> 2D
           const x2 = targetNode.x3d * cosY - targetNode.z3d * sinY;
           const z2 = targetNode.x3d * sinY + targetNode.z3d * cosY;
           const y2 = targetNode.y3d * cosX - z2 * sinX;
-          const scale2 = 400 / (400 + z2 + 250);
+          const scale2 = (400 / (400 + z2 + 220)) * zoom;
           tx = x2 * scale2;
           ty = y2 * scale2;
         }
 
-        const isHighlight =
-          (selectedNode && (selectedNode.id === link.source || selectedNode.id === link.target)) ||
-          matchedNodeIds.has(link.source) ||
-          matchedNodeIds.has(link.target);
+        const isLinkSelected =
+          selectedNode && (selectedNode.id === link.source || selectedNode.id === link.target);
+        const isMatched = matchedNodeIds.has(link.source) || matchedNodeIds.has(link.target);
 
-        ctx.strokeStyle = isHighlight ? 'rgba(99, 102, 241, 0.6)' : 'rgba(148, 163, 184, 0.15)';
-        ctx.lineWidth = isHighlight ? 1.5 : 0.8;
+        // 鄰近高亮判定
+        const isDimmed =
+          selectedNode && !neighborNodeIds.has(link.source) && !neighborNodeIds.has(link.target);
+
+        ctx.lineWidth = isLinkSelected ? 2.5 : isMatched ? 1.8 : 0.8;
+        ctx.strokeStyle = isLinkSelected
+          ? '#6366F1'
+          : isMatched
+          ? '#F59E0B'
+          : isDimmed
+          ? 'rgba(148, 163, 184, 0.05)'
+          : 'rgba(148, 163, 184, 0.18)';
+
         ctx.beginPath();
         ctx.moveTo(cx + sx, cy + sy);
         ctx.lineTo(cx + tx, cy + ty);
         ctx.stroke();
+
+        // 脈衝微光 (Pulse Laser Effect)
+        if (isLinkSelected || (selectedNode && !isDimmed)) {
+          const px = cx + sx + (tx - sx) * pulseOffset;
+          const py = cy + sy + (ty - sy) * pulseOffset;
+          ctx.beginPath();
+          ctx.arc(px, py, 2.5, 0, 2 * Math.PI);
+          ctx.fillStyle = '#818CF8';
+          ctx.fill();
+        }
       }
 
-      // 繪製節點 Nodes
+      // 2. 繪製節點 Nodes
       for (const node of simNodes) {
-        let drawX = node.x;
-        let drawY = node.y;
-        let drawScale = 1;
+        let drawX = node.x * zoom;
+        let drawY = node.y * zoom;
+        let drawScale = zoom;
 
         if (viewMode === '3D') {
-          const cosY = Math.cos(angleY);
-          const sinY = Math.sin(angleY);
-          const cosX = Math.cos(angleX);
-          const sinX = Math.sin(angleX);
-
           const x1 = node.x3d * cosY - node.z3d * sinY;
           const z1 = node.x3d * sinY + node.z3d * cosY;
           const y1 = node.y3d * cosX - z1 * sinX;
-          drawScale = 400 / (400 + z1 + 250);
+          drawScale = (400 / (400 + z1 + 220)) * zoom;
           drawX = x1 * drawScale;
           drawY = y1 * drawScale;
         }
 
-        const r = Math.max(4, node.val * 0.45 * (viewMode === '3D' ? drawScale : 1));
+        const r = Math.max(3.5, node.val * 0.45 * (viewMode === '3D' ? drawScale : zoom));
         const screenX = cx + drawX;
         const screenY = cy + drawY;
 
         const isSelected = selectedNode?.id === node.id;
         const isMatched = matchedNodeIds.has(node.id);
+        const isNeighbor = neighborNodeIds.has(node.id);
+        const isDimmed = selectedNode && !isNeighbor;
 
-        // 外發光圓環
+        ctx.globalAlpha = isDimmed ? 0.2 : 1.0;
+
+        // 外發光 Aura
         if (isSelected || isMatched) {
           ctx.beginPath();
-          ctx.arc(screenX, screenY, r + 6, 0, 2 * Math.PI);
-          ctx.fillStyle = isSelected ? 'rgba(99, 102, 241, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+          ctx.arc(screenX, screenY, r + 7, 0, 2 * Math.PI);
+          ctx.fillStyle = isSelected ? 'rgba(99, 102, 241, 0.45)' : 'rgba(245, 158, 11, 0.45)';
           ctx.fill();
         }
 
-        // 節點實體
+        // 節點本體
         ctx.beginPath();
         ctx.arc(screenX, screenY, r, 0, 2 * Math.PI);
         ctx.fillStyle = node.color;
         ctx.fill();
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = isSelected ? 2 : 1;
+        ctx.strokeStyle = isSelected ? '#FFFFFF' : 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = isSelected ? 2.5 : 1;
         ctx.stroke();
 
-        // 標籤文字 (重點節點或選取節點顯示)
-        if (node.val >= 12 || isSelected || isMatched) {
-          ctx.fillStyle = isSelected ? '#FFFFFF' : '#E2E8F0';
+        // 標籤文字 (重點節點/被選取/高亮節點)
+        if (node.val >= 12 || isSelected || isMatched || isNeighbor) {
+          ctx.fillStyle = isSelected ? '#FFFFFF' : isMatched ? '#FCD34D' : '#E2E8F0';
           ctx.font = isSelected ? 'bold 12px monospace' : '11px sans-serif';
-          ctx.fillText(node.name, screenX + r + 4, screenY + 4);
+          ctx.fillText(node.name, screenX + r + 5, screenY + 4);
         }
+
+        ctx.globalAlpha = 1.0;
       }
 
       animationFrameId = requestAnimationFrame(render);
@@ -225,29 +322,43 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isOpen, viewMode, nodesWithPos, graphData, selectedNode, matchedNodeIds, autoRotate]);
+  }, [
+    isOpen,
+    viewMode,
+    nodesWithPos,
+    graphData,
+    selectedNode,
+    matchedNodeIds,
+    neighborNodeIds,
+    autoRotate,
+    rotX,
+    rotY,
+    zoom,
+    panOffset,
+    isDragging,
+  ]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden text-slate-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-3 sm:p-5">
+      <div className="bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-7xl h-[92vh] flex flex-col overflow-hidden text-slate-100 relative select-none">
         
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90 gap-4">
+        <div className="flex flex-wrap items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 gap-4">
           <div className="flex items-center space-x-3">
             <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              <Compass className="w-5 h-5" />
+              <Compass className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-lg font-bold flex items-center gap-2">
+              <h2 className="text-lg font-bold flex items-center gap-2 font-sans">
                 <span>凱益醫療產品知識與 BOM 網絡圖譜</span>
                 <span className="px-2 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   {graphData.nodes.length} 節點 · {graphData.links.length} 關聯
                 </span>
               </h2>
               <p className="text-xs text-slate-400">
-                整合《產品識別教育訓練》與《編碼記憶》規則，雙向展算 SA/SB/SC/SD 組立與實體零件結構
+                可自由拖曳 360 度旋轉 3D 觀察視角 · 滾輪縮放 · 點擊節點高亮關聯
               </p>
             </div>
           </div>
@@ -257,7 +368,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
             <div className="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700">
               <button
                 onClick={() => setViewMode('2D')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === '2D'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
@@ -267,13 +378,13 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
               </button>
               <button
                 onClick={() => setViewMode('3D')}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   viewMode === '3D'
                     ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                3D 立體視圖
+                3D 軌道立體視圖
               </button>
             </div>
 
@@ -286,8 +397,8 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
           </div>
         </div>
 
-        {/* Toolbar */}
-        <div className="px-6 py-3 border-b border-slate-800 bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Search Toolbar */}
+        <div className="px-6 py-2.5 border-b border-slate-800 bg-slate-900/60 flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -301,7 +412,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
 
           <div className="flex items-center space-x-4">
             {/* Color Legend */}
-            <div className="flex items-center space-x-3 text-slate-300">
+            <div className="hidden sm:flex items-center space-x-3 text-slate-300">
               <div className="flex items-center space-x-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]"></span>
                 <span>編碼規則</span>
@@ -319,49 +430,83 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
                 <span>客戶別名</span>
               </div>
             </div>
-
-            {viewMode === '3D' && (
-              <button
-                onClick={() => setAutoRotate(!autoRotate)}
-                className={`px-2.5 py-1 rounded-lg border font-semibold transition-colors cursor-pointer ${
-                  autoRotate
-                    ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700'
-                }`}
-              >
-                {autoRotate ? '旋轉中 旋' : '定格視角'}
-              </button>
-            )}
           </div>
         </div>
 
-        {/* Main Canvas Viewport */}
+        {/* Main Interactive Canvas Viewport */}
         <div className="flex-1 relative overflow-hidden bg-slate-950 flex">
           <canvas
             ref={canvasRef}
-            width={1200}
-            height={700}
+            width={1300}
+            height={750}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onWheel={handleWheel}
+            onContextMenu={(e) => e.preventDefault()}
             onClick={(e) => {
+              if (isDragging) return;
               const rect = canvasRef.current?.getBoundingClientRect();
               if (!rect || !canvasRef.current) return;
               const x = e.clientX - rect.left;
               const y = e.clientY - rect.top;
-              const cx = canvasRef.current.width / 2;
-              const cy = canvasRef.current.height / 2;
+              const cx = canvasRef.current.width / 2 + panOffset.x;
+              const cy = canvasRef.current.height / 2 + panOffset.y;
 
-              // 簡單距離點擊判斷
               const hit = nodesWithPos.find((n) => {
-                const dist = Math.hypot(cx + (n.x ?? 0) - x, cy + (n.y ?? 0) - y);
-                return dist <= (n.val * 0.8 + 6);
+                const drawScale = viewMode === '3D' ? (400 / (400 + (n.z3d ?? 0) + 220)) * zoom : zoom;
+                const r = Math.max(3.5, n.val * 0.45 * drawScale);
+                const screenX = cx + (viewMode === '3D' ? (n.x3d ?? 0) * drawScale : (n.x ?? 0) * zoom);
+                const screenY = cy + (viewMode === '3D' ? (n.y3d ?? 0) * drawScale : (n.y ?? 0) * zoom);
+                return Math.hypot(screenX - x, screenY - y) <= (r + 8);
               });
               setSelectedNode(hit || null);
             }}
-            className="w-full h-full cursor-crosshair"
+            className="w-full h-full cursor-grab active:cursor-grabbing"
           />
 
-          {/* Node Details Floating Card Panel */}
+          {/* Floating Tool-Calling Dock Bar (視角控制面板) */}
+          <div className="absolute left-6 bottom-6 flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl p-1.5 space-x-1 shadow-2xl z-20">
+            <button
+              onClick={() => setZoom((prev) => Math.min(4.5, prev * 1.25))}
+              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="放大視角 (Zoom In)"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setZoom((prev) => Math.max(0.3, prev * 0.8))}
+              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="縮小視角 (Zoom Out)"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <div className="w-px h-5 bg-slate-700 mx-1" />
+            <button
+              onClick={handleResetView}
+              className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              title="重置視角與軌道 (Reset Camera Orbit)"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            {viewMode === '3D' && (
+              <button
+                onClick={() => setAutoRotate(!autoRotate)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  autoRotate
+                    ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/40'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+                title={autoRotate ? '定格目前視角' : '開啟 3D 自動微軌道旋轉'}
+              >
+                {autoRotate ? <Pause className="w-4 h-4 text-indigo-400" /> : <Play className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
+
+          {/* Node Details Floating Panel */}
           {selectedNode && (
-            <div className="absolute right-6 top-6 w-80 bg-slate-900/90 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-100 z-10 animate-in fade-in slide-in-from-right-4">
+            <div className="absolute right-6 top-6 w-84 bg-slate-900/95 backdrop-blur-2xl border border-slate-700/90 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-100 z-30 animate-in fade-in slide-in-from-right-4">
               <div className="flex items-start justify-between">
                 <div>
                   <span
@@ -374,28 +519,28 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="text-xs text-slate-300 space-y-2 border-t border-slate-800 pt-3">
-                <p className="leading-relaxed">{selectedNode.description || '暫無詳細說明'}</p>
+              <div className="text-xs text-slate-300 space-y-2.5 border-t border-slate-800 pt-3">
+                <p className="leading-relaxed text-slate-300">{selectedNode.description || '暫無詳細說明'}</p>
 
                 {selectedNode.details && (
-                  <div className="bg-slate-950/60 rounded-xl p-3 space-y-1.5 font-mono border border-slate-800/80">
+                  <div className="bg-slate-950/80 rounded-xl p-3 space-y-1.5 font-mono border border-slate-800/90 text-[11px]">
                     {selectedNode.details.customer && (
-                      <p><span className="text-slate-400">客戶:</span> {selectedNode.details.customer}</p>
+                      <p><span className="text-slate-400">客戶名稱:</span> {selectedNode.details.customer}</p>
                     )}
                     {selectedNode.details.category && (
-                      <p><span className="text-slate-400">類別:</span> {selectedNode.details.category}</p>
+                      <p><span className="text-slate-400">物料類別:</span> {selectedNode.details.category}</p>
                     )}
                     {selectedNode.details.material && (
-                      <p><span className="text-slate-400">原料:</span> {selectedNode.details.material}</p>
+                      <p><span className="text-slate-400">原料成分:</span> {selectedNode.details.material}</p>
                     )}
                     {selectedNode.details.componentsCount !== undefined && (
-                      <p><span className="text-slate-400">BOM零件數:</span> {selectedNode.details.componentsCount} 件</p>
+                      <p><span className="text-slate-400">BOM 零件個數:</span> <strong className="text-indigo-400">{selectedNode.details.componentsCount} 件</strong></p>
                     )}
                   </div>
                 )}
@@ -409,10 +554,10 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
                       onClose();
                     }
                   }}
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-colors cursor-pointer shadow-lg"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-lg cursor-pointer active:scale-95"
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>跳轉查看料號詳情與 BOM ➔</span>
+                  <span>跳轉查看此料號與 BOM ➔</span>
                 </button>
               )}
             </div>
@@ -420,8 +565,8 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/80 flex items-center justify-between text-xs text-slate-400">
-          <span>提示：支援滾輪放縮、拖拽節點或點擊節點查看編碼邏輯與 BOM 關係</span>
+        <div className="px-6 py-2.5 border-t border-slate-800 bg-slate-900/90 flex items-center justify-between text-xs text-slate-400 font-mono">
+          <span>提示：左鍵拖曳 360 度旋轉 3D 視角 · 滾輪縮放 · 右鍵/Shift 鍵拖曳平移</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium transition-colors cursor-pointer"

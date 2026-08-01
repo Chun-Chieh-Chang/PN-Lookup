@@ -1,5 +1,24 @@
 # PN-Lookup 開發日誌
 
+## v4.1.0 — 互動體驗升級：導入 3D 軌道球自由視角控制 (3D Trackball Orbit) 與 Tool-Calling 科技感圖譜系統
+
+### 需求內容與作業
+- **3D 軌道球與視角操控 (User-Controlled Orbit & Camera System)**：
+  - 參考 [Tool-Calling 知識圖譜](https://github.com/Chun-Chieh-Chang/Tool-Calling) 互動經驗重構 [ProductGraphModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductGraphModal.tsx)。
+  - **滑鼠左鍵按住拖曳**：360 度自由旋轉 3D 空間觀察視角 (`rotX`, `rotY`)。
+  - **滑鼠滾輪**：平滑縮放圖譜視野 (Zoom In / Out 0.3x ~ 4.5x)。
+  - **滑鼠右鍵/Shift鍵拖曳**：自由平移圖譜視角中心點 (Pan Offset)。
+- **Tool-Calling 風格點對點高亮與脈衝微光 (Neighbor Focus & Pulse Flow)**：
+  - 點擊任意節點時，自動高亮該節點與相連的所有 1 階連線與鄰近節點，其餘無關節點呈現微妙暗化。
+  - 藍紫色雷射脈衝 (Laser Pulse Flow) 沿連線動態流動。
+- **浮動操控 Dock Bar**：
+  - 新增 `[➕ 放大]`、`[➖ 縮小]`、`[🎯 重置視角與歸位]`、`[🔄 自動/手動軌道旋轉]` 快捷工具列。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v4.0.0 — 重大功能更新：建構全景醫療產品知識與 BOM 網絡圖譜 (2D/3D Interactive Product Knowledge Graph)
 
 ### 需求內容與作業
