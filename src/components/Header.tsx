@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, ShieldAlert, ExternalLink } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, ShieldAlert, ExternalLink, Network } from 'lucide-react';
 
 interface HeaderProps {
   totalCount: number;
@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenExportImport: () => void;
   onResetData: () => void;
   onEnterAdmin?: () => void;
+  onOpenGraph?: () => void;
   imageFolderName?: string | null;
   imageCount?: number;
   orphanCount?: number;
@@ -25,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenExportImport,
   onResetData,
   onEnterAdmin,
+  onOpenGraph,
   imageFolderName,
   imageCount,
   orphanCount = 0,
@@ -88,6 +90,17 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+
+            {onOpenGraph && (
+              <button
+                onClick={onOpenGraph}
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer active:scale-95 border border-indigo-400/30"
+                title="開啟 2D / 3D 全景醫療產品知識與 BOM 網絡圖譜"
+              >
+                <Network className="w-4 h-4 text-indigo-200" />
+                <span>產品圖譜</span>
+              </button>
+            )}
 
             {/* Jump to Back-end Admin Button (Appears when unlocked) */}
             {isAdminMode && onEnterAdmin && (

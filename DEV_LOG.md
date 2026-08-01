@@ -1,5 +1,25 @@
 # PN-Lookup 開發日誌
 
+## v4.0.0 — 重大功能更新：建構全景醫療產品知識與 BOM 網絡圖譜 (2D/3D Interactive Product Knowledge Graph)
+
+### 需求內容與作業
+- **產品識別與編碼知識庫抽取 (`productKnowledgeGraph.ts`)**：
+  - 融合 `rawdata/產品識別` 目錄下的《產品識別教育訓練_Rev. 02_2025-11-05.pdf》與《編碼記憶.pdf》資料。
+  - 將 SA (呼吸迴路/管路)、SB (轉接頭/閥門)、SC (面罩/鼻罩)、SD (水瓶/集水杯) 與單品射出配件之編碼前綴與記憶規則轉化為知識節點。
+  - 自動聯結全量 913 筆品號與雙向 BOM 階層關聯圖檔。
+- **2D / 3D 雙視圖切換與互動展示 ([ProductGraphModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductGraphModal.tsx))**：
+  - **`[2D 繪圖視圖]`**：基於 HTML5 Canvas 物理模擬，提供極致順暢的平面網絡結構。
+  - **`[3D 立體視圖]`**：基於 3D 空間矩陣投影與立體球體，支援自動相機旋轉 (`Auto Orbit`)。
+  - **節點搜尋與聚焦**：支援即時搜尋品號或 SA/SB 前綴，高亮對應點線。
+  - **懸浮詳情面板**：點擊節點顯示詳細說明與對應零件數，並支援 **「一鍵跳轉查看品號 BOM」**。
+- **主介面一鍵跳轉**：
+  - 在 [Header.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/Header.tsx) 頂部導覽列加入 **`[🕸️ 產品圖譜]`** 按鈕，允許用戶在主介面中一鍵開啟圖譜。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v3.9.0 — 品號多圖檔超連結：支援多圖檔對應與多選擇下拉選單 (Multi-Image Resolution & Popover Dropdown)
 
 ### 需求內容與作業

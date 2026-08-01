@@ -26,6 +26,7 @@ import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils
 import { loadBindings, saveBindings, getOrphanFiles, loadDismissedOrphans, saveDismissedOrphans } from './utils/imageResolver';
 import { ImageBindModal } from './components/ImageBindModal';
 import { OrphanImagesModal } from './components/OrphanImagesModal';
+import { ProductGraphModal } from './components/ProductGraphModal';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -226,6 +227,7 @@ export default function App() {
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
   const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
   // 標記排除/重複別稱孤兒圖檔（本機限定）
   const [dismissedOrphans, setDismissedOrphans] = useState<Set<string>>(() => loadDismissedOrphans());
@@ -451,6 +453,7 @@ export default function App() {
 
         onOpenExportImport={() => setIsExportImportOpen(true)}
         onResetData={handleResetData}
+        onOpenGraph={() => setIsGraphModalOpen(true)}
         onEnterAdmin={() => {
           setIsUnlocked(true);
           window.location.hash = 'admin';
@@ -577,6 +580,15 @@ export default function App() {
         onStartOcrScan={handleStartOcrScan}
         onStopOcrScan={handleStopOcrScan}
         onSingleOcr={handleSingleOcr}
+      />
+
+      <ProductGraphModal
+        isOpen={isGraphModalOpen}
+        onClose={() => setIsGraphModalOpen(false)}
+        parts={parts}
+        onSelectPart={(pn) => {
+          setFilterState((prev) => ({ ...prev, keyword: pn, searchField: 'partNo' }));
+        }}
       />
 
       {/* Footer */}
