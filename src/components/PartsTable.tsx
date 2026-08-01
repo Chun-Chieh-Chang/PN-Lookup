@@ -357,7 +357,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   <td className={`p-3 font-medium ${isCompact ? 'py-2' : 'py-3.5'}`}>
                     <button
                       onClick={() => onCustomerClick(item.customer)}
-                      className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 hover:bg-indigo-50 text-indigo-700 border border-gray-200 hover:border-indigo-300 transition-all font-mono text-sm cursor-pointer"
+                      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all font-mono text-xs font-bold cursor-pointer hover:shadow-xs"
                       title="點擊篩選該客戶"
                     >
                       <span>{highlightText(item.customer, searchKeyword)}</span>
@@ -365,13 +365,13 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Part Number */}
-                  <td className={`p-3 font-mono font-bold text-gray-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className={`p-3 font-mono font-bold text-slate-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center space-x-2">
                         <span
                           onClick={imageUrl ? () => openImage(imageUrl) : undefined}
-                          className={`text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 ${
-                            imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:underline' : ''
+                          className={`text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200/80 font-bold ${
+                            imageUrl ? 'cursor-pointer hover:bg-teal-100 hover:shadow-xs' : ''
                           }`}
                           title={imageUrl ? '點擊開啟圖檔' : undefined}
                         >
@@ -379,10 +379,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         </span>
                         <button
                           onClick={() => handleCopyPartNo(item.id, item.partNo)}
-                          className={`p-1 rounded transition-colors cursor-pointer ${
+                          className={`p-1 rounded-md transition-colors cursor-pointer ${
                             isCopied
                               ? 'text-emerald-600 bg-emerald-100'
-                              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
                           }`}
                           title="複製品號"
                         >
@@ -391,7 +391,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {imageUrl && (
                           <button
                             onClick={() => openImage(imageUrl)}
-                            className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
                             title="開啟圖檔"
                           >
                             <ImageIcon className="w-3.5 h-3.5" />
@@ -401,12 +401,12 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                       {item.alternates && item.alternates.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1">
-                          <span className="text-[10px] text-gray-400 uppercase tracking-wide">別名</span>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wide font-sans">別名</span>
                           {item.alternates.map((alt) => (
                             <button
                               key={alt}
                               onClick={() => handleCopyPartNo(item.id, alt)}
-                              className="text-[11px] font-normal text-gray-500 bg-gray-100 border border-gray-200 rounded px-1.5 py-px hover:bg-gray-200 hover:text-gray-700 font-mono cursor-pointer"
+                              className="text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 rounded px-1.5 py-px hover:bg-slate-200 hover:text-slate-800 font-mono cursor-pointer transition-colors"
                               title={`別名：${alt}（點擊複製）`}
                             >
                               {highlightText(alt, searchKeyword)}
@@ -421,14 +421,18 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
                     <button
                       onClick={() => onViewDetail(item)}
-                      className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded text-sm font-medium border transition-colors cursor-pointer ${
-                        isAssembly
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
-                          : 'bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100'
+                      className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
+                        (item.category && item.category.includes('組件')) || isAssembly
+                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80 hover:bg-indigo-100'
+                          : (item.category && item.category.includes('客戶特規'))
+                          ? 'bg-rose-50 text-rose-700 border-rose-200/80 hover:bg-rose-100'
+                          : (item.category && (item.category.includes('輔料') || item.category.includes('包材')))
+                          ? 'bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100'
+                          : 'bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100'
                       }`}
                       title={isAssembly ? '查看組成此組件的所有零件' : '查看可組成該零件的相應組件'}
                     >
-                      {isAssembly ? <Boxes className="w-3 h-3" /> : <Component className="w-3 h-3" />}
+                      {isAssembly ? <Boxes className="w-3.5 h-3.5" /> : <Component className="w-3.5 h-3.5" />}
                       <span>{item.category || (isAssembly ? '組件 Assembly' : '零件 Part')}</span>
                     </button>
                   </td>

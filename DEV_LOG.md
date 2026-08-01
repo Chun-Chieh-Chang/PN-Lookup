@@ -1,5 +1,16 @@
 # PN-Lookup 開發日誌
 
+## v3.2.0 — Taste-Skill 介面深度重構 (Anti-Slop Modern UI Redesign)
+
+### 需求內容與作業
+- **設計系統升級 (Taste-Skill UI Framework)**：導入 Google Fonts (`Inter` 與 `JetBrains Mono` 等寬字型)，提升品號、品名與數據的可讀性與專業質感。
+- **高階毛玻璃與莫蘭迪色彩標籤 (Morandi Tokens & Glassmorphism)**：
+  - Header 與模態彈窗全面導入 `glass-header` 與 `glass-card` 高級毛玻璃與微模糊動態樣式。
+  - 物料類別標籤區分（SA/SB/SC/SD組件使用莫蘭迪靛紫、客戶特規使用莫蘭迪玫瑰紅、輔料包材使用莫蘭迪青綠、單品件使用翡翠綠），提升視覺階層。
+- **無損重構極致品質**：100% 保留所有搜尋、過濾、BOM 展算、圖檔自動超連結、Excel 匯出與後台管理等全數既有業務邏輯與功能。
+
+---
+
 ## v3.1.1 — Excel 匯出「組立名稱(英)」欄位資料補全 (Assembly English Name Population)
 
 ### 需求內容與作業
