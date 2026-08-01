@@ -23,7 +23,7 @@ import {
   clearImageFolderDismissed,
 } from './utils/imageLibrary';
 import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils/ocr';
-import { loadBindings, saveBindings, getOrphanFiles } from './utils/imageResolver';
+import { loadBindings, saveBindings, getOrphanFiles, loadDismissedOrphans, saveDismissedOrphans } from './utils/imageResolver';
 import { ImageBindModal } from './components/ImageBindModal';
 import { OrphanImagesModal } from './components/OrphanImagesModal';
 
@@ -227,10 +227,26 @@ export default function App() {
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
   const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
 
+  // 標記排除/重複別稱孤兒圖檔（本機限定）
+  const [dismissedOrphans, setDismissedOrphans] = useState<Set<string>>(() => loadDismissedOrphans());
+
+  const handleToggleDismiss = useCallback((fileName: string) => {
+    setDismissedOrphans((prev) => {
+      const next = new Set<string>(prev);
+      if (next.has(fileName)) {
+        next.delete(fileName);
+      } else {
+        next.add(fileName);
+      }
+      saveDismissedOrphans(next);
+      return next;
+    });
+  }, []);
+
   // 孤兒圖檔 (未對應圖檔) 統計
   const orphanInfo = useMemo(() => {
-    return getOrphanFiles(imageLib, parts, bindings, ocrIndex);
-  }, [imageLib, parts, bindings, ocrIndex]);
+    return getOrphanFiles(imageLib, parts, bindings, ocrIndex, dismissedOrphans);
+  }, [imageLib, parts, bindings, ocrIndex, dismissedOrphans]);
 
   // Save to localStorage on change, debounce-save to server (derived fields stripped)
   const lastSavedRef = useRef('');
@@ -551,9 +567,11 @@ export default function App() {
         lib={imageLib}
         parts={parts}
         orphanFiles={orphanInfo.orphanFiles}
+        dismissedFiles={orphanInfo.dismissedFiles}
         ocrIndex={ocrIndex}
         bindings={bindings}
         onBind={handleBind}
+        onToggleDismiss={handleToggleDismiss}
         isOcrScanning={isOcrScanning}
         ocrProgress={ocrProgress}
         onStartOcrScan={handleStartOcrScan}

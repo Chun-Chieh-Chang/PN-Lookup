@@ -9,9 +9,11 @@ interface OrphanImagesModalProps {
   lib: ImageLibrary | null;
   parts: PartItem[];
   orphanFiles: string[];
+  dismissedFiles?: string[];
   ocrIndex: Map<string, string>;
   bindings: Record<string, string>;
   onBind: (partNo: string, fileName: string) => void;
+  onToggleDismiss?: (fileName: string) => void;
   isOcrScanning?: boolean;
   ocrProgress?: { done: number; total: number } | null;
   onStartOcrScan?: (targetFiles?: string[]) => void;
@@ -25,9 +27,11 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
   lib,
   parts,
   orphanFiles = [],
+  dismissedFiles = [],
   ocrIndex,
   bindings,
   onBind,
+  onToggleDismiss,
   isOcrScanning = false,
   ocrProgress,
   onStartOcrScan,
@@ -35,18 +39,23 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
   onSingleOcr,
 }) => {
   const [query, setQuery] = useState('');
+  const [showDismissed, setShowDismissed] = useState(false);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [partQuery, setPartQuery] = useState('');
   const [scanningSingleFile, setScanningSingleFile] = useState<string | null>(null);
 
+  const activeFiles = useMemo(() => {
+    return showDismissed ? [...orphanFiles, ...dismissedFiles] : orphanFiles;
+  }, [showDismissed, orphanFiles, dismissedFiles]);
+
   const filteredOrphans = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return orphanFiles;
-    return orphanFiles.filter((name) => {
+    if (!q) return activeFiles;
+    return activeFiles.filter((name) => {
       const text = ocrIndex.get(name) || '';
       return name.toLowerCase().includes(q) || text.toLowerCase().includes(q);
     });
-  }, [orphanFiles, query, ocrIndex]);
+  }, [activeFiles, query, ocrIndex]);
 
   const candidateParts = useMemo(() => {
     const q = partQuery.trim().toLowerCase();
@@ -75,7 +84,10 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
             <div>
               <h2 className="text-lg font-bold text-gray-900">未對應孤兒圖檔管理中心</h2>
               <p className="text-xs text-gray-500">
-                資料夾共 {lib.count} 張圖檔 · 仍有 <strong className="text-amber-700 font-bold">{orphanFiles.length}</strong> 張未連結至任何品號
+                資料夾共 {lib.count} 張圖檔 · 待對應 <strong className="text-amber-700 font-bold">{orphanFiles.length}</strong> 張
+                {dismissedFiles.length > 0 && (
+                  <span> · 已標記排除 <strong className="text-slate-600 font-bold">{dismissedFiles.length}</strong> 張 (重複/別稱)</span>
+                )}
               </p>
             </div>
           </div>
@@ -101,6 +113,19 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2 shrink-0">
+            {dismissedFiles.length > 0 && (
+              <button
+                onClick={() => setShowDismissed(!showDismissed)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                  showDismissed
+                    ? 'bg-slate-200 text-slate-800 border-slate-300 font-bold'
+                    : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                {showDismissed ? '隱藏已排除圖檔' : `檢視已排除圖檔 (${dismissedFiles.length})`}
+              </button>
+            )}
+
             {isOcrScanning ? (
               <div className="flex items-center space-x-2 bg-violet-50 border border-violet-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-violet-700">
                 <span>OCR 辨識中 {ocrProgress?.done ?? 0}/{ocrProgress?.total ?? 0}…</span>
@@ -127,33 +152,36 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
             )}
 
             <span className="text-xs text-gray-500 font-mono">
-              {filteredOrphans.length} / {orphanFiles.length} 筆
+              {filteredOrphans.length} / {activeFiles.length} 筆
             </span>
           </div>
         </div>
 
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-3">
-          {orphanFiles.length === 0 ? (
+          {activeFiles.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
                 <Check className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-gray-800">全部圖檔皆已精準連結！</h3>
-              <p className="text-sm text-gray-500">資料夾中沒有任何孤兒圖檔，所有圖檔皆已對應至系統品號。</p>
+              <h3 className="text-base font-bold text-gray-800">全部圖檔皆已精準對應與核可！</h3>
+              <p className="text-sm text-gray-500">資料夾中沒有任何待處理孤兒圖檔，所有圖檔皆已對應品號或標記排除。</p>
             </div>
           ) : filteredOrphans.length === 0 ? (
-            <p className="text-center py-8 text-sm text-gray-400">查無符合搜尋條件的孤兒圖檔</p>
+            <p className="text-center py-8 text-sm text-gray-400">查無符合搜尋條件的圖檔</p>
           ) : (
             filteredOrphans.map((name) => {
               const ocrText = ocrIndex.get(name);
               const isBindingThis = selectedFileName === name;
+              const isDismissed = dismissedFiles.includes(name);
 
               return (
                 <div
                   key={name}
                   className={`p-4 rounded-xl border transition-all ${
-                    isBindingThis
+                    isDismissed
+                      ? 'bg-slate-50 border-slate-200 opacity-75'
+                      : isBindingThis
                       ? 'bg-amber-50/60 border-amber-300 shadow-sm'
                       : 'bg-white border-gray-200 hover:border-gray-300'
                   }`}
@@ -164,9 +192,16 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
                         <ImageIcon className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-mono text-sm font-bold text-gray-900 truncate" title={name}>
-                          {name}
-                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className="font-mono text-sm font-bold text-gray-900 truncate" title={name}>
+                            {name}
+                          </p>
+                          {isDismissed && (
+                            <span className="px-2 py-0.5 bg-slate-200 text-slate-700 text-[11px] font-bold rounded-md border border-slate-300 shrink-0">
+                              已標記排除 (重複/別稱)
+                            </span>
+                          )}
+                        </div>
                         {ocrText ? (
                           <div className="flex items-center space-x-1.5 mt-1">
                             <Sparkles className="w-3 h-3 text-violet-500 shrink-0" />
@@ -181,7 +216,7 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
                     </div>
 
                     <div className="flex items-center space-x-2 shrink-0">
-                      {!ocrText && onSingleOcr && (
+                      {!ocrText && onSingleOcr && !isDismissed && (
                         <button
                           onClick={async () => {
                             setScanningSingleFile(name);
@@ -197,16 +232,39 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
                         </button>
                       )}
 
-                      <button
-                        onClick={() => {
-                          setSelectedFileName(isBindingThis ? null : name);
-                          setPartQuery('');
-                        }}
-                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer"
-                      >
-                        <Link2 className="w-3.5 h-3.5" />
-                        <span>{isBindingThis ? '收起選單' : '連結至品號'}</span>
-                      </button>
+                      {!isDismissed ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedFileName(isBindingThis ? null : name);
+                              setPartQuery('');
+                            }}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors cursor-pointer"
+                          >
+                            <Link2 className="w-3.5 h-3.5" />
+                            <span>{isBindingThis ? '收起選單' : '連結至品號'}</span>
+                          </button>
+
+                          {onToggleDismiss && (
+                            <button
+                              onClick={() => onToggleDismiss(name)}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
+                              title="標記為重複別稱或無須對應的舊版圖檔（將從待處理孤兒中排除）"
+                            >
+                              標記排除
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        onToggleDismiss && (
+                          <button
+                            onClick={() => onToggleDismiss(name)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer"
+                          >
+                            ↺ 復原對應
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
 

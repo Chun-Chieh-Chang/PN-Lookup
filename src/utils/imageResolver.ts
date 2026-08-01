@@ -8,6 +8,7 @@ export interface ImageResolution {
 }
 
 const BINDINGS_KEY = 'pn_lookup_image_bindings';
+const DISMISSED_ORPHANS_KEY = 'pn_lookup_dismissed_orphans';
 
 // ---------- 手動綁定（本機限定：綁定的是本機檔案） ----------
 export function loadBindings(): Record<string, string> {
@@ -24,6 +25,24 @@ export function loadBindings(): Record<string, string> {
 export function saveBindings(bindings: Record<string, string>): void {
   try {
     localStorage.setItem(BINDINGS_KEY, JSON.stringify(bindings));
+  } catch { /* ignore */ }
+}
+
+// ---------- 標記排除 / 重複別稱孤兒圖檔 ----------
+export function loadDismissedOrphans(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISMISSED_ORPHANS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveDismissedOrphans(dismissed: Set<string>): void {
+  try {
+    localStorage.setItem(DISMISSED_ORPHANS_KEY, JSON.stringify(Array.from(dismissed)));
   } catch { /* ignore */ }
 }
 
@@ -72,14 +91,31 @@ export function getPartNoAliases(item: Pick<PartItem, 'partNo' | 'alternates'>):
   return [item.partNo, ...(item.alternates ?? [])];
 }
 
-// ---------- 統計所有受控圖檔與未對應孤兒圖檔 ----------
+// ---------- 統計所有受控圖檔、待處理孤兒圖檔與已排除孤兒圖檔 ----------
+export interface OrphanFilesResult {
+  matchedFiles: Set<string>;
+  orphanFiles: string[];
+  dismissedFiles: string[];
+  rawOrphanCount: number;
+  matchedCount: number;
+}
+
 export function getOrphanFiles(
   lib: ImageLibrary | null,
   parts: PartItem[],
   bindings: Record<string, string>,
   ocrIndex: Map<string, string>,
-): { matchedFiles: Set<string>; orphanFiles: string[]; matchedCount: number } {
-  if (!lib) return { matchedFiles: new Set(), orphanFiles: [], matchedCount: 0 };
+  dismissedSet: Set<string> = new Set(),
+): OrphanFilesResult {
+  if (!lib) {
+    return {
+      matchedFiles: new Set(),
+      orphanFiles: [],
+      dismissedFiles: [],
+      rawOrphanCount: 0,
+      matchedCount: 0,
+    };
+  }
 
   const matchedFiles = new Set<string>();
 
@@ -90,10 +126,15 @@ export function getOrphanFiles(
     }
   }
 
-  const orphanFiles = lib.fileNames.filter((fname) => !matchedFiles.has(fname));
+  const rawOrphans = lib.fileNames.filter((fname) => !matchedFiles.has(fname));
+  const orphanFiles = rawOrphans.filter((fname) => !dismissedSet.has(fname));
+  const dismissedFiles = rawOrphans.filter((fname) => dismissedSet.has(fname));
+
   return {
     matchedFiles,
     orphanFiles,
+    dismissedFiles,
+    rawOrphanCount: rawOrphans.length,
     matchedCount: matchedFiles.size,
   };
 }

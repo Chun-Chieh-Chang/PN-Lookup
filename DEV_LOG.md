@@ -1,5 +1,20 @@
 # PN-Lookup 開發日誌
 
+## v3.8.0 — 孤兒圖檔清理機制：導入「標記排除 (重複/別稱圖檔)」與數據清理功能 (Orphan Image Dismissal & Duplicate Exclusion)
+
+### 需求內容與作業
+- **孤兒圖檔資料治理 (Orphan Image Governance)**：
+  - 解決資料夾內含有品號別稱、客戶/供應商重複版本或舊版圖檔，導致孤兒圖檔數量無法歸零的問題。
+  - 在 [OrphanImagesModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/OrphanImagesModal.tsx) 中新增 **「標記排除」** 按鈕與 **「↺ 復原」** 功能。
+- **本機持久化儲存 (`pn_lookup_dismissed_orphans`)**：
+  - 被標記排除的圖檔保存在 [imageResolver.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageResolver.ts) 的 `localStorage` 中。
+  - Header 警示統計與待處理孤兒清單自動扣除已標記排除者，當全數對應或排除後呈綠色極致對應率狀態。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 成功通過。
+
+---
+
 ## v3.7.8 — 數據架構與災害復原 (Disaster Recovery)：實施零干預 Master Table 自我修復機制 (Self-Healing Master Table Recovery & Multi-Layer Seed Safeguard)
 
 ### 需求內容與作業
