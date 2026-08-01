@@ -62,7 +62,7 @@ export const GROUP_COLORS: Record<NodeGroup, string> = {
   customer_oem: '#EAB308',     // 鵝黃 - OEM/ODM 客戶
 };
 
-// 廠內 MindMap 核心架構節點
+// 廠內 MindMap 與《編碼記憶》核心架構節點
 const FACTORY_MINDMAP_NODES = [
   {
     id: 'mindmap-set',
@@ -75,39 +75,58 @@ const FACTORY_MINDMAP_NODES = [
   },
   {
     id: 'mindmap-sa',
-    name: 'SA 組件 (呼吸迴路/次組合管路)',
+    name: 'SA 系列 (呼吸迴路/次組合管路)',
     group: 'factory_assembly' as const,
     val: 18,
     color: GROUP_COLORS.factory_assembly,
     axis: 'factory' as const,
-    description: '【廠內 MindMap - SA】呼吸管路、蛇木管、雙平滑管與蛇管配件次組合。',
+    description: '【編碼記憶 - SA】SA 開頭為呼吸管路、蛇木管、雙平滑管與蛇管配件次組合。',
   },
   {
     id: 'mindmap-sb',
-    name: 'SB 組件 (醫用轉接頭/閥門組裝)',
+    name: 'SB 系列 (醫用轉接頭/閥門組裝)',
     group: 'factory_assembly' as const,
     val: 17,
     color: GROUP_COLORS.factory_assembly,
     axis: 'factory' as const,
-    description: '【廠內 MindMap - SB】三通轉接頭、吐氣閥、PEEP 閥與壓力監測介面。',
+    description: '【編碼記憶 - SB】SB 開頭為直通/三通轉接頭、吐氣閥、PEEP 閥與壓力監測介面。',
   },
   {
     id: 'mindmap-sc',
-    name: 'SC 組件 (面罩/鼻罩/呼吸組件)',
+    name: 'SC 系列 (面罩/鼻罩/呼吸組件)',
     group: 'factory_assembly' as const,
     val: 16,
     color: GROUP_COLORS.factory_assembly,
     axis: 'factory' as const,
-    description: '【廠內 MindMap - SC】氣墊面罩、無氣墊面罩、鼻罩與固定頭帶組裝。',
+    description: '【編碼記憶 - SC】SC 開頭為氣墊面罩、無氣墊面罩、鼻罩與固定頭帶組裝。',
   },
   {
     id: 'mindmap-sd',
-    name: 'SD 組件 (濕化水瓶/集水杯組裝)',
+    name: 'SD 系列 (濕化水瓶/集水杯組裝)',
     group: 'factory_assembly' as const,
     val: 15,
     color: GROUP_COLORS.factory_assembly,
     axis: 'factory' as const,
-    description: '【廠內 MindMap - SD】加熱水瓶、自動給水水瓶與集水杯模組。',
+    description: '【編碼記憶 - SD】SD 開頭為加熱水瓶、自動給水水瓶與集水杯模組。',
+  },
+  // 《編碼記憶.pdf》關鍵分流與倒鉤編碼法則
+  {
+    id: 'code-k-connectors',
+    name: 'K 系列分流轉接頭 (K07/K08/K27 Connectors)',
+    group: 'factory_spec' as const,
+    val: 16,
+    color: GROUP_COLORS.factory_spec,
+    axis: 'factory' as const,
+    description: '【編碼記憶 - K系列】包含 K07 (Bi-Connector 雙通道)、K08 (Tri-Connector 三通道)、K27 (Quadfuse 四分分流頭)。',
+  },
+  {
+    id: 'code-q-barbed',
+    name: 'Q 系列倒鉤轉接件 (Q09/Q10 Barbed Fittings)',
+    group: 'factory_spec' as const,
+    val: 16,
+    color: GROUP_COLORS.factory_spec,
+    axis: 'factory' as const,
+    description: '【編碼記憶 - Q系列】包含 Q09 (Barbed Connector with MLL 公 Luer 倒鉤接頭)、Q10 (Barbed Connector with FLL 母 Luer 倒鉤接頭)。',
   },
   {
     id: 'mindmap-material',
@@ -256,6 +275,14 @@ export function buildProductKnowledgeGraph(
     if (axisFilter === 'all' || axisFilter === 'factory') {
       nodesMap.set(node.id, node);
       addLink(targetMindMapId, node.id, '歸屬 MindMap', 2);
+
+      // 《編碼記憶.pdf》特定代碼關聯
+      if (item.partNo.includes('K07') || item.partNo.includes('K08') || item.partNo.includes('K27')) {
+        addLink('code-k-connectors', node.id, 'K系列分流對照', 2);
+      }
+      if (item.partNo.includes('Q09') || item.partNo.includes('Q10')) {
+        addLink('code-q-barbed', node.id, 'Q系列倒鉤對照', 2);
+      }
     }
 
     if (axisFilter === 'all' || axisFilter === 'customer') {

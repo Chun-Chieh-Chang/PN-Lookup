@@ -1,5 +1,21 @@
 # PN-Lookup 開發日誌
 
+## v5.1.0 — 知識庫深度融合：全面導入《編碼記憶.pdf》K/Q系列專業代碼記憶網絡 (Encoding Memory Knowledge Graph Integration)
+
+### 需求內容與作業
+- **《編碼記憶.pdf》關鍵知識解碼與圖譜整合 ([productKnowledgeGraph.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/productKnowledgeGraph.ts))**：
+  - 完整解碼並導入《編碼記憶.pdf》中記載之凱益產品編碼法則與專業代碼對照：
+    - **`K` 系列分流轉接頭**：`K07` (Bi-Connector 雙通道)、`K08` (Tri-Connector 三通道)、`K27` (Quadfuse 四分頭)。
+    - **`Q` 系列倒鉤轉接件**：`Q09` (Barbed Connector with MLL 公 Luer 倒鉤)、`Q10` (Barbed Connector with FLL 母 Luer 倒鉤)。
+    - **`SA / SB / SC / SD` 組立前綴**：自動與品號資料庫進行點對點雙向網絡掛載。
+- **介面說明與節點高亮 ([ProductGraphModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductGraphModal.tsx))**：
+  - 在全瀏覽圖譜頂部與詳情面板中，明確展示《編碼記憶》之硬核對照節點與說明。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v5.0.0 — 重大版本更新：重構雙軸心多維全瀏覽頁面產品知識圖譜 (Dual-Axis Full-Viewport Product Knowledge Graph)
 
 ### 需求內容與作業

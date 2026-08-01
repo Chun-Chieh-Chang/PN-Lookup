@@ -370,7 +370,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              融合【廠內 MindMap 6 大分類】與【客戶採購體系】雙軸心 · 全瀏覽頁面 · 滑鼠 360 度旋轉
+              融合【廠內 MindMap 6 大分類】與【《編碼記憶》K/Q/SA/SB/SC/SD 代碼】與【客戶採購體系】雙軸心
             </p>
           </div>
         </div>
