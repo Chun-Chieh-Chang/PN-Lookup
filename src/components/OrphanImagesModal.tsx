@@ -24,7 +24,7 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
   onClose,
   lib,
   parts,
-  orphanFiles,
+  orphanFiles = [],
   ocrIndex,
   bindings,
   onBind,

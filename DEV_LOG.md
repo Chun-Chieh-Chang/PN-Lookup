@@ -1,5 +1,22 @@
 # PN-Lookup 開發日誌
 
+## v3.7.1 — 防禦修復：修復 `orphanInfo.orphanFiles` 屬性讀取錯誤導致之 `TypeError: Cannot read properties of undefined (reading 'length')` 運行時崩潰 (Runtime TypeError Fix & Defensive Programming)
+
+### 需求內容與作業
+- **錯誤現象 (Symptom)**：
+  - 前端控制台拋出 `Uncaught TypeError: Cannot read properties of undefined (reading 'length')`。
+- **根因分析 (RCA)**：
+  - 在 `imageResolver.ts` 的 `getOrphanFiles` 函式中，回傳的孤兒圖檔清單欄位名稱為 **`orphanFiles`** (`{ matchedFiles, orphanFiles, matchedCount }`)。
+  - 然而在 [App.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/App.tsx) 第 444 行與第 557 行傳遞狀態時，誤寫為 `orphanInfo.files.length` 與 `orphanFiles={orphanInfo.files}`。由於 `orphanInfo.files` 為 `undefined`，存取 `.length` 屬性時拋出了典型的運作時崩潰。
+- **矯正與預防措施 (CAPA)**：
+  - **精準修正**：將 `App.tsx` 中的 `orphanInfo.files` 修正為正確的 `orphanInfo.orphanFiles`。
+  - **防禦性編程 (Defensive Guarding)**：在 [OrphanImagesModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/OrphanImagesModal.tsx) 的元件 Props 解構中加入備用預設值 `orphanFiles = []`，避免未來任何傳入 `undefined` 之極端情境導致二次崩潰。
+- **運行確效 (Mandatory Runtime Check)**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 4.18s 生產打包測試 100% 成功通過。
+
+---
+
 ## v3.7.0 — 效能防禦：取消預設背景全量 OCR 掃描，改為「用戶手動啟用與單圖點擊辨識」機制 (On-Demand OCR Engine & Performance Defense)
 
 ### 需求內容與作業

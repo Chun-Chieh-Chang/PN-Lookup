@@ -441,7 +441,7 @@ export default function App() {
         }}
         imageFolderName={imageLib?.folderName ?? null}
         imageCount={imageLib?.count ?? 0}
-        orphanCount={orphanInfo.files.length}
+        orphanCount={orphanInfo.orphanFiles.length}
         onPickImageFolder={handlePickImageFolder}
         onOpenOrphansModal={() => setIsOrphansModalOpen(true)}
         isAdminMode={isUnlocked || route === 'admin'}
@@ -554,7 +554,7 @@ export default function App() {
         onClose={() => setIsOrphansModalOpen(false)}
         lib={imageLib}
         parts={parts}
-        orphanFiles={orphanInfo.files}
+        orphanFiles={orphanInfo.orphanFiles}
         ocrIndex={ocrIndex}
         bindings={bindings}
         onBind={handleBind}
