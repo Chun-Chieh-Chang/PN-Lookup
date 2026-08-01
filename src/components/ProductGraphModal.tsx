@@ -15,6 +15,9 @@ import {
   Building2,
   Factory,
   Globe,
+  FlaskConical,
+  Ruler,
+  Palette,
 } from 'lucide-react';
 import { PartItem } from '../types';
 import {
@@ -23,6 +26,7 @@ import {
   GraphLink,
   GROUP_COLORS,
   NodeGroup,
+  AxisFilterMode,
 } from '../utils/productKnowledgeGraph';
 
 interface ProductGraphModalProps {
@@ -33,7 +37,6 @@ interface ProductGraphModalProps {
 }
 
 type ViewMode = '2D' | '3D';
-type AxisFilterMode = 'all' | 'factory' | 'customer';
 
 export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
   isOpen,
@@ -59,7 +62,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 建構雙軸心圖譜數據
+  // 建構六維矩陣圖譜數據
   const graphData = useMemo(() => {
     return buildProductKnowledgeGraph(parts, axisFilter);
   }, [parts, axisFilter]);
@@ -364,53 +367,92 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2 font-sans">
-              <span>雙軸心醫療產品知識與 BOM 網絡圖譜 (v5.0.0)</span>
+              <span>六維矩陣醫療產品知識與 BOM 網絡圖譜 (v6.0.0)</span>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                 {graphData.nodes.length} 節點 · {graphData.links.length} 關聯
               </span>
             </h2>
             <p className="text-xs text-slate-400">
-              融合【廠內 MindMap 6 大分類】與【《編碼記憶》K/Q/SA/SB/SC/SD 代碼】與【客戶採購體系】雙軸心
+              融合【廠內 MindMap】、【編碼記憶】、【客戶體系】、【原料】、【規格】與【配色】六維矩陣
             </p>
           </div>
         </div>
 
         {/* 視角軸心與 2D/3D 切換器 */}
         <div className="flex flex-wrap items-center space-x-3 gap-y-2">
-          {/* 軸心篩選 Mode */}
-          <div className="flex items-center bg-slate-800/90 rounded-xl p-1 border border-slate-700/80">
+          {/* 6 大多維視角 Mode */}
+          <div className="flex flex-wrap items-center bg-slate-800/90 rounded-xl p-1 border border-slate-700/80 gap-0.5">
             <button
               onClick={() => setAxisFilter('all')}
-              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 axisFilter === 'all'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
+              title="六維全景總圖譜"
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>全景總圖譜</span>
+              <span>全景總綱</span>
             </button>
             <button
               onClick={() => setAxisFilter('factory')}
-              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 axisFilter === 'factory'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
+              title="廠內 MindMap 分類與編碼記憶視角"
             >
               <Factory className="w-3.5 h-3.5" />
-              <span>廠內 MindMap 視角</span>
+              <span>廠內 MindMap</span>
             </button>
             <button
               onClick={() => setAxisFilter('customer')}
-              className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 axisFilter === 'customer'
                   ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
+              title="ICU 與 OEM/ODM 客戶採購體系視角"
             >
               <Building2 className="w-3.5 h-3.5" />
-              <span>客戶採購視角</span>
+              <span>客戶對照</span>
+            </button>
+            <button
+              onClick={() => setAxisFilter('material')}
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'material'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="PVC, Silicone, PC, PP 原料成分多維視角"
+            >
+              <FlaskConical className="w-3.5 h-3.5" />
+              <span>原料成分</span>
+            </button>
+            <button
+              onClick={() => setAxisFilter('spec')}
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'spec'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="15mm, 22mm, ID/OD 尺寸規格多維視角"
+            >
+              <Ruler className="w-3.5 h-3.5" />
+              <span>尺寸規格</span>
+            </button>
+            <button
+              onClick={() => setAxisFilter('color')}
+              className={`inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                axisFilter === 'color'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="透明, 藍色, 綠色 顏色識別多維視角"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>顏色識別</span>
             </button>
           </div>
 
@@ -448,7 +490,7 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜尋品號、SA/SB/SC/SD 前綴、廠內分類或客戶名稱..."
+            placeholder="搜尋品號、K/Q代碼、原料、規格或客戶名稱..."
             className="w-full pl-9 pr-4 py-1.5 bg-slate-800/90 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
           />
         </div>
@@ -469,15 +511,15 @@ export const ProductGraphModal: React.FC<ProductGraphModalProps> = ({
           </div>
           <div className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#EC4899]"></span>
-            <span>原料屬性</span>
+            <span>原料 (PVC/Silicone/PC)</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#14B8A6]"></span>
+            <span>規格 (15M/22M)</span>
           </div>
           <div className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
-            <span>ICU 重症客戶</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#EAB308]"></span>
-            <span>OEM/ODM 客戶</span>
+            <span>ICU/OEM 客戶</span>
           </div>
         </div>
       </div>

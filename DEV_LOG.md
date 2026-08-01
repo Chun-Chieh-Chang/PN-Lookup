@@ -1,5 +1,22 @@
 # PN-Lookup 開發日誌
 
+## v6.0.0 — 旗艦版本更新：六維矩陣醫療產品知識與 BOM 網絡圖譜 (Hexa-Dimensional Matrix Product Knowledge Graph)
+
+### 需求內容與作業
+- **六大多維度視角矩陣 (Hexa-Dimensional Viewport Matrix)**：
+  - 響應用戶指導，將圖譜升級為 6 大多維度視角切換器：
+    1. **`[🌐 六維全景]`**：整合全量物料、BOM、代碼記憶與多維網絡。
+    2. **`[🏭 廠內 MindMap]`**：廠內 6 大心智圖結構與《編碼記憶》K/Q系列代碼。
+    3. **`[🏢 客戶對照]`**：ICU 重症專用號與 OEM/ODM 代工客戶號對照。
+    4. **`[🧪 原料成分]`**：PVC, Silicone 矽膠, PC 聚碳酸酯, PP 等原料屬性對照。
+    5. **`[📐 尺寸規格]`**：15mm, 22mm, ID/OD 外徑管長規格對照。
+    6. **`[🎨 顏色識別]`**：透明 (Clear), 醫療藍 (Blue), 氧氣綠 (Green) 視覺識別。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包 100% 成功。
+
+---
+
 ## v5.1.0 — 知識庫深度融合：全面導入《編碼記憶.pdf》K/Q系列專業代碼記憶網絡 (Encoding Memory Knowledge Graph Integration)
 
 ### 需求內容與作業
