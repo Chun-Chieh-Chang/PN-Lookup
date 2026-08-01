@@ -142,8 +142,8 @@ export function getOrphanFiles(
   const matchedFiles = new Set<string>();
 
   for (const part of parts) {
-    const res = resolveImage(part.partNo, part.alternates, lib, bindings, ocrIndex);
-    if (res) {
+    const allRes = resolveAllImages(part.partNo, part.alternates, lib, bindings, ocrIndex);
+    for (const res of allRes) {
       matchedFiles.add(res.name);
     }
   }

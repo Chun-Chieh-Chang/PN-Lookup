@@ -1135,6 +1135,23 @@ pn-lookup/
    * **搜尋自動展開**：當輸入關鍵字時，包含匹配品號的卡片會自動展開呈現搜尋結果。
 2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.9.2 — 演算法優化：孤兒圖檔計算改採全圖檔比對 (Orphan Files Resolution & Alternates Full Matching Fix)
+
+### 需求內容
+解答與修復「孤兒圖檔高達 1042 個」的異常問題。說明品號去重歸併後，如何精準比對多圖檔與替代料號圖檔，大幅降低孤兒圖檔數量。
+
+### 根因分析 (RCA)
+在 [imageResolver.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageResolver.ts) 中，舊版 `getOrphanFiles` 函數在統計受控圖檔時，僅調用了只回傳**單張圖檔**的 `resolveImage(...)`，而非能匹配全數圖檔的 `resolveAllImages(...)`。
+這導致若同一個品號（或其 `alternates` 客戶料號）擁有 2~4 張工程圖檔時，只有第 1 張圖被標記為受控圖檔，其餘 2~3 張圖檔均被誤判定為「孤兒圖檔」，致使孤兒數量高達 1000+ 檔！
+
+### 矯正與預防措施 (CAPA)
+1. **全數圖檔與替代料號全匹配 (`resolveAllImages`)**：
+   重構 [imageResolver.ts](file:///d:/Self-developed_Apps/PN-Lookup/src/utils/imageResolver.ts)。在 `getOrphanFiles` 迴圈中調用 `resolveAllImages`，使每個主品號及其 **所有 `alternates` 客戶料號** 對應的圖檔均被完整納入 `matchedFiles`！
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 
