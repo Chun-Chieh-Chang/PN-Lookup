@@ -1170,6 +1170,24 @@ pn-lookup/
 3. **寫入全域 Agent 規範**：
    在 [.agents/AGENTS.md](file:///d:/Self-developed_Apps/PN-Lookup/.agents/AGENTS.md) 中新增 `<RULE[regression_defense_and_logic_freezing]>` 規則。
 
+---
+
+## v3.9.4 — CI/CD 防禦升級：解決 CI 靜態建構模式下私有資料庫檔防護衝突 (CI Sandbox Defense for Core Logic Verification)
+
+### 需求內容
+修復 GitHub Actions CI 打包時，因 `data/` 與 `rawdata/` 依據專案 Zero Private Data 資安規範已列入 `.gitignore`（不在公開 Git 倉庫中），導致 GitHub Actions 執行 `verifyCoreLogic.js` 時因找不到本機私有資料檔而終止建置的問題。
+
+### 根因分析 (RCA)
+`scripts/verifyCoreLogic.js` 原先假設測試環境永遠具備 `data/pn-lookup-master.json` 與 `rawdata/master_table_unified.json`。然而在 CI (GitHub Actions) 靜態發布環境中，為確保商業數據隱私，私有資料檔不被提交至 Git。舊版指令在檔案不存在時直接呼叫 `assert(false)` 終止編譯，引發 CI 失敗。
+
+### 矯正與預防措施 (CAPA)
+1. **沙盒相容性檢測 (CI Sandbox Mode Defense)**：
+   重構 [scripts/verifyCoreLogic.js](file:///d:/Self-developed_Apps/PN-Lookup/scripts/verifyCoreLogic.js)。
+   * **本機開發環境**：當私有資料庫檔案存在時，100% 執行全套 6 項數據筆數與去重嚴格驗證！
+   * **CI 發布環境**：當私有資料檔被 `.gitignore` 排除時，印出 `ℹ️ [CI 沙盒模式]` 提示並自動切換至沙盒模式，跳過本機檔案依賴測試，保留純單元邏輯驗證（如 `isMatchedSegment`），確保 CI 建構 100% 綠燈成功。
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
 
