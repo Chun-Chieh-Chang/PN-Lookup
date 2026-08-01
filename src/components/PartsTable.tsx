@@ -54,7 +54,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [isCompact, setIsCompact] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // 每列圖檔解析快取（imageLib/bindings/ocrIndex 變動時清除）
@@ -222,26 +221,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* Density toggle */}
-            <div className="hidden sm:flex items-center space-x-1 bg-slate-200/70 p-1 rounded-xl border border-slate-300/60 text-xs">
-              <button
-                onClick={() => setIsCompact(false)}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-medium ${
-                  !isCompact ? 'bg-white text-slate-800 shadow-xs font-bold' : 'text-slate-600'
-                }`}
-              >
-                舒適
-              </button>
-              <button
-                onClick={() => setIsCompact(true)}
-                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer font-medium ${
-                  isCompact ? 'bg-white text-slate-800 shadow-xs font-bold' : 'text-slate-600'
-                }`}
-              >
-                緊湊
-              </button>
-            </div>
-
             {/* Page size dropdown */}
             <div className="flex items-center space-x-1.5 text-slate-600 text-xs">
               <span className="font-medium hidden sm:inline">每頁:</span>
@@ -356,7 +335,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Customer Badge */}
-                  <td className={`p-3 font-medium ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 font-medium py-3.5">
                     <button
                       onClick={() => onCustomerClick(item.customer)}
                       className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all font-mono text-xs font-bold cursor-pointer hover:shadow-xs"
@@ -367,7 +346,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Part Number */}
-                  <td className={`p-3 font-mono font-bold text-slate-900 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 font-mono font-bold text-slate-900 py-3.5">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center space-x-2">
                         <span
@@ -420,7 +399,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Item Type Badge */}
-                  <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 py-3.5">
                     <button
                       onClick={() => onViewDetail(item)}
                       className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
@@ -440,7 +419,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Part Name */}
-                  <td className={`p-3 text-gray-600 max-w-md ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 text-gray-600 max-w-md py-3.5">
                     <div className="flex flex-col gap-1">
                       <div className="truncate font-medium text-gray-800" title={item.name}>
                         {highlightText(item.name, searchKeyword)}
@@ -463,7 +442,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* 圖檔連結 */}
-                  <td className={`p-3 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 py-3.5">
                     {imageRes ? (
                       <button
                         onClick={() => openImage(imageUrl as string)}
@@ -502,7 +481,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Actions */}
-                  <td className={`p-3 text-right pr-6 ${isCompact ? 'py-2' : 'py-3.5'}`}>
+                  <td className="p-3 text-right pr-6 py-3.5">
                     <div className="flex items-center justify-end space-x-1">
                       
                       <button

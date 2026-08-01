@@ -1,5 +1,32 @@
 # PN-Lookup 開發日誌
 
+## v3.7.3 — 介面體驗優化：取消「舒適/緊湊」切換開關，全介面統一強制採用「舒適 (Morandi High-End Comfort)」版面內距 (UI Layout & Comfort Lock)
+
+### 需求內容與作業
+- **版面密度統一**：
+  - 取消 [PartsTable.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/PartsTable.tsx) 表格右上角的「舒適/緊湊」切換按鈕。
+  - 移除 `isCompact` 狀態，將全數表格儲存格內距統一鎖定為最適視覺體驗之「舒適 (`py-3.5`)」規格，保持質感與呼吸感。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包通過。
+
+---
+
+## v3.7.2 — Master Table 檔名標準化重構：預設主資料庫與備份檔名統一訂為 `pn-lookup-master.json` (Master Table Naming Standardization & Legacy Migration)
+
+### 需求內容與作業
+- **Master Table 檔名重構**：
+  - 將伺服器真源檔名 (`server.js`) 與完整備份匯出檔名 (`AdminPanel.tsx`) 預設統一修訂為 **`pn-lookup-master.json`**。
+- **向下相容無縫遷移 (Legacy Fallback)**：
+  - 在 `server.js` 的 `loadMaster()` 載入邏輯中加入平滑降級機制：若 `data/pn-lookup-master.json` 不存在但舊版 `data/master.json` 存在，自動讀取並轉存移轉至 `pn-lookup-master.json`。
+- **文件與 UI 提示同步**：
+  - 更新 [README.md](file:///d:/Self-developed_Apps/PN-Lookup/README.md) 與 [AdminPanel.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/AdminPanel.tsx) 所有呈現 `data/pn-lookup-master.json` 之說明文字與預設匯出檔名。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 成功。
+
+---
+
 ## v3.7.1 — 防禦修復：修復 `orphanInfo.orphanFiles` 屬性讀取錯誤導致之 `TypeError: Cannot read properties of undefined (reading 'length')` 運行時崩潰 (Runtime TypeError Fix & Defensive Programming)
 
 ### 需求內容與作業

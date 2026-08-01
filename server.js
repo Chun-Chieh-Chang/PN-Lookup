@@ -5,7 +5,8 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
-const MASTER_PATH = join(DATA_DIR, 'master.json');
+const MASTER_PATH = join(DATA_DIR, 'pn-lookup-master.json');
+const LEGACY_MASTER_PATH = join(DATA_DIR, 'master.json');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -21,6 +22,15 @@ function defaultMaster() {
 
 function loadMaster() {
   if (!existsSync(MASTER_PATH)) {
+    if (existsSync(LEGACY_MASTER_PATH)) {
+      try {
+        const legacyData = JSON.parse(readFileSync(LEGACY_MASTER_PATH, 'utf-8'));
+        saveMaster(legacyData);
+        return legacyData;
+      } catch {
+        /* ignore fallback error */
+      }
+    }
     return defaultMaster();
   }
   return JSON.parse(readFileSync(MASTER_PATH, 'utf-8'));
@@ -47,7 +57,7 @@ function enqueueWrite(mutator) {
   return writeQueue;
 }
 
-// Master API — the single source of truth (data/master.json)
+// Master API — the single source of truth (data/pn-lookup-master.json)
 app.get('/api/master', (_req, res) => {
   try {
     res.json(loadMaster());

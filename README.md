@@ -34,7 +34,7 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
   - 具備 Morandi 莫蘭迪分級標籤與高階 `glass-header` 毛玻璃視覺體驗。
 - 🛡️ **資安與數據實體隔離 (Zero Private Data Security Patch)**：
   - 靜態編譯包 (`dist/assets/*.js`) 100% 零私有數據。
-  - 本地 Server 模式由 `node server.js` 動態讀寫 `data/master.json`（已列入 `.gitignore`）。
+  - 本地 Server 模式由 `node server.js` 動態讀寫 `data/pn-lookup-master.json`（已列入 `.gitignore`）。
 
 ---
 
@@ -42,7 +42,7 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 
 ```text
 PN-Lookup/
-├── data/                    # [隱私隔離] 本地單一真實資料庫 (master.json)
+├── data/                    # [隱私隔離] 本地單一真實資料庫 (pn-lookup-master.json)
 ├── rawdata/                 # [隱私隔離] 原始 Excel 與 1,527 份工程圖檔
 ├── src/                     # 前端應用程式原始碼
 ├── components/          # 視覺 UI 元件 (MECE 分類)

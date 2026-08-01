@@ -264,7 +264,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `完整備份_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `pn-lookup-master.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -815,7 +815,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               <span>匯入完整備份</span>
             </button>
             <span className="text-xs text-gray-400">
-              格式等同伺服器唯一真源 data/master.json；匯入會覆蓋現有品號與 BOM 資料
+              格式等同伺服器唯一真源 data/pn-lookup-master.json；匯入會覆蓋現有品號與 BOM 資料
             </span>
           </div>
         </div>
@@ -826,7 +826,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
           {orphanPartNos.length > 0 && (
             <p>BOM 中有 {orphanPartNos.length} 個零件編號不在品號表中（原料/通用件屬正常）</p>
           )}
-          <p>所有異動會自動同步至伺服器（data/master.json），無需手動儲存</p>
+          <p>所有異動會自動同步至伺服器（data/pn-lookup-master.json），無需手動儲存</p>
         </div>
       </div>
     </div>
