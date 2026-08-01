@@ -49,3 +49,11 @@
 2. 數值對比與說明：必須在完成當次任務並向用戶回報時，明確列出變更前後的關鍵數據變化（如筆數對比 913 筆 ➔ 565 筆），並說明歸併/去重/重構的原因與影響。
 3. 零資料遺失承諾：明確說明歸併/重構後原始數據（如別稱、關係鏈）的保留方式，消除用戶疑慮。
 </RULE[data_structure_change_notification]>
+
+<RULE[explicit_file_path_prompt_rule]>
+資料匯入匯出顯性路徑對話框詢問規則 (Explicit File Path Prompt Rule for Import & Export)
+
+在開發與架構設計中，所有資料的匯入與匯出操作均必須提供顯性的檔案選擇/另存新檔視窗 (Prompt for Save & Open Paths)：
+1. 匯出操作 (Export)：優先採用 HTML5 File System Access API (`window.showSaveFilePicker`) 彈出 OS 原生「另存新檔」視窗，允許使用者自訂儲存資料夾路徑與檔名，防止默默下載至預設 Downloads 資料夾。
+2. 匯入操作 (Import)：提供顯性「開啟檔案 / 選擇資料夾」視窗，讓使用者自行選取檔案來源路徑。
+</RULE[explicit_file_path_prompt_rule]>

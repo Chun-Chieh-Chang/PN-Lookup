@@ -144,10 +144,52 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     return <FileJson className="w-5 h-5" />;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    const fileName = getFileName();
+
+    // 優先使用 File System Access API 彈出 OS 原生「另存新檔 (Ask Save Path)」路徑選擇視窗
+    const win = window as unknown as {
+      showSaveFilePicker?: (options?: {
+        suggestedName?: string;
+        types?: Array<{ description?: string; accept: Record<string, string[]> }>;
+      }) => Promise<{ createWritable: () => Promise<{ write: (data: unknown) => Promise<void>; close: () => Promise<void> }> }>;
+    };
+
+    if (typeof win.showSaveFilePicker === 'function') {
+      try {
+        const acceptTypes = exportFormat === 'xlsx'
+          ? [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
+          : exportFormat === 'csv'
+          ? [{ description: 'CSV Document', accept: { 'text/csv': ['.csv'] } }]
+          : [{ description: 'JSON Document', accept: { 'application/json': ['.json'] } }];
+
+        const handle = await win.showSaveFilePicker({
+          suggestedName: fileName,
+          types: acceptTypes,
+        });
+        const writable = await handle.createWritable();
+
+        if (exportFormat === 'xlsx') {
+          const wb = generateExcelWorkbook(parts);
+          const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          await writable.write(buf);
+        } else {
+          const content = generateExportData();
+          const data = exportFormat === 'csv' ? '\uFEFF' + content : content;
+          await writable.write(data);
+        }
+        await writable.close();
+        return;
+      } catch (err: unknown) {
+        if ((err as Error)?.name === 'AbortError') return;
+        /* fallback to standard download */
+      }
+    }
+
+    // 瀏覽器降級下載處理
     if (exportFormat === 'xlsx') {
       const wb = generateExcelWorkbook(parts);
-      XLSX.writeFile(wb, getFileName());
+      XLSX.writeFile(wb, fileName);
       return;
     }
     const content = generateExportData();
@@ -155,7 +197,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', getFileName());
+    link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
