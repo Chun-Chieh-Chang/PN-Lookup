@@ -26,7 +26,7 @@ import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils
 import { loadBindings, saveBindings, getOrphanFiles, loadDismissedOrphans, saveDismissedOrphans } from './utils/imageResolver';
 import { ImageBindModal } from './components/ImageBindModal';
 import { OrphanImagesModal } from './components/OrphanImagesModal';
-import { ProductGraphModal } from './components/ProductGraphModal';
+import { ProductMindMapModal } from './components/ProductMindMapModal';
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -582,7 +582,7 @@ export default function App() {
         onSingleOcr={handleSingleOcr}
       />
 
-      <ProductGraphModal
+      <ProductMindMapModal
         isOpen={isGraphModalOpen}
         onClose={() => setIsGraphModalOpen(false)}
         parts={parts}

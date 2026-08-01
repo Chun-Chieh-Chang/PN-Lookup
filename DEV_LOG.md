@@ -1,6 +1,44 @@
 # PN-Lookup 開發日誌
 
+## v7.0.0 — 產品思維導圖重構：深度 PDF 解析 + ICU Spike 完整子類分類 (MindMap Tree v5.0.0)
+
+### 需求內容
+- 使用者要求將 ICU 插袋針/採藥針進一步細分到 spike 子類層級。
+- 要求「深度理解《產品識別教育訓練_Rev. 02_2025-11-05.pdf》」並結合圖檔識別完成精確分類。
+- 整體以思維導圖架構取代原 Canvas 力導向圖譜（ProductGraphModal → ProductMindMapModal）。
+
+### 作業重點
+- **PDF 完整逐頁解析 (Page 22~33)**：
+  - 讀取插袋針辨別（Page 24/25）、插袋針系列組件對照表（Page 26）、插袋針-透氣（Page 27）、插袋針-透氣有鼻子（Page 28）、插袋針-不透氣（Page 29）。
+  - 讀取採藥針系列辨別（Page 30）、採藥針-奶嘴（Page 31）、採藥針-9035（Page 32）、採藥針-花系列（Page 33）。
+  - 讀取 BD & MPS（Page 35）、Biometrix（Page 36）、Vivus（Page 37）。
+
+- **[NEW] mindmapClassifier.ts**：
+  - 建立完整品號精確對照表（Lookup Sets），涵蓋所有已知 ICU 品號（R1-8026~R1-15936, RAW0000335~336 等）。
+  - 插袋針分為 4 個子類：透氣-透氣口 (Side port) / 透氣-有鼻子 (Clave) / 不透氣 / 插袋針蓋。
+  - 採藥針分為 4 個子類：奶嘴 / 9035 (兩翼) / 花系列 (小/中/大花) / 採藥針蓋。
+  - 廠內零件按品號碼前3碼前綴分為 9 類。
+  - 組件 SA/SB/SC/SD 按前綴分類，特殊品號（如 3M41459）精確比對。
+  - BD/MPS/Biometrix/Vivus 依 customer 欄位 + 品號前綴雙重驗證。
+
+- **[MODIFY] ProductMindMapModal.tsx (全新)**：
+  - 完全移除 Canvas 引擎，改用純 React DOM 樹狀節點。
+  - 實作展開/收合、搜尋即時高亮、自動展開命中路徑。
+  - Pan/Zoom 畫布（左鍵拖曳 + 滾輪縮放）。
+  - 品號節點點擊 → 關閉 Modal 並跳轉主系統查詢。
+  - 統計標籤顯示已分類/待分類品號數量。
+
+- **[MODIFY] App.tsx**：
+  - import ProductGraphModal → ProductMindMapModal（單行替換）。
+
+### 確效驗證
+- `npx tsc --noEmit` → 0 錯誤。
+- `npm run build` → ✓ built in 4.34s，100% 成功。
+
+---
+
 ## v6.0.0 — 旗艦版本更新：六維矩陣醫療產品知識與 BOM 網絡圖譜 (Hexa-Dimensional Matrix Product Knowledge Graph)
+
 
 ### 需求內容與作業
 - **六大多維度視角矩陣 (Hexa-Dimensional Viewport Matrix)**：
