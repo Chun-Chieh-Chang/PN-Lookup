@@ -362,6 +362,101 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 };
 
 // ────────────────────────────────────────────────────────────────────────────
+// ConnectorTree – 量測子節點真實高度後畫精確連接線
+// ────────────────────────────────────────────────────────────────────────────
+
+interface ConnectorTreeProps {
+  childCount: number;
+  connColor: string;
+  horizontalLen: number;
+  lineW: number;
+  defaultHalfH: number;
+  children: React.ReactNode[];
+}
+
+const ConnectorTree: React.FC<ConnectorTreeProps> = ({
+  childCount, connColor, horizontalLen, lineW, defaultHalfH, children,
+}) => {
+  // 每個子節點「直接卡片」的 clientHeight（量測後存入陣列）
+  const [cardHeights, setCardHeights] = React.useState<number[]>([]);
+  const rowRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+
+  // ResizeObserver：只量測首個子元素（即卡片本身，不含展開的孫節點）
+  React.useLayoutEffect(() => {
+    const obs = new ResizeObserver(() => {
+      const heights = rowRefs.current.map((el) => {
+        if (!el) return defaultHalfH * 2;
+        // 量測 el 內第一個直接子 div（即節點卡片 wrapper）的高度
+        const card = el.firstElementChild as HTMLElement | null;
+        return card ? card.offsetHeight : defaultHalfH * 2;
+      });
+      setCardHeights(heights);
+    });
+    rowRefs.current.forEach((el) => { if (el) obs.observe(el); });
+    return () => obs.disconnect();
+  }, [childCount, defaultHalfH]);
+
+  const GAP = 10;
+
+  // 計算每個子節點出線點的 Y 座標（相對 children 容器頂部）
+  // Y_i = sum(heights[0..i-1]) + i*GAP + heights[i]/2
+  const midYs: number[] = [];
+  let acc = 0;
+  for (let i = 0; i < childCount; i++) {
+    const h = cardHeights[i] ?? defaultHalfH * 2;
+    midYs.push(acc + Math.floor(h / 2));
+    acc += h + GAP;
+  }
+  const firstMid = midYs[0] ?? defaultHalfH;
+  const lastMid  = midYs[childCount - 1] ?? defaultHalfH;
+
+  return (
+    <div
+      style={{ marginLeft: horizontalLen + 8, position: 'relative', display: 'flex', flexDirection: 'column', gap: GAP }}
+    >
+      {/* 垂直主幹 */}
+      {childCount > 1 && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            left: -(horizontalLen + 1),
+            top: firstMid,
+            height: lastMid - firstMid,
+            width: lineW,
+            backgroundColor: connColor,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
+
+      {(children as React.ReactNode[]).map((child, idx) => (
+        <div
+          key={idx}
+          ref={(el) => { rowRefs.current[idx] = el; }}
+          className="relative flex items-start"
+        >
+          {/* 水平橫線 */}
+          <div
+            aria-hidden
+            style={{
+              position: 'absolute',
+              left: -(horizontalLen + 1),
+              top: (midYs[idx] ?? defaultHalfH) - Math.floor(lineW / 2),
+              width: horizontalLen,
+              height: lineW,
+              backgroundColor: connColor,
+              pointerEvents: 'none',
+            }}
+          />
+          {child}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ────────────────────────────────────────────────────────────────────────────
 // MindMap node component
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -430,7 +525,9 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
   const sublabelClass = isRoot ? 'text-[10px]' : 'text-[9px]';
   const minW = isRoot ? CARD.rootMinW : node.depth === 1 ? CARD.d1MinW : node.depth === 2 ? CARD.d2MinW : CARD.d3MinW;
   const padding = isRoot ? CARD.rootPad : node.depth <= 2 ? CARD.nodePad : CARD.leafPad;
-  const connColor = node.borderColor + '90';
+  const connColor = node.borderColor + 'BB';
+  // 每個子項目列的高度中心 = 卡片上半部高度的估算（用於 CSS var 傳遞）
+  // 改用純 CSS border 方案，不需硬編碼數值
 
   return (
     <div className={`flex items-start transition-opacity duration-200 ${isDimmed ? 'opacity-30' : 'opacity-100'}`}>
@@ -472,54 +569,28 @@ const MindMapNodeComponent: React.FC<NodeProps> = ({
 
       {isExpanded && hasChildren && (() => {
         const childCount = node.children.length;
+        const HALF_H = CONN.nodeHeaderH; // 節點卡片頂到視覺中心的像素估算
         return (
-          <div
-            className="flex flex-col"
-            style={{ marginLeft: CONN.horizontalLen + 8, position: 'relative' }}
+          <ConnectorTree
+            childCount={childCount}
+            connColor={connColor}
+            horizontalLen={CONN.horizontalLen}
+            lineW={CONN.lineW}
+            defaultHalfH={HALF_H}
           >
-            {childCount > 1 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  left: -CONN.horizontalLen,
-                  top: CONN.nodeHeaderH,
-                  bottom: CONN.nodeHeaderH,
-                  width: CONN.lineW,
-                  backgroundColor: connColor,
-                  pointerEvents: 'none',
-                }}
-              />
-            )}
-
-            {node.children.map((child, idx) => (
-              <div
+            {node.children.map((child) => (
+              <MindMapNodeComponent
                 key={child.id}
-                className="relative flex items-start"
-                style={{ marginBottom: idx < childCount - 1 ? 10 : 0 }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: -CONN.horizontalLen,
-                    top: CONN.nodeHeaderH,
-                    width: CONN.horizontalLen,
-                    height: CONN.lineW,
-                    backgroundColor: connColor,
-                    pointerEvents: 'none',
-                  }}
-                />
-                <MindMapNodeComponent
-                  node={child}
-                  searchQuery={searchQuery}
-                  expandedIds={expandedIds}
-                  highlightIds={highlightIds}
-                  onToggle={onToggle}
-                  onShowThumbnail={onShowThumbnail}
-                  onSelectPart={onSelectPart}
-                />
-              </div>
+                node={child}
+                searchQuery={searchQuery}
+                expandedIds={expandedIds}
+                highlightIds={highlightIds}
+                onToggle={onToggle}
+                onShowThumbnail={onShowThumbnail}
+                onSelectPart={onSelectPart}
+              />
             ))}
-          </div>
+          </ConnectorTree>
         );
       })()}
     </div>
