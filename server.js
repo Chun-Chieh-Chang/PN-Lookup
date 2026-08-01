@@ -7,6 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, 'data');
 const MASTER_PATH = join(DATA_DIR, 'pn-lookup-master.json');
 const LEGACY_MASTER_PATH = join(DATA_DIR, 'master.json');
+const RAW_SEED_PATH = join(__dirname, 'rawdata', 'master_table_unified.json');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -22,6 +23,7 @@ function defaultMaster() {
 
 function loadMaster() {
   if (!existsSync(MASTER_PATH)) {
+    // 1. 優先嘗試從舊版 master.json 自動遷移
     if (existsSync(LEGACY_MASTER_PATH)) {
       try {
         const legacyData = JSON.parse(readFileSync(LEGACY_MASTER_PATH, 'utf-8'));
@@ -29,6 +31,16 @@ function loadMaster() {
         return legacyData;
       } catch {
         /* ignore fallback error */
+      }
+    }
+    // 2. 若資料庫檔案全數遺失，自動從 rawdata 統一種子檔災難復原
+    if (existsSync(RAW_SEED_PATH)) {
+      try {
+        const seedData = JSON.parse(readFileSync(RAW_SEED_PATH, 'utf-8'));
+        saveMaster(seedData);
+        return seedData;
+      } catch {
+        /* ignore seed error */
       }
     }
     return defaultMaster();

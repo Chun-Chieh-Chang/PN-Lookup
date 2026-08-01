@@ -1,5 +1,18 @@
 # PN-Lookup 開發日誌
 
+## v3.7.8 — 數據架構與災害復原 (Disaster Recovery)：實施零干預 Master Table 自我修復機制 (Self-Healing Master Table Recovery & Multi-Layer Seed Safeguard)
+
+### 需求內容與作業
+- **三重備援與自我修復機制 (Multi-Layer Disaster Recovery)**：
+  - **第 1 層 (Server Self-Healing)**：更新 [server.js](file:///d:/Self-developed_Apps/PN-Lookup/server.js) 的 `loadMaster()`。若 `data/pn-lookup-master.json` 與 `data/master.json` 皆不幸毀損或遺失，伺服器啟動時會**自動抓取 `rawdata/master_table_unified.json` 統一種子檔自動重建**，完成零干預自修復。
+  - **第 2 層 (Raw Data Backup)**：專案包含全套分解式 JSON 檔案 (`clean_sa_bom_tree.json` 等 10 個核心檔) 與原始 Excel 檔 (`rawdata/產品一覽表.xlsm`)。
+  - **第 3 層 (UI One-Click Restore)**：後台 (`AdminPanel.tsx`) 支援隨時點擊「匯入完整備份」或「客戶料號工作表匯入」恢復全量 913 筆品號與雙向 BOM 階層。
+- **確效驗證**：
+  - `npx tsc --noEmit` 0 錯誤。
+  - Vite `npm run build` 打包成功通過。
+
+---
+
 ## v3.7.7 — 防禦修復：修復條件 Return 後呼叫 Hook 導致之 `React Error #300` 運作時崩潰 (Rules of Hooks Fix & React Error #300 Prevention)
 
 ### 需求內容與作業
