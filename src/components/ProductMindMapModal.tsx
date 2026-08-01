@@ -441,13 +441,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     });
   }, [imageLib, bindings, ocrIndex]);
 
-  if (!isOpen) return null;
-
-  const handleNavigatePart = (partNo: string) => {
-    onSelectPart?.(partNo);
-    onClose();
-  };
-
   // 自訂連接線繪製：讓線條由父卡片右緣 (source.y + sourceWidth) 延伸至子卡片左緣 (target.y)
   const customStepPath = useCallback((linkDatum: TreeLinkDatum) => {
     const { source, target } = linkDatum;
@@ -464,6 +457,13 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
     return `M${startX},${startY} H${midX} V${endY} H${endX}`;
   }, []);
+
+  if (!isOpen) return null;
+
+  const handleNavigatePart = (partNo: string) => {
+    onSelectPart?.(partNo);
+    onClose();
+  };
 
   // react-d3-tree renderCustomNodeElement：每個節點渲染成自訂卡片
   const renderNode = ({ nodeDatum, toggleNode }: {

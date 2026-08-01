@@ -999,5 +999,21 @@ pn-lookup/
 1. **目錄與規則整合**：整合 `.agents/AGENTS.md` agent 規則檔，強化防迎合討好與 5 人 AI 智囊團機制。
 2. **確效驗證**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
+
+## v3.8.1 — 防禦修復：修復早期 Return 放置於 Hook 前導致之 React Error #310 (Rules of Hooks Fix & React Error #310 Prevention)
+
+### 需求內容
+修復生產環境發生的 `Uncaught Error: Minified React error #310` 運行時崩潰（Rendered more/fewer hooks than during the previous render）。
+
+### 根因分析 (RCA)
+在 [ProductMindMapModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductMindMapModal.tsx) 中，`customStepPath` 的 `useCallback` Hook 被放置在了 `if (!isOpen) return null;` 條件 return **之後**。
+當 modal 狀態從關閉 (`isOpen: false`) 切換為開啟 (`isOpen: true`) 時，導致渲染過程中 Hook 的調用數量改變，嚴重違反 React Rules of Hooks，引發 React Error #310 崩潰。
+
+### 矯正與預防措施 (CAPA)
+1. **Hook 提至頂層 (Top-Level Hook Lift)**：將 `customStepPath` 的 `useCallback` 移至 `if (!isOpen) return null;` 之前，確保組件於任何條件渲染下均執行相同數量的 Hook。
+2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
+
+
 
 
