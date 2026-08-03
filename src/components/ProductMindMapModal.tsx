@@ -418,6 +418,9 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const containerRef                  = useRef<HTMLDivElement>(null);
   // translate: 將 root 置於画布左側居中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 400 });
+  const [treeZoom, setTreeZoom]           = useState(0.85);
+  // 記錄 D3Tree 當前的 transform，remount 後恢復視角
+  const lastTransformRef = useRef<{ translateX: number; translateY: number; scale: number } | null>(null);
 
 
   const toggleLeafExpanded = useCallback((id: string) => {
@@ -456,6 +459,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     if (!isOpen) return;
     const h = containerRef.current?.clientHeight || window.innerHeight - 120;
     setTreeTranslate({ x: 80, y: Math.round(h / 2) });
+    setTreeZoom(0.85);
   }, [isOpen]);
 
   const handleResetDefault = useCallback(() => {
@@ -463,22 +467,65 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     setSearchQuery('');
     setThumbnail(null);
     setExpandedLeafIds(new Set());
-    setTreeKey(prev => prev + 1);
+    setOpenBranchIds(new Set());
+    setCurrentNodeSizeY(GAP.collapsedRow);
     setTreeTranslate({ x: 80, y: Math.round(h / 2) });
+    setTreeZoom(0.85);
+    setTreeKey(prev => prev + 1);
   }, []);
 
+  // 追蹤 D3Tree 中目前展開的分類節點數量，控制 nodeSize 切換時機
+  const [openBranchIds, setOpenBranchIds] = useState<Set<string>>(new Set());
+
+  // nodeSize.y 由展開狀態決定：有任何展開的節點就用大間距，全收合才用小間距
+  const [currentNodeSizeY, setCurrentNodeSizeY] = useState(GAP.collapsedRow);
+
   const effectiveNodeSize = useMemo(() => ({
-    // react-d3-tree 內部 tree.nodeSize([nodeSize.y, nodeSize.x]):
-    // .x → 水平欄距 (SVG X / depth column spacing)
-    // .y → 垂直列步長 (SVG Y / sibling row spacing)
     x: GAP.columnDepth,
-    y: hasAnyExpanded ? GAP.expandedRow : GAP.collapsedRow,
-  }), [hasAnyExpanded]);
+    y: currentNodeSizeY,
+  }), [currentNodeSizeY]);
 
   const effectiveSeparation = useMemo(() => ({
-    siblings:    hasAnyExpanded ? 2.0 : 1.1,   // 同分支節點間距係數
-    nonSiblings: hasAnyExpanded ? 5.0 : 4.5,   // 跨分支節點間距係數（需夠大防止交疊）
-  }), [hasAnyExpanded]);
+    siblings:    currentNodeSizeY >= GAP.expandedRow ? 1.4 : 1.1,
+    nonSiblings: currentNodeSizeY >= GAP.expandedRow ? 3.5 : 2.5,
+  }), [currentNodeSizeY]);
+
+  // 攔截 toggleNode：
+  // 1. 更新 openBranchIds（維護哪些節點是展開的）
+  // 2. 根據更新後的展開數量，設定 nodeSize.y
+  // 3. 讀取當前 SVG transform，remount 後恢復視角
+  // 4. 執行 D3 內建 toggle，treeKey++ 強制 remount
+  const wrapToggleNode = useCallback((toggleNode: () => void, nodeId: string, isCurrentlyCollapsed: boolean) => {
+    return () => {
+      // 更新展開節點集合
+      const nextOpen = new Set(openBranchIds);
+      if (isCurrentlyCollapsed) {
+        nextOpen.add(nodeId);      // 即將展開
+      } else {
+        nextOpen.delete(nodeId);   // 即將收合
+      }
+      setOpenBranchIds(nextOpen);
+
+      // 依更新後的展開數量決定間距
+      const nextNodeSizeY = nextOpen.size > 0 ? GAP.expandedRow : GAP.collapsedRow;
+      setCurrentNodeSizeY(nextNodeSizeY);
+
+      // 讀取 D3 當前的 SVG transform，remount 後恢復視角
+      const gEl = containerRef.current?.querySelector('.rd3t-g') as SVGGElement | null;
+      if (gEl) {
+        const attr = gEl.getAttribute('transform') || '';
+        const tMatch = attr.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
+        const sMatch = attr.match(/scale\(([-\d.]+)\)/);
+        if (tMatch && sMatch) {
+          setTreeTranslate({ x: parseFloat(tMatch[1]), y: parseFloat(tMatch[2]) });
+          setTreeZoom(parseFloat(sMatch[1]));
+        }
+      }
+
+      toggleNode();
+      setTreeKey(prev => prev + 1);
+    };
+  }, [openBranchIds]);
 
   React.useEffect(() => {
     const byId = new Map<string, NodeDiag>();
@@ -829,8 +876,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       >
         <div
           xmlns="http://www.w3.org/1999/xhtml"
-          onClick={() => hasChildren && toggleNode()}
-          onDoubleClick={(e) => { e.stopPropagation(); if (hasChildren) toggleNode(); }}
+          onClick={() => hasChildren && wrapToggleNode(toggleNode, mm.id, isCollapsed)()}
+          onDoubleClick={(e) => { e.stopPropagation(); if (hasChildren) wrapToggleNode(toggleNode, mm.id, isCollapsed)(); }}
           style={{
             position: 'relative',
             display: 'flex', flexDirection: 'column',
@@ -976,7 +1023,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           translate={treeTranslate}
           zoomable={true}
           scaleExtent={{ min: 0.2, max: 3 }}
-          zoom={0.85}
+          zoom={treeZoom}
           enableLegacyTransitions={false}
           collapsible={true}
           initialDepth={1}
