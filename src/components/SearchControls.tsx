@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Search,
   X,
@@ -67,7 +67,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
                 key={key}
                 type="button"
                 onClick={() => onSearchFieldChange(key)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center cursor-pointer ${
+                className={`px-3 py-1.5 text-sm font-semibold rounded-lg transition-all flex items-center cursor-pointer ${
                   searchField === key
                     ? 'bg-white text-indigo-700 shadow-xs border border-slate-200 font-bold'
                     : 'text-slate-600 hover:text-slate-900'
@@ -80,7 +80,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
 
           {/* Customer Lock Tag */}
           {filterCustomer && (
-            <div className="flex items-center space-x-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs">
+            <div className="flex items-center space-x-1.5 bg-indigo-50 border border-indigo-200 text-indigo-700 px-3 py-1.5 rounded-xl text-sm font-bold shadow-xs">
               <span>鎖定客戶: {filterCustomer}</span>
               <button
                 onClick={onClearCustomerFilter}

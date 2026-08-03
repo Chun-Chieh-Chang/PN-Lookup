@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+﻿import React, { useState, useRef, useCallback } from 'react';
 import {
   Copy,
   Check,
@@ -203,8 +203,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             style={{ position: 'fixed', left, top, width: POPUP_W, zIndex: 9999, pointerEvents: 'none' }}
             className="rounded-xl border border-slate-300 bg-white shadow-2xl overflow-hidden"
           >
-            <div className="bg-slate-700 px-3 py-1.5 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-mono font-bold text-white truncate">{hoverThumb.name}</span>
+            <div className="bg-slate-100 px-3 py-1.5 flex items-center justify-between gap-2 border-b border-slate-200">
+              <span className="text-[13px] font-mono font-bold text-slate-800 truncate">{hoverThumb.name}</span>
             </div>
             <div className="w-full bg-slate-100 flex items-center justify-center" style={{ height: POPUP_H - 32 }}>
               {isPdf ? (
@@ -228,7 +228,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
       <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden flex flex-col flex-1">
         
         {/* Table Toolbar / Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50/70 border-b border-slate-200/80 text-xs sm:text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-slate-50/70 border-b border-slate-200/80 text-[13px] sm:text-sm">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-slate-600 font-medium">
               顯示 <strong className="text-slate-900 font-bold font-mono">{sortedItems.length}</strong> 筆結果
@@ -242,7 +242,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             {selectedIds.length > 0 && (
               <button
                 onClick={handleCopySelected}
-                className="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
+                className="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[13px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 <ClipboardCheck className="w-3.5 h-3.5" />
                 <span>複製所選品號清單</span>
@@ -250,14 +250,14 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             )}
 
             {!imageLib && (
-              <span className="text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 text-xs font-medium shadow-2xs">
+              <span className="text-amber-700 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1 text-[13px] font-medium shadow-2xs">
                 未指定圖檔資料夾 — 點右上角「圖檔資料夾」可讓品號直接開啟圖檔
               </span>
             )}
 
             {imageLib && (
               <span
-                className="text-slate-500 text-xs cursor-help bg-slate-100/80 border border-slate-200/80 rounded-lg px-2.5 py-1 font-mono"
+                className="text-slate-500 text-[13px] cursor-help bg-slate-100/80 border border-slate-200/80 rounded-lg px-2.5 py-1 font-mono"
                 title={
                   `圖檔資料夾：${imageLib.folderName}\n` +
                   `掃描檔案：${imageLib.debug.totalFiles} 個（副檔名不支援的會被略過）\n` +
@@ -272,7 +272,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             )}
 
             {ocrProgress && ocrProgress.total > 0 && (
-              <span className="text-violet-700 bg-violet-50 border border-violet-200/80 rounded-lg px-2.5 py-1 text-xs font-semibold">
+              <span className="text-violet-700 bg-violet-50 border border-violet-200/80 rounded-lg px-2.5 py-1 text-[13px] font-semibold">
                 OCR 辨識中 {ocrProgress.done}/{ocrProgress.total}…
               </span>
             )}
@@ -280,7 +280,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
           <div className="flex items-center space-x-3">
             {/* Page size dropdown */}
-            <div className="flex items-center space-x-1.5 text-slate-600 text-xs">
+            <div className="flex items-center space-x-1.5 text-slate-600 text-[13px]">
               <span className="font-medium hidden sm:inline">每頁:</span>
               <select
                 value={pageSize}
@@ -397,7 +397,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   <td className="p-3 font-medium py-3.5">
                     <button
                       onClick={() => onCustomerClick(item.customer)}
-                      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all font-mono text-xs font-bold cursor-pointer hover:shadow-xs"
+                      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all font-mono text-[13px] font-bold cursor-pointer hover:shadow-xs"
                       title="點擊篩選該客戶"
                     >
                       <span>{highlightText(item.customer, searchKeyword)}</span>
@@ -451,12 +451,12 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                       {item.alternates && item.alternates.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1">
-                          <span className="text-[10px] text-slate-400 uppercase tracking-wide font-sans">別名</span>
+                          <span className="text-[13px] text-slate-400 uppercase tracking-wide font-sans">別名</span>
                           {item.alternates.map((alt) => (
                             <button
                               key={alt}
                               onClick={() => handleCopyPartNo(item.id, alt)}
-                              className="text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 rounded px-1.5 py-px hover:bg-slate-200 hover:text-slate-800 font-mono cursor-pointer transition-colors"
+                              className="text-[13px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 rounded px-1.5 py-px hover:bg-slate-200 hover:text-slate-800 font-mono cursor-pointer transition-colors"
                               title={`別名：${alt}（點擊複製）`}
                             >
                               {highlightText(alt, searchKeyword)}
@@ -471,7 +471,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   <td className="p-3 py-3.5">
                     <button
                       onClick={() => onViewDetail(item)}
-                      className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
+                      className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
                         (item.category && item.category.includes('組件')) || isAssembly
                           ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80 hover:bg-indigo-100'
                           : (item.category && item.category.includes('客戶特規'))
@@ -494,14 +494,14 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {highlightText(item.name, searchKeyword)}
                       </div>
                       {(item.color || item.material) && (
-                        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                        <div className="flex flex-wrap items-center gap-1.5 text-[13px]">
                           {item.color && (
-                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200 text-[11px]">
+                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200 text-[13px]">
                               顏色: {item.color}
                             </span>
                           )}
                           {item.material && (
-                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 font-mono rounded border border-emerald-200 text-[11px]">
+                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 font-mono rounded border border-emerald-200 text-[13px]">
                               原料: {item.material}
                             </span>
                           )}
@@ -518,7 +518,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         onMouseEnter={(e) => handleImageMouseEnter(allImages[0].url, allImages[0].name, e)}
                         onMouseMove={handleImageMouseMove}
                         onMouseLeave={handleImageMouseLeave}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs hover:shadow-xs"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs hover:shadow-xs"
                         title={
                           `開啟圖檔：${item.partNo} → ${allImages[0].name}\n` +
                           (allImages[0].via === 'file'
@@ -538,7 +538,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                             e.stopPropagation();
                             setOpenMultiId(openMultiId === item.id ? null : item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                           title={`此品號對應 ${allImages.length} 張圖檔，點擊展開選擇`}
                         >
                           <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
@@ -549,7 +549,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {openMultiId === item.id && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-40 py-2 text-xs"
+                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-40 py-2 text-[13px]"
                           >
                             <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                               <span className="font-bold text-slate-700">對應圖檔 ({allImages.length} 張)</span>
@@ -558,7 +558,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                   allImages.forEach((img) => openImage(img.url));
                                   setOpenMultiId(null);
                                 }}
-                                className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-[11px] cursor-pointer"
+                                className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-[13px] cursor-pointer"
                                 title="在瀏覽器新分頁一次打開所有關聯圖檔"
                               >
                                 ⚡ 一鍵開啟全部
@@ -581,7 +581,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                     <p className="font-mono font-bold text-slate-800 group-hover:text-indigo-700 truncate" title={img.name}>
                                       {img.name}
                                     </p>
-                                    <span className="text-[10px] text-slate-400">
+                                     {/* min-font-size exception: 圖檔匹配方式輔助說明，密集清單場景 */}
+                                    <span className="text-[13px] text-slate-400">
                                       {img.via === 'file' ? '檔名比對命中' : img.via === 'binding' ? '手動綁定' : 'OCR 內容辨識'}
                                     </span>
                                   </div>
@@ -603,7 +604,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {imageLib && onBindClick && (
                           <button
                             onClick={() => onBindClick(item)}
-                            className="text-xs text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-1.5 py-0.5 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer"
+                            className="text-[13px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-1.5 py-0.5 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer"
                             title="手動指定此品號對應的圖檔"
                           >
                             綁定

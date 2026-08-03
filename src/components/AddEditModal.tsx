@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { X, PlusCircle, Edit3, Check } from 'lucide-react';
 import { PartItem } from '../types';
 import { parseAlternates } from '../utils/alternates';
@@ -82,7 +82,7 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
               <h2 className="text-lg font-extrabold text-slate-900 font-sans">
                 {initialItem ? '修訂品號資料' : '新增品號資料'}
               </h2>
-              <p className="text-xs text-slate-500 font-medium">修訂既有醫療配件品號屬性、備註與對照別名</p>
+              <p className="text-[13px] text-slate-500 font-medium">修訂既有醫療配件品號屬性、備註與對照別名</p>
             </div>
           </div>
           <button
@@ -169,7 +169,7 @@ export const AddEditModal: React.FC<AddEditModalProps> = ({
               placeholder="以逗號或空格分隔，例如: D09-410-111-1、3M55567"
               className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 font-mono focus:outline-none focus:border-blue-500"
             />
-            <p className="text-xs text-gray-400">
+            <p className="text-[13px] text-gray-400">
               輸入後圖檔比對與搜尋都會一併查詢這些品號（例如 3M55567 的圖檔以 D09-410-111-1 命名也能找到）
             </p>
           </div>

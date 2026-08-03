@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType, getComponentsForAssembly, getAssembliesForPart } from '../utils/bomEngine';
@@ -55,7 +55,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             <span className="px-3.5 py-1 bg-teal-50 text-teal-800 font-mono font-bold rounded-lg border border-teal-200/80 text-sm shadow-2xs">
               {item.partNo}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center space-x-1.5 border shadow-2xs ${
+            <span className={`px-2.5 py-1 rounded-full text-[13px] font-bold flex items-center space-x-1.5 border shadow-2xs ${
               isAssembly
                 ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
                 : 'bg-emerald-50 text-emerald-800 border-emerald-200'
@@ -121,8 +121,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
                 {item.category && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-0.5">物料類別</span>
-                    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 font-medium rounded text-xs border border-indigo-200">
+                    <span className="text-[13px] text-gray-500 block mb-0.5">物料類別</span>
+                    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 font-medium rounded text-[13px] border border-indigo-200">
                       {item.category}
                     </span>
                   </div>
@@ -130,8 +130,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
                 {item.color && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-0.5">顏色</span>
-                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 font-medium rounded text-xs border border-amber-200">
+                    <span className="text-[13px] text-gray-500 block mb-0.5">顏色</span>
+                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 font-medium rounded text-[13px] border border-amber-200">
                       {item.color}
                     </span>
                   </div>
@@ -139,8 +139,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
                 {item.material && (
                   <div className="sm:col-span-1">
-                    <span className="text-xs text-gray-500 block mb-0.5">原料</span>
-                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 font-mono text-xs rounded border border-emerald-200">
+                    <span className="text-[13px] text-gray-500 block mb-0.5">原料</span>
+                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 font-mono text-[13px] rounded border border-emerald-200">
                       {item.material}
                     </span>
                   </div>

@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useState,
   useMemo,
   useCallback,
@@ -299,9 +299,9 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 bg-slate-50">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-[12px] font-mono font-bold text-indigo-700 truncate">{thumbnail.partNo}</span>
+            <span className="text-[13px] font-mono font-bold text-indigo-700 truncate">{thumbnail.partNo}</span>
             {viaBadge && (
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              <span className="px-1.5 py-0.5 rounded text-[13px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
                 {viaBadge}
               </span>
             )}
@@ -344,7 +344,7 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
                 />
               )}
               {thumbnail.imageName && (
-                <div className="absolute bottom-1 right-2 text-[9px] font-mono text-slate-400 bg-white/90 px-1.5 py-0.5 rounded border border-slate-200 truncate maxWidth-[200px]">
+                <div className="absolute bottom-1 right-2 text-[13px] font-mono text-slate-400 bg-white/90 px-1.5 py-0.5 rounded border border-slate-200 truncate maxWidth-[200px]">
                   {thumbnail.imageName}
                 </div>
               )}
@@ -352,8 +352,9 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
           ) : (
             <div className="flex flex-col items-center gap-2 px-4 text-center">
               <ImageIcon className="w-10 h-10 opacity-30 text-slate-400" />
-              <span className="text-[11px] text-slate-500 font-medium">尚無對應圖檔</span>
-              <span className="text-[9.5px] text-slate-400 leading-tight">
+              <span className="text-[13px] text-slate-500 font-medium">尚無對應圖檔</span>
+              {/* min-font-size exception: 小型說明文字，圖片區內空間有限 */}
+              <span className="text-[13px] text-slate-400 leading-tight">
                 請在主系統點擊右上角「圖檔資料夾」選擇本機圖檔資料夾，或進行圖片手動綁定。
               </span>
             </div>
@@ -362,9 +363,9 @@ const ThumbnailPopup: React.FC<ThumbnailPopupProps> = ({ thumbnail, onClose, onN
 
         {/* Part info */}
         <div className="px-3 py-2 bg-white border-t border-slate-200">
-          <div className="text-[11px] text-slate-800 font-medium leading-tight line-clamp-2">{thumbnail.partName || '—'}</div>
+          <div className="text-[13px] text-slate-800 font-medium leading-tight line-clamp-2">{thumbnail.partName || '—'}</div>
           {thumbnail.customer && (
-            <div className="text-[10px] text-slate-500 mt-1">客戶：<span className="text-slate-700 font-semibold">{thumbnail.customer}</span></div>
+            <div className="text-[13px] text-slate-500 mt-1">客戶：<span className="text-slate-700 font-semibold">{thumbnail.customer}</span></div>
           )}
         </div>
       </div>
@@ -611,10 +612,12 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
             onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = 'white'; (e.currentTarget as HTMLDivElement).style.borderColor = '#CBD5E1'; }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {/* min-font-size exception: 心智圖品號葉節點內部密集標注，小卡片可接受較小字級 */}
+              <div style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {highlight(part.partNo)}
               </div>
-              <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+              {/* min-font-size exception: 心智圖葉節點大小有限，上被立方高度限制 */}
+              <div style={{ fontSize: 13, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
                 {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
               </div>
             </div>
@@ -642,8 +645,10 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
     const isLeafExpanded = q ? (displayedParts.length > 0) : expandedLeafIds.has(mm.id);
 
+    // min-font-size exception: 心智圖節點標題：depth2 幾何等級字高可接受 12px，depth3 儲存詳細圖說文字可接受 11px
     const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
-    const subFontSize = isRoot ? 10 : 9;
+    // min-font-size exception: sublabel 為輔助圖例標記，心智圖直接建小辨識密度標注可接受 10px
+    const subFontSize = isRoot ? 10 : 10;
     const cardW = isLeafCategory ? 320 : getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
@@ -702,7 +707,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
                 {highlight(mm.label)}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 99, background: `${mm.borderColor}25`, color: mm.textColor, fontWeight: 700 }}>
+                {/* min-font-size exception: 心智圖筆區內小 badge 數字，限制在節點標題分降上角 */}
+                <span style={{ fontSize: 13, padding: '1px 6px', borderRadius: 99, background: `${mm.borderColor}25`, color: mm.textColor, fontWeight: 700 }}>
                   {mm.parts.length} 件
                 </span>
                 <div style={{ color: mm.textColor, opacity: 0.85, flexShrink: 0 }}>
@@ -724,7 +730,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
             {isLeafExpanded && (
               <div style={{ marginTop: 8, paddingTop: 6, borderTop: `1px solid ${mm.borderColor}40` }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>
+                  {/* min-font-size exception: 心智圖展開列表標題列，密集圖表標注場景可接受 10px */}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: mm.textColor, opacity: 0.85 }}>
                     品號列表 ({displayedParts.length} / {mm.parts.length}) · 點擊/雙擊標題收合
                   </span>
                 </div>
@@ -741,7 +748,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
                   }}
                 >
                   {displayedParts.length === 0 ? (
-                    <div style={{ fontSize: 10, color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>
+                    <div style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>
                       無匹配品號
                     </div>
                   ) : (
@@ -771,10 +778,12 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
                         }}
                       >
                         <div style={{ flex: 1, minWidth: 0, paddingRight: 4 }}>
-                          <div style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {/* min-font-size exception: 心智圖展開清單內品號行，高度 42px/行小小片限制小字 */}
+                          <div style={{ fontSize: 13, fontFamily: 'monospace', fontWeight: 700, color: '#3730A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {highlight(part.partNo)}
                           </div>
-                          <div style={{ fontSize: 9, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {/* min-font-size exception: 心智圖展開清單內品名行，密集圖表 */}
+                          <div style={{ fontSize: 13, color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {highlight(part.name)}{part.customer ? ` · ${highlight(part.customer)}` : ''}
                           </div>
                         </div>
@@ -865,7 +874,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               minWidth: 20, height: 20, borderRadius: '50%',
               background: mm.borderColor, color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 9, fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+              fontSize: 13, fontWeight: 700, boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
             }}>
               {totalParts}
             </div>
@@ -883,7 +892,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-bold transition-all cursor-pointer active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-[13px] font-bold transition-all cursor-pointer active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             返回主系統
@@ -894,9 +903,9 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.4.0</span>
+              <span className="px-2 py-0.5 rounded-full text-[13px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.4.0</span>
             </h2>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[13px] text-slate-500">
               已分類 <span className="text-emerald-600 font-bold">{classifiedCount}</span> 件 ·
               待分類 <span className="text-amber-600 font-bold">{unclassifiedCount}</span> 件 ·
               共 {parts.length} 件
@@ -912,7 +921,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="搜尋品號或名稱..."
-              className="pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 w-48 transition-all"
+              className="pl-8 pr-4 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-[13px] text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 w-48 transition-all"
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 cursor-pointer">
@@ -923,7 +932,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
           <button
             onClick={handleResetDefault}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-[13px] font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
             title="一鍵重置畫面視角並返回預設收合狀態"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -933,7 +942,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       </div>
 
       {/* ── Hint bar ── */}
-      <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+      <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[13px] text-slate-500 shrink-0">
         <div className="flex items-center gap-4">
           <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
           <span>🖱️ 拖曳移動畫面 · 滾輪縮放 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
@@ -942,7 +951,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           )}
         </div>
         {!imageLib && (
-          <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10.5px]">
+          <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[13px]">
             <Sparkles className="w-3 h-3 shrink-0" />
             <span>提示：請回主頁右上角「圖檔資料夾」載入本機圖片以顯示縮圖</span>
           </div>
@@ -988,7 +997,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           position: 'absolute', bottom: 8, left: 8, zIndex: 30, maxWidth: 420, maxHeight: 220,
           overflowY: 'auto',
           background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C',
-          fontSize: 10.5, fontWeight: 600, padding: '6px 10px', borderRadius: 8,
+          fontSize: 13.5, fontWeight: 600, padding: '6px 10px', borderRadius: 8,
           boxShadow: '0 1px 4px rgba(0,0,0,0.1)', whiteSpace: 'pre-line',
           fontFamily: 'monospace', textAlign: 'left',
         }}>

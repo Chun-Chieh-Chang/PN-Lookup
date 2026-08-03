@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { X, Link2, Check, Search, Image as ImageIcon } from 'lucide-react';
 import { ImageLibrary } from '../utils/imageLibrary';
 
@@ -59,12 +59,12 @@ export const ImageBindModal: React.FC<ImageBindModalProps> = ({
             為品號 <span className="font-mono font-bold text-blue-700">{partNo}</span> 指定圖檔
           </p>
           {alternates && alternates.length > 0 && (
-            <p className="text-xs text-gray-400 mb-3">
+            <p className="text-[13px] text-gray-400 mb-3">
               替代品號：{alternates.join('、')}（綁定任一者皆有效）
             </p>
           )}
           {boundName && (
-            <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 mb-3">
+            <p className="text-[13px] text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 mb-3">
               目前已綁定：<span className="font-mono">{boundName}</span>
               <button
                 onClick={() => { onUnbind(partNo); onClose(); }}
@@ -100,13 +100,13 @@ export const ImageBindModal: React.FC<ImageBindModalProps> = ({
                     <span className="truncate font-mono">{name}</span>
                   </span>
                   {isBound ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-medium shrink-0">
+                    <span className="inline-flex items-center gap-1 text-emerald-600 text-[13px] font-medium shrink-0">
                       <Check className="w-3.5 h-3.5" /> 已綁定
                     </span>
                   ) : (
                     <button
                       onClick={() => { onBind(partNo, name); onClose(); }}
-                      className="px-2.5 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md shrink-0 cursor-pointer"
+                      className="px-2.5 py-1 text-[13px] bg-blue-600 hover:bg-blue-500 text-white rounded-md shrink-0 cursor-pointer"
                     >
                       綁定
                     </button>

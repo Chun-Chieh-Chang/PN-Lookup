@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span
                   onClick={handleVersionClick}
                   title="五擊解鎖前端「修訂」與後台「增刪」管理權限"
-                  className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
+                  className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[13px] px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
                   v3.6.0
                 </span>
@@ -73,17 +73,17 @@ export const Header: React.FC<HeaderProps> = ({
                 {isAdminMode && (
                   <span
                     onClick={onEnterAdmin}
-                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-xs font-bold cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
+                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-[13px] font-bold cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
                     title="點擊直接跳轉後台進行資料「增刪」"
                   >
                     <span>修訂已解鎖</span>
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <p className="text-[13px] text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span>醫療器材與 BOM 階層規格料號即時對照平台</span>
                 <span className="hidden sm:inline text-slate-300">•</span>
-                <span className="font-mono text-indigo-700/80 font-semibold text-[11px]">Developed by Wesley Chang, July-2026 @Mouldex.</span>
+                <span className="font-mono text-indigo-700/80 font-semibold text-[13px]">Developed by Wesley Chang, July-2026 @Mouldex.</span>
               </p>
             </div>
           </div>
@@ -94,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenGraph && (
               <button
                 onClick={onOpenGraph}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer active:scale-95 border border-indigo-400/30"
+                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer active:scale-95 border border-indigo-400/30"
                 title="開啟 2D / 3D 全景醫療產品知識與 BOM 網絡圖譜"
               >
                 <Network className="w-4 h-4 text-indigo-200" />
@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
             {isAdminMode && onEnterAdmin && (
               <button
                 onClick={onEnterAdmin}
-                className="inline-flex items-center px-3.5 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95 border border-amber-300 shadow-amber-500/20"
+                className="inline-flex items-center px-3.5 py-1.5 text-sm font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95 border border-amber-300 shadow-amber-500/20"
                 title="前往後台管理頁面執行『增刪』（新增與刪除數據）"
               >
                 <ShieldAlert className="w-4 h-4 text-slate-950" />
@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
             
             <button
               onClick={onOpenBatchSearch}
-              className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
+              className="inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
               title="貼上多筆品號一次比對檢索"
             >
               <ListChecks className="w-4 h-4" />
@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={onPickImageFolder}
-                  className={`inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all gap-1.5 cursor-pointer border active:scale-95 ${
+                  className={`inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1.5 cursor-pointer border active:scale-95 ${
                     imageFolderName
                       ? 'bg-teal-50/80 hover:bg-teal-100 text-teal-700 border-teal-200'
                       : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border-slate-200'
@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {imageFolderName && onOpenOrphansModal && (
                   <button
                     onClick={onOpenOrphansModal}
-                    className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg transition-all gap-1 cursor-pointer border active:scale-95 ${
+                    className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1 cursor-pointer border active:scale-95 ${
                       orphanCount > 0
                         ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 shadow-xs'
                         : 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onOpenExportImport}
-              className="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
+              className="inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
             >
               <FileSpreadsheet className="w-4 h-4" />
               <span>匯出與匯入</span>
