@@ -411,7 +411,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
-  const [treeKey, setTreeKey]         = useState(0);
   const [expandedLeafIds, setExpandedLeafIds] = useState<Set<string>>(new Set());
   const [diagInfo, setDiagInfo] = useState<string>('');
   const diagRef = useRef<NodeDiag[]>([]);
@@ -419,8 +418,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   // translate: 將 root 置於画布左側居中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 400 });
   const [treeZoom, setTreeZoom]           = useState(0.85);
-  // 記錄 D3Tree 當前的 transform，remount 後恢復視角
-  const lastTransformRef = useRef<{ translateX: number; translateY: number; scale: number } | null>(null);
 
 
   const toggleLeafExpanded = useCallback((id: string) => {
@@ -471,7 +468,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     setCurrentNodeSizeY(GAP.collapsedRow);
     setTreeTranslate({ x: 80, y: Math.round(h / 2) });
     setTreeZoom(0.85);
-    setTreeKey(prev => prev + 1);
   }, []);
 
   // 追蹤 D3Tree 中目前展開的分類節點數量，控制 nodeSize 切換時機
@@ -492,9 +488,11 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
   // 攔截 toggleNode：
   // 1. 更新 openBranchIds（維護哪些節點是展開的）
-  // 2. 根據更新後的展開數量，設定 nodeSize.y
-  // 3. 讀取當前 SVG transform，remount 後恢復視角
-  // 4. 執行 D3 內建 toggle，treeKey++ 強制 remount
+  // 2. 根據更新後的展開數量，設定 nodeSize.y（prop 更新 → react-d3-tree 就地重算佈局）
+  // 3. 執行 D3 內建 toggle
+  // 注意：不可用 treeKey++ 強制 remount —— remount 會重設 __rd3t.collapsed 導致展開/收合失效，
+  //       且 remount 觸發 bindZoomListener → d3-zoom defaultExtent 讀取 SVG width="100%" 相對長度
+  //       可能拋出 NotSupportedError: Could not resolve relative length。視角由 d3 __zoom 自然保留。
   const wrapToggleNode = useCallback((toggleNode: () => void, nodeId: string, isCurrentlyCollapsed: boolean) => {
     return () => {
       // 更新展開節點集合
@@ -510,20 +508,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       const nextNodeSizeY = nextOpen.size > 0 ? GAP.expandedRow : GAP.collapsedRow;
       setCurrentNodeSizeY(nextNodeSizeY);
 
-      // 讀取 D3 當前的 SVG transform，remount 後恢復視角
-      const gEl = containerRef.current?.querySelector('.rd3t-g') as SVGGElement | null;
-      if (gEl) {
-        const attr = gEl.getAttribute('transform') || '';
-        const tMatch = attr.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
-        const sMatch = attr.match(/scale\(([-\d.]+)\)/);
-        if (tMatch && sMatch) {
-          setTreeTranslate({ x: parseFloat(tMatch[1]), y: parseFloat(tMatch[2]) });
-          setTreeZoom(parseFloat(sMatch[1]));
-        }
-      }
-
       toggleNode();
-      setTreeKey(prev => prev + 1);
     };
   }, [openBranchIds]);
 
@@ -1013,7 +998,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         onClick={() => setThumbnail(null)}
       >
         <D3Tree
-          key={treeKey}
           data={d3TreeData}
           orientation="horizontal"
           pathFunc={customStepPath}

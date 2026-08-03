@@ -1,5 +1,53 @@
 # PN-Lookup 開發日誌
 
+## v7.5.1 — 心智圖展開/收合失效 + SVGLength 崩潰修復 (MindMap Toggle Regression Fix)
+
+### 需求內容
+- 使用者回報：commit 754a538 之後「變糟了，無法展開與收合」，控制台拋出
+  `NotSupportedError: Failed to read the 'value' property from 'SVGLength': Could not resolve relative length`（`SVGSVGElement` 堆疊）。
+
+### 根因分析 (RCA) — 雙重缺陷
+
+#### 缺陷 1（功能性）：`treeKey++` 強制 remount 抹除 toggle 狀態
+- `wrapToggleNode` 在 `toggleNode()` 之後呼叫 `setTreeKey(prev => prev + 1)` → D3Tree 整個 remount。
+- remount 時 react-d3-tree 的 `assignInternalProperties` 重新 clone 資料並將所有節點 `collapsed` 重設為 `false`，
+  接著 `setInitialTreeDepth` 依 `initialDepth={1}` 重新收合 depth ≥ 1 的節點 → **toggle 結果被抹除**，
+  展開/收合變成無效操作（DOM 重繪但畫面與初始狀態完全相同）。
+
+#### 缺陷 2（崩潰）：remount → `bindZoomListener` → d3-zoom `defaultExtent` 讀取相對長度
+- 每次 remount 的 `componentDidMount` 都會執行 `bindZoomListener` →
+  `svg.call(d3zoom().transform, ...)` → d3-zoom `defaultExtent()`（d3-zoom/src/zoom.js:17-28）。
+- react-d3-tree 渲染的 `<svg width="100%" height="100%">` 無 `viewBox` → `defaultExtent` 讀取
+  `e.width.baseVal.value`（SVGLength 相對長度）。當全新 SVG 尚未建立可解析的 viewport（detached / 未 layout）時，
+  Chrome 拋出 `NotSupportedError: Could not resolve relative length`（已用 Playwright 實測：detached svg 必拋，connected 正常）。
+- 使用者環境在 toggle remount 當下命中此路徑 → 整個 React 樹拋錯。
+
+### 修正與預防措施 (CAPA)
+1. **移除 remount 機制**：`wrapToggleNode` 只保留 `setOpenBranchIds` + `setCurrentNodeSizeY` + `toggleNode()`。
+   - `nodeSize` / `separation` 是 props，react-d3-tree 的 `generateTree()` 每次 render 就地重算佈局，無需 remount。
+   - 視角（pan/zoom）由 d3 內部 `__zoom` + `g[transform]` 自然保留，不再需要「讀 transform → remount → 還原」的補償 hack。
+2. **`handleResetDefault` 移除 `setTreeKey`**：改由 `translate` / `zoom` props 變更觸發 `getDerivedStateFromProps` 與
+   `bindZoomListener`（既有 svg 已 layout，無崩潰風險）。
+3. **刪除死碼**：`treeKey` state、`lastTransformRef`、`key={treeKey}` prop。
+4. **保留 754a538 的正確部分**：`openBranchIds` / `currentNodeSizeY` 追蹤展開節點以切換 `nodeSize.y`
+   （收合 65px / 展開 155px），此機制本就不依賴 remount。
+
+### 確效驗證
+- `npx tsc --noEmit`：zero errors。
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS。
+- Playwright 實測（vite dev）：
+  - 點擊展開 4 → 7 節點（零件/組件/Set 子節點出現）✓
+  - 再次點擊收合 7 → 4 節點 ✓
+  - 展開時行距 217px（155×1.4）、收合時 71.5px（65×1.1）✓
+  - 滾輪縮放至 scale=1.48 後 toggle，視角完全保留（translate/scale 數值不變）✓
+  - 全程 console 無 NotSupportedError ✓
+
+### 回歸規則
+- `regression_defense_and_logic_freezing`：資料不變量 565/181 不受影響
+- `data_structure_change_notification`：無資料結構變更
+
+---
+
 ## v7.5.0 — 全專案代碼優化作業：死碼清除 + 心智圖架構根治 + DEV_LOG 同步 (Full Refactor & Dead-Code Sweep)
 
 ### 需求內容
