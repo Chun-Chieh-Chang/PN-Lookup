@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PN-Lookup 資料流映射文件 — Data Mapping Specification</title>
+  <style>
+    :root {
+      --bg:#0f172a;--surface:#1e293b;--surface2:#263348;--border:#334155;
+      --accent:#60a5fa;--accent2:#34d399;--accent3:#f472b6;--accent4:#fb923c;
+      --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--warn:#fbbf24;--danger:#f87171;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:14px}
+    header{background:linear-gradient(135deg,#1e3a5f 0%,#0f172a 60%,#1a1040 100%);border-bottom:1px solid var(--border);padding:32px 48px 24px}
+    header h1{font-size:20px;font-weight:800;background:linear-gradient(90deg,#60a5fa,#a78bfa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    header p{color:var(--text2);font-size:12px;margin-top:6px}
+    .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;margin-left:8px;background:rgba(96,165,250,.15);color:var(--accent);border:1px solid rgba(96,165,250,.3);-webkit-text-fill-color:var(--accent)}
+    .container{max-width:1160px;margin:0 auto;padding:32px 48px}
+    .toc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:36px}
+    .toc h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px}
+    .toc ol{padding-left:18px}
+    .toc li{margin:4px 0}
+    .toc a{color:var(--accent);text-decoration:none;font-size:12.5px}
+    .toc a:hover{text-decoration:underline}
+    section{margin-bottom:52px}
+    section h2{font-size:17px;font-weight:700;margin-bottom:18px;padding-bottom:9px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    section h2 .num{width:26px;height:26px;border-radius:7px;background:var(--accent);color:#0f172a;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+    section h3{font-size:13px;font-weight:700;margin:20px 0 10px;color:var(--accent)}
+    p{color:var(--text2);margin-bottom:10px}
+    .pipeline{display:flex;align-items:center;flex-wrap:wrap;margin:20px 0;overflow-x:auto;gap:0}
+    .pipeline-step{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:120px;text-align:center;flex-shrink:0}
+    .pipeline-step .icon{font-size:20px;margin-bottom:4px}
+    .pipeline-step .label{font-size:11px;font-weight:700;color:var(--text2)}
+    .pipeline-step .sublabel{font-size:9.5px;color:var(--text3);margin-top:2px;font-family:monospace}
+    .pipeline-arrow{color:var(--text3);font-size:16px;padding:0 5px;flex-shrink:0}
+    .step-raw{border-color:var(--accent4)}.step-raw .label{color:var(--accent4)}
+    .step-build{border-color:#a78bfa}.step-build .label{color:#a78bfa}
+    .step-master{border-color:var(--accent2)}.step-master .label{color:var(--accent2)}
+    .step-api{border-color:var(--accent)}.step-api .label{color:var(--accent)}
+    .step-enrich{border-color:var(--accent3)}.step-enrich .label{color:var(--accent3)}
+    .step-ui{border-color:var(--warn)}.step-ui .label{color:var(--warn)}
+    .mapping-table{width:100%;border-collapse:collapse;margin:14px 0}
+    .mapping-table th{background:var(--surface2);color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.7px;padding:9px 13px;text-align:left;border-bottom:1px solid var(--border)}
+    .mapping-table td{padding:9px 13px;border-bottom:1px solid rgba(51,65,85,.5);vertical-align:top;color:var(--text2);font-size:13px}
+    .mapping-table tr:last-child td{border-bottom:none}
+    .mapping-table tr:hover td{background:rgba(255,255,255,.02)}
+    code{background:rgba(96,165,250,.1);color:var(--accent);border:1px solid rgba(96,165,250,.2);padding:1px 5px;border-radius:4px;font-family:'Consolas',monospace;font-size:11.5px}
+    code.green{background:rgba(52,211,153,.1);color:var(--accent2);border-color:rgba(52,211,153,.2)}
+    code.pink{background:rgba(244,114,182,.1);color:var(--accent3);border-color:rgba(244,114,182,.2)}
+    code.orange{background:rgba(251,146,60,.1);color:var(--accent4);border-color:rgba(251,146,60,.2)}
+    .flow-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:14px 0}
+    .flow-card .title{font-size:12.5px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+    .flow-card ol,.flow-card ul{padding-left:20px}
+    .flow-card li{margin:6px 0;color:var(--text2);font-size:12.5px}
+    .alert{border-left:4px solid;border-radius:8px;padding:11px 15px;margin:14px 0;font-size:12.5px}
+    .alert-info{border-color:var(--accent);background:rgba(96,165,250,.08);color:var(--text2)}
+    .alert-warn{border-color:var(--warn);background:rgba(251,191,36,.08);color:#fde68a}
+    .alert-green{border-color:var(--accent2);background:rgba(52,211,153,.08);color:#6ee7b7}
+    .tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10.5px;font-weight:600;margin:1px}
+    .tag-required{background:rgba(248,113,113,.15);color:var(--danger);border:1px solid rgba(248,113,113,.3)}
+    .tag-derived{background:rgba(244,114,182,.15);color:var(--accent3);border:1px solid rgba(244,114,182,.3)}
+    .tag-optional{background:rgba(148,163,184,.1);color:var(--text3);border:1px solid var(--border)}
+    .tag-local{background:rgba(251,191,36,.12);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
+    footer{border-top:1px solid var(--border);padding:22px 48px;color:var(--text3);font-size:11px;text-align:center}
+    pre{color:var(--text2);font-size:11.5px;font-family:monospace;line-height:1.7;overflow-x:auto}
+  </style>
+</head>
+<body>
+<header>
+  <h1>PN-Lookup 資料流映射文件<span class="badge">v7.5.0</span></h1>
+  <p>Data Mapping Specification — 從原始種子檔案到操作介面欄位的完整資料轉換說明 &nbsp;|&nbsp; 最後更新：2026-08-03</p>
+</header>
+
+<div class="container">
+
+<!-- TOC -->
+<div class="toc">
+  <h3>目錄 Table of Contents</h3>
+  <ol>
+    <li><a href="#s1">整體資料流總覽 (Pipeline Overview)</a></li>
+    <li><a href="#s2">原始種子數據 → Master JSON (Build Stage)</a></li>
+    <li><a href="#s3">PartItem 型別定義與欄位說明</a></li>
+    <li><a href="#s4">資料載入路徑 (Runtime Loading)</a></li>
+    <li><a href="#s5">BOM 衍生欄位計算 (enrichParts)</a></li>
+    <li><a href="#s6">圖檔解析邏輯 (Image Resolution)</a></li>
+    <li><a href="#s7">心智圖分類引擎 (MindMap Classifier)</a></li>
+    <li><a href="#s8">主表格欄位映射 (PartsTable UI)</a></li>
+    <li><a href="#s9">搜尋與過濾邏輯 (Filter Engine)</a></li>
+    <li><a href="#s10">別稱去重規則 (Alternates Dedup)</a></li>
+    <li><a href="#s11">資料持久化策略 (Persistence)</a></li>
+  </ol>
+</div>
+
+<!-- S1 -->
+<section id="s1">
+  <h2><span class="num">1</span> 整體資料流總覽 (Pipeline Overview)</h2>
+  <p>整個資料流分為 <strong>建置期 (Build Time)</strong> 與 <strong>執行期 (Runtime)</strong> 兩個階段，完全隔離，任何私有數據不會進入 Git 倉庫。</p>
+  <div class="pipeline">
+    <div class="pipeline-step step-raw"><div class="icon">📁</div><div class="label">原始種子 JSON</div><div class="sublabel">rawdata/master_table_unified.json</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-build"><div class="icon">⚙️</div><div class="label">建置腳本</div><div class="sublabel">scripts/buildMaster.js</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-master"><div class="icon">🗄️</div><div class="label">Master JSON</div><div class="sublabel">data/pn-lookup-master.json</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-api"><div class="icon">🌐</div><div class="label">API / 靜態模式</div><div class="sublabel">/api/parts &amp; /api/bom</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-enrich"><div class="icon">🔗</div><div class="label">BOM 富化</div><div class="sublabel">enrichParts()</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-ui"><div class="icon">🖥️</div><div class="label">操作介面</div><div class="sublabel">PartsTable + Modals</div></div>
+  </div>
+  <div class="alert alert-info">
+    <strong>雙模式架構：</strong>本地模式 (Flask + <code>node server.js</code>) 透過 <code>GET /api/parts</code> 讀取 <code>data/pn-lookup-master.json</code>；
+    GitHub Pages 靜態模式 (<code>VITE_STATIC_ONLY=true</code>) 不呼叫任何 API，使用者透過 ExportImportModal 手動匯入 JSON。
+  </div>
+</section>
+
+<!-- S2 -->
+<section id="s2">
+  <h2><span class="num">2</span> 原始種子數據 → Master JSON (Build Stage)</h2>
+  <p><code>scripts/buildMaster.js</code> 讀取 <code>rawdata/master_table_unified.json</code>，解析四個資料表，以 <strong>partNo 為主鍵</strong>去重合併，輸出 <code>data/pn-lookup-master.json</code>。</p>
+
+  <h3>種子 JSON 四個資料來源的欄位映射</h3>
+  <table class="mapping-table">
+    <thead><tr><th>資料來源</th><th>原始欄位</th><th>映射至 PartItem 欄位</th><th>備註</th></tr></thead>
+    <tbody>
+      <tr><td rowspan="6"><code>internalParts</code><br/><small>廠內品號</small></td><td><code>產品編號</code> / <code>partNo</code></td><td><code class="green">partNo</code> <span class="tag tag-required">主鍵</span></td><td>優先 <code>產品編號</code>，次 <code>partNo</code></td></tr>
+      <tr><td><code>零件名稱(中)</code> / <code>零件名稱(英)</code></td><td><code class="green">name</code></td><td>優先中文，fallback 英文，再 fallback partNo</td></tr>
+      <tr><td><code>客戶</code></td><td><code class="green">customer</code></td><td></td></tr>
+      <tr><td><code>顏色</code></td><td><code class="green">color</code></td><td></td></tr>
+      <tr><td><code>原料</code></td><td><code class="green">material</code></td><td></td></tr>
+      <tr><td><code>零件編號(客)</code></td><td><code class="green">alternates[]</code></td><td>客戶對應品號，加入 alternates 陣列</td></tr>
+
+      <tr><td rowspan="3"><code>customerParts</code><br/><small>客戶品號</small></td><td><code>品號</code> / <code>partNo</code></td><td><code class="green">partNo</code> <span class="tag tag-required">主鍵</span></td><td></td></tr>
+      <tr><td><code>品名</code></td><td><code class="green">name</code></td><td></td></tr>
+      <tr><td><code>客戶</code></td><td><code class="green">customer</code></td><td></td></tr>
+
+      <tr><td rowspan="4"><code>customerPartNumbers</code><br/><small>廠客對照表</small></td><td><code>對應廠內料號</code></td><td><code class="green">partNo</code> (廠內) + <code class="green">alternates[]</code> ← 客戶料號</td><td rowspan="2">建立雙向品號：廠內的 alternates 包含客戶料號；客戶料號的 alternates 包含廠內品號</td></tr>
+      <tr><td><code>客戶料號</code></td><td><code class="green">partNo</code> (客戶) + <code class="green">alternates[]</code> ← 廠內品號</td></tr>
+      <tr><td><code>名稱</code></td><td><code class="green">name</code></td><td></td></tr>
+      <tr><td><code>客戶</code></td><td><code class="green">customer</code></td><td></td></tr>
+
+      <tr><td rowspan="4"><code>bomHierarchy</code><br/><small>BOM 組立關係</small></td><td><code>assemblyId</code> / <code>id</code></td><td><code class="green">partNo</code> (組件) + <code class="pink">bom.children</code></td><td>同時寫入 PartItem 記錄與 bom 映射表</td></tr>
+      <tr><td><code>name</code></td><td><code class="green">name</code></td><td></td></tr>
+      <tr><td><code>levelKey</code> (SA/SB/SC/SD組立)</td><td><code class="green">category</code></td><td>如 <code>SA組立</code>、<code>SB組立</code></td></tr>
+      <tr><td><code>children[]</code></td><td><code class="pink">bom.children[assemblyId][]</code><br/><code class="pink">bom.parents[childId][]</code></td><td>雙向索引：父→子 / 子→父</td></tr>
+    </tbody>
+  </table>
+
+  <div class="flow-card">
+    <div class="title">🔑 addPart() 去重合併規則</div>
+    <ol>
+      <li>以 <code>partNo</code> 為主鍵，<code>partsMap.get(partNo)</code> 查詢是否已存在</li>
+      <li>首次出現：直接寫入完整記錄，<code>id = partNo</code></li>
+      <li>重複出現：<strong>只補充空白欄位</strong>（已有值的欄位不覆蓋）</li>
+      <li><code>alternates[]</code>：多次出現的別稱陣列以 <code>Set</code> union 合併去重</li>
+      <li>最終輸出 <strong>565 筆去重品號</strong> + <strong>181 組 BOM 組立關係</strong>（不變量，由 <code>verifyCoreLogic.js</code> 守護）</li>
+    </ol>
+  </div>
+
+  <h3>輸出格式：<code>data/pn-lookup-master.json</code></h3>
+  <div class="flow-card">
+    <pre>{
+  "type": "pn-lookup-master",
+  "version": "3.1.0",
+  "parts": [ /* PartItem[] — 565 筆 */ ],
+  "bom": {
+    "children": { "SA001": ["C01-001", "C02-005"] },   // assemblyId → 子件清單
+    "parents":  { "C01-001": ["SA001", "SB003"]    }   // childId → 所屬組件清單
+  },
+  "totalParts": 565
+}</pre>
+  </div>
+</section>
+
+<!-- S3 -->
+<section id="s3">
+  <h2><span class="num">3</span> PartItem 型別定義與欄位說明</h2>
+  <p>定義於 <code>src/types.ts</code>，每個品號在記憶體中的完整資料結構：</p>
+  <table class="mapping-table">
+    <thead><tr><th>欄位</th><th>型別</th><th>屬性</th><th>說明</th><th>來源</th></tr></thead>
+    <tbody>
+      <tr><td><code>id</code></td><td><code>string</code></td><td><span class="tag tag-required">必填</span></td><td>記錄唯一識別符。Master JSON 中等於 partNo；手動新增為 <code>custom-{timestamp}</code></td><td>buildMaster / 手動新增</td></tr>
+      <tr><td><code>partNo</code></td><td><code>string</code></td><td><span class="tag tag-required">必填</span></td><td>廠內或客戶品號，搜尋與 BOM join 的主要 key</td><td>種子 JSON</td></tr>
+      <tr><td><code>name</code></td><td><code>string</code></td><td><span class="tag tag-required">必填</span></td><td>品號中英文名稱，fallback 為 partNo</td><td>種子 JSON</td></tr>
+      <tr><td><code>customer</code></td><td><code>string</code></td><td><span class="tag tag-required">必填</span></td><td>客戶名稱（廠內品號通常為空字串），用於篩選與分類</td><td>種子 JSON</td></tr>
+      <tr><td><code>category</code></td><td><code>string?</code></td><td><span class="tag tag-optional">選填</span></td><td>品號分類描述，如 <code>單品零件</code>、<code>SA組立</code></td><td>buildMaster</td></tr>
+      <tr><td><code>color</code></td><td><code>string?</code></td><td><span class="tag tag-optional">選填</span></td><td>零件顏色，來自 internalParts <code>顏色</code> 欄位</td><td>internalParts</td></tr>
+      <tr><td><code>material</code></td><td><code>string?</code></td><td><span class="tag tag-optional">選填</span></td><td>原料材質，來自 internalParts <code>原料</code> 欄位</td><td>internalParts</td></tr>
+      <tr><td><code>notes</code></td><td><code>string?</code></td><td><span class="tag tag-optional">選填</span></td><td>備註欄位，手動填寫</td><td>手動</td></tr>
+      <tr><td><code>alternates</code></td><td><code>string[]?</code></td><td><span class="tag tag-optional">選填</span></td><td>別稱品號清單（廠客對照、替代料號）；圖檔比對與搜尋遍歷全部別稱</td><td>customerPartNumbers 雙向綁定</td></tr>
+      <tr><td><code>itemType</code></td><td><code>'part' | 'assembly'</code></td><td><span class="tag tag-derived">衍生欄位</span></td><td>由 <code>isAssemblyPartNo()</code> 即時推導，<strong>不寫入儲存</strong></td><td>enrichParts()</td></tr>
+      <tr><td><code>components</code></td><td><code>string[]?</code></td><td><span class="tag tag-derived">衍生欄位</span></td><td>組件的子件品號清單，從 <code>bom.children[partNo]</code> 即時查詢，<strong>不寫入儲存</strong></td><td>enrichParts()</td></tr>
+      <tr><td><code>usedInAssemblies</code></td><td><code>string[]?</code></td><td><span class="tag tag-derived">衍生欄位</span></td><td>零件被哪些組件使用，從 <code>bom.parents[partNo]</code> 即時查詢，<strong>不寫入儲存</strong></td><td>enrichParts()</td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-warn">
+    <strong>衍生欄位保護：</strong><code>stripDerivedFields()</code> 在落檔前移除 itemType / components / usedInAssemblies，確保儲存格式僅含主檔欄位。BOM 關係每次從記憶體 <code>childrenMap/parentsMap</code> 即時重算。
+  </div>
+</section>
+
+<!-- S4 -->
+<section id="s4">
+  <h2><span class="num">4</span> 資料載入路徑 (Runtime Loading)</h2>
+  <table class="mapping-table">
+    <thead><tr><th>執行環境</th><th>品號載入</th><th>BOM 載入</th><th>持久化</th></tr></thead>
+    <tbody>
+      <tr><td><strong>本地 Flask 模式</strong></td><td><code>GET /api/parts</code> → master.json <code>.parts</code></td><td><code>GET /api/bom</code> → master.json <code>.bom</code></td><td>localStorage + <code>PUT /api/parts</code> debounce 800ms</td></tr>
+      <tr><td><strong>GitHub Pages 靜態模式</strong></td><td>API 攔截返回 <code>[]</code>，需手動匯入</td><td>攔截返回 <code>{children:{}, parents:{}}</code></td><td>sessionStorage，不持久化</td></tr>
+    </tbody>
+  </table>
+  <div class="flow-card">
+    <div class="title">🔄 App.tsx 啟動流程</div>
+    <ol>
+      <li><code>useState</code> 初始化：非靜態模式從 localStorage 讀入上次資料並執行 <code>enrichParts()</code></li>
+      <li><code>useEffect</code>：並行呼叫 <code>initBOM()</code>（載入 BOM 映射表）與 <code>loadParts()</code>（載入品號清單）</li>
+      <li><code>loadParts()</code> 回傳後呼叫 <code>enrichParts()</code>，所有衍生欄位即時計算</li>
+      <li>若品號列表為空，自動打開 <code>ExportImportModal</code></li>
+      <li>圖檔資料夾：<code>restoreImageFolder()</code> 嘗試恢復 OPFS 資料夾句柄</li>
+      <li>OCR 快取：<code>loadOcrCache()</code> 從 IndexedDB 載入上次掃描結果</li>
+    </ol>
+  </div>
+</section>
+
+<!-- S5 -->
+<section id="s5">
+  <h2><span class="num">5</span> BOM 衍生欄位計算 (enrichParts)</h2>
+  <p>BOM 引擎定義於 <code>src/utils/bomEngine.ts</code>，在記憶體維護三份資料結構：</p>
+  <table class="mapping-table">
+    <thead><tr><th>記憶體變數</th><th>型別</th><th>內容</th></tr></thead>
+    <tbody>
+      <tr><td><code>childrenMap</code></td><td><code>Record&lt;string,string[]&gt;</code></td><td>組件 partNo → 子件 partNo[]（181 組）</td></tr>
+      <tr><td><code>parentsMap</code></td><td><code>Record&lt;string,string[]&gt;</code></td><td>子件 partNo → 所屬組件 partNo[]（反向索引）</td></tr>
+      <tr><td><code>assemblySet</code></td><td><code>Set&lt;string&gt;</code></td><td>childrenMap 所有 key 的集合（快速組件判斷）</td></tr>
+    </tbody>
+  </table>
+  <div class="flow-card">
+    <div class="title">⚙️ isAssemblyPartNo() 判斷順序</div>
+    <ol>
+      <li>partNo 在 <code>assemblySet</code> 中存在 → <code>assembly</code></li>
+      <li>partNo 大寫後以 <code>MDXE</code> 開頭 → <code>assembly</code>（前綴規則）</li>
+      <li>否則 → <code>part</code></li>
+    </ol>
+  </div>
+  <h3>遞迴 BOM 查詢（最大深度 5）</h3>
+  <p><code>getComponentsForAssembly()</code> 展開組件所有子件（含子組件遞迴）；<code>getAssembliesForPart()</code> 反向查詢零件被哪些組件使用。兩者均以 visited Set 防止循環引用。</p>
+  <h3>品號改名連鎖更新 (renamePartNo)</h3>
+  <p>品號改名時自動遍歷 childrenMap 所有 key 與 value 替換，並重建 parentsMap 與 assemblySet，保持 BOM 關係完整性。</p>
+</section>
+
+<!-- S6 -->
+<section id="s6">
+  <h2><span class="num">6</span> 圖檔解析邏輯 (Image Resolution)</h2>
+  <p>定義於 <code>src/utils/imageResolver.ts</code>，<code>resolveAllImages()</code> 依以下三策略依序嘗試：</p>
+  <table class="mapping-table">
+    <thead><tr><th>優先順序</th><th>策略</th><th>機制</th><th>via</th></tr></thead>
+    <tbody>
+      <tr><td style="text-align:center;font-weight:700;color:var(--accent2)">1</td><td><strong>檔名比對</strong></td><td><code>imageLib.matchAll(partNo, alternates)</code>：比對資料夾中所有檔名是否包含品號或別稱（大小寫正規化）</td><td><code class="green">file</code></td></tr>
+      <tr><td style="text-align:center;font-weight:700;color:var(--accent)">2</td><td><strong>手動綁定</strong></td><td>查詢 <code>localStorage['pn_lookup_image_bindings']</code>：以 partNo 及所有別稱為 key 尋找綁定檔名</td><td><code>binding</code></td></tr>
+      <tr><td style="text-align:center;font-weight:700;color:var(--accent3)">3</td><td><strong>OCR 辨識</strong></td><td>正規化比對 <code>ocrIndex</code>（IndexedDB）中每個圖檔的 OCR 文字是否包含品號字串</td><td><code class="pink">ocr</code></td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-green">
+    <strong>別稱展開搜尋：</strong>以 <code>[partNo, ...alternates]</code> 作為搜尋鍵集合同步比對，任一別稱命中即成功，解決廠內與客戶品號命名差異導致圖檔找不到的問題。
+  </div>
+</section>
+
+<!-- S7 -->
+<section id="s7">
+  <h2><span class="num">7</span> 心智圖分類引擎 (MindMap Classifier)</h2>
+  <p>定義於 <code>src/utils/mindmapClassifier.ts</code>，<code>classifyPart(item)</code> 依以下優先順序分類：</p>
+  <div class="flow-card">
+    <div class="title">🧠 classifyPart() 分類優先順序</div>
+    <ol>
+      <li><strong>精確品號比對 (exact)</strong>：ICU 插袋針 / 採藥針 8 個子類的預定義 Set（來自產品識別教育訓練 PDF）</li>
+      <li><strong>廠內品號前綴比對 (pattern)</strong>：取 partNo 前 3 字元比對 FACTORY_PREFIX_MAP 10 個規則組（A01~H00 廠內零件 + K/Q 連接管）</li>
+      <li><strong>組件判斷 (inferred)</strong>：<code>isAssemblyPartNo()</code> → SA/SB/SC/SD/特殊/MDXE/MDXI Set 組件</li>
+      <li><strong>客戶欄位比對 (customer_field)</strong>：customer 字串含 BD / MPS / Biometrix / Vivus</li>
+      <li><strong>Fallback</strong>：<code>unclassified</code> — 待人工分類</li>
+    </ol>
+  </div>
+  <h3>心智圖節點深度與卡片尺寸對應</h3>
+  <table class="mapping-table">
+    <thead><tr><th>深度 (Depth)</th><th>代表節點</th><th>卡片寬度</th><th>說明</th></tr></thead>
+    <tbody>
+      <tr><td>0 — Root</td><td>凱益 — 產品識別導圖</td><td>288px</td><td>根節點</td></tr>
+      <tr><td>1</td><td>廠內品號 / 客戶品號 / 待人工分類</td><td>240px</td><td>主分類</td></tr>
+      <tr><td>2</td><td>零件 / 組件 / Set / ICU / BD / MPS / Biometrix / Vivus</td><td>204px</td><td>次分類</td></tr>
+      <tr><td>3 (葉類別)</td><td>T接頭 / Y管 / SA / 插袋針 等</td><td>320px</td><td>含品號列表展開</td></tr>
+      <tr><td>4 (ICU 子類)</td><td>透氣口 / Clave / 不透氣 / 奶嘴 / 9035 / 花系列</td><td>168px</td><td>Mini 品號卡片</td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-info">
+    <strong>Layout 技術細節：</strong>使用 react-d3-tree，horizontal 模式下 <code>nodeSize.x=390</code> 控制水平欄距（≥ 320px 卡片），<code>nodeSize.y=65</code> 控制垂直行高。D3 原生 pan/zoom (<code>scaleExtent: 0.2~3</code>)。
+  </div>
+</section>
+
+<!-- S8 -->
+<section id="s8">
+  <h2><span class="num">8</span> 主表格欄位映射 (PartsTable UI)</h2>
+  <p>定義於 <code>src/components/PartsTable.tsx</code>，每列映射一筆 PartItem：</p>
+  <table class="mapping-table">
+    <thead><tr><th>UI 欄位 / 操作</th><th>PartItem 欄位</th><th>補充邏輯</th></tr></thead>
+    <tbody>
+      <tr><td><strong>客戶名稱</strong>（可點擊篩選）</td><td><code>item.customer</code></td><td>點擊呼叫 <code>onCustomerClick()</code> → 設定 <code>filterState.selectedCustomers</code></td></tr>
+      <tr><td><strong>品號</strong>（可複製）</td><td><code>item.partNo</code></td><td><code>navigator.clipboard.writeText(partNo)</code></td></tr>
+      <tr><td><strong>別稱 Alternates</strong></td><td><code>item.alternates[]</code></td><td>超過 2 個顯示摺疊 Dropdown</td></tr>
+      <tr><td><strong>品名</strong>（關鍵字高亮）</td><td><code>item.name</code></td><td><code>highlightText(name, keyword)</code> → 匹配子字串標黃色 <code>&lt;mark&gt;</code></td></tr>
+      <tr><td><strong>類型標籤</strong></td><td><code>item.itemType</code> (衍生)</td><td><code>getItemType(item)</code> → 「零件 Part」藍色 / 「組件 Assembly」紫色</td></tr>
+      <tr><td><strong>圖檔縮圖</strong></td><td><code>resolveAllImages()</code> 結果</td><td>快取 Map 避免重複計算；懸停 120ms 顯示 260×210 浮動縮圖</td></tr>
+      <tr><td><strong>BOM 組件數 badge</strong></td><td><code>item.components?.length</code></td><td>顯示子件品號清單</td></tr>
+      <tr><td><strong>排序</strong></td><td>customer / partNo / name / category</td><td><code>localeCompare('zh-Hant', {numeric:true})</code></td></tr>
+      <tr><td><strong>分頁</strong></td><td>25 / 50 / 100 筆 / 頁</td><td><code>sortedItems.slice(startIndex, startIndex+pageSize)</code></td></tr>
+      <tr><td><strong>批次複製</strong></td><td><code>selectedIds[]</code></td><td>格式：<code>客戶\t品號\t品名</code>，多列 \n 分隔</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- S9 -->
+<section id="s9">
+  <h2><span class="num">9</span> 搜尋與過濾邏輯 (Filter Engine)</h2>
+  <p>定義於 <code>App.tsx filteredParts</code> useMemo，所有條件 AND 關係依序過濾：</p>
+  <table class="mapping-table">
+    <thead><tr><th>過濾條件</th><th>FilterState 欄位</th><th>比對邏輯</th></tr></thead>
+    <tbody>
+      <tr><td><strong>品號類型</strong></td><td><code>itemTypeFilter</code></td><td><code>getItemType(item)</code> 比對 <code>'part' | 'assembly' | 'all'</code></td></tr>
+      <tr><td><strong>客戶篩選</strong></td><td><code>selectedCustomers[]</code></td><td><code>selectedCustomers.includes(item.customer)</code></td></tr>
+      <tr><td><strong>品號前綴</strong></td><td><code>prefixFilter</code></td><td><code>partNo.split('-')[0]</code> 或前 3 字元大寫比對</td></tr>
+      <tr><td><strong>關鍵字搜尋</strong></td><td><code>keyword</code> + <code>searchField</code> + <code>matchMode</code></td><td>
+        <strong>模糊 (fuzzy)</strong>：<code>includes(q)</code>　<strong>精確 (exact)</strong>：<code>startsWith(q)</code><br/>
+        <code>all</code>：partNo + alternates + customer + name；<code>partNo</code>：partNo + alternates；其他單欄位
+      </td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- S10 -->
+<section id="s10">
+  <h2><span class="num">10</span> 別稱去重規則 (Alternates Dedup)</h2>
+  <p>定義於 <code>src/utils/alternates.ts</code>，<code>dedupeAlternates(list, selfPartNo)</code>：</p>
+  <div class="flow-card">
+    <div class="title">🧹 去重規則</div>
+    <ul>
+      <li>全部轉大寫進行唯一性比對（<code>Set&lt;string&gt;</code>），<strong>保留原始大小寫輸出</strong></li>
+      <li>過濾空字串與空白項目</li>
+      <li>過濾與 <code>selfPartNo</code> 相同的項目（品號不應出現在自己的別稱中）</li>
+      <li>若去重後長度為 0，回傳 <code>undefined</code>（不寫入空陣列，節省儲存空間）</li>
+    </ul>
+  </div>
+  <div class="alert alert-info">
+    <strong>觸發時機：</strong>① 用戶在 AddEditModal 儲存品號時；② buildMaster.js <code>addPart()</code> 合併 alternates 時（Set union）
+  </div>
+</section>
+
+<!-- S11 -->
+<section id="s11">
+  <h2><span class="num">11</span> 資料持久化策略 (Persistence)</h2>
+  <table class="mapping-table">
+    <thead><tr><th>資料</th><th>儲存位置</th><th>Key</th><th>讀寫時機</th></tr></thead>
+    <tbody>
+      <tr><td>品號清單 (PartItem[])</td><td>localStorage + 伺服器 JSON</td><td><code>medical_parts_system_data_v2</code></td><td>寫：parts 變動後 800ms debounce；讀：App 初始化</td></tr>
+      <tr><td>圖檔手動綁定</td><td>localStorage</td><td><code>pn_lookup_image_bindings</code></td><td>寫：ImageBindModal 確認綁定；讀：App 初始化</td></tr>
+      <tr><td>已排除孤兒圖檔</td><td>localStorage</td><td><code>pn_lookup_dismissed_orphans</code></td><td>寫：OrphanImagesModal 標記排除；讀：App 初始化</td></tr>
+      <tr><td>OCR 辨識結果</td><td>IndexedDB (idb.ts)</td><td>圖檔 SHA/path key</td><td>寫：OCR 掃描完成後；讀：圖檔資料夾恢復時</td></tr>
+      <tr><td>圖檔資料夾句柄</td><td>OPFS / FileSystem Access API</td><td>內部 handle</td><td>寫：選取資料夾後；讀：<code>restoreImageFolder()</code></td></tr>
+      <tr><td><span class="tag tag-local">靜態模式保護</span></td><td>—</td><td>—</td><td>App 初始化時強制 <code>localStorage.removeItem(STORAGE_KEY_PARTS)</code>，防止私有資料洩漏</td></tr>
+    </tbody>
+  </table>
+  <div class="alert alert-warn">
+    <strong>隱私防護：</strong>GitHub Pages 靜態模式下，App 初始化時強制清除 localStorage 品號資料，確保先前在本地模式輸入的私有品號不會被公開部署版本讀取。
+  </div>
+</section>
+
+</div>
+<footer>
+  PN-Lookup Data Mapping Specification v7.5.0 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
+</footer>
+</body>
+</html>
