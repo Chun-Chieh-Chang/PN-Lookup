@@ -415,7 +415,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const [diagInfo, setDiagInfo] = useState<string>('');
   const diagRef = useRef<NodeDiag[]>([]);
   const containerRef                  = useRef<HTMLDivElement>(null);
-  const [treeTranslate, setTreeTranslate] = useState({ x: 60, y: 400 });
+  // translate: 將 root 置於画布左側居中
+  const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 400 });
 
 
   const toggleLeafExpanded = useCallback((id: string) => {
@@ -449,49 +450,21 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     return highlightIds.size > 0;
   }, [expandedLeafIds, searchQuery, highlightIds]);
 
-  const treeMetrics = useMemo(() => {
-    let maxD = 0;
-    let leafRows = 0;
-    function traverse(node: MindMapNode) {
-      if (node.depth > maxD) maxD = node.depth;
-      const isLeafCategory = node.parts.length > 0 && (!node.children || node.children.length === 0);
-      const isLeafExpanded = isLeafCategory && (searchQuery.trim() ? node.parts.length > 0 : expandedLeafIds.has(node.id));
-      if (!node.children || node.children.length === 0) {
-        leafRows += isLeafExpanded ? 3.5 : 1;
-      } else {
-        node.children.forEach(traverse);
-      }
-    }
-    traverse(mindMapTree);
-    return { maxDepth: maxD, leafRows };
-  }, [mindMapTree, expandedLeafIds, searchQuery]);
-
-  // treeCanvasWidth: based on column depth (x in react-d3-tree nodeSize)
-  const treeCanvasWidth = useMemo(() => {
-    const calculatedW = (treeMetrics.maxDepth + 1) * GAP.columnDepth + 200;
-    const containerW = containerRef.current?.clientWidth || window.innerWidth;
-    return Math.max(calculatedW, containerW);
-  }, [treeMetrics.maxDepth]);
-
-  // treeCanvasHeight: based on row step (y in react-d3-tree nodeSize × separation)
-  const treeCanvasHeight = useMemo(() => {
-    const rowStep = hasAnyExpanded ? GAP.expandedRow * 2.5 : GAP.collapsedRow * 2.5;
-    const calculatedH = treeMetrics.leafRows * rowStep + 300;
-    const containerH = containerRef.current?.clientHeight || window.innerHeight;
-    return Math.max(calculatedH, containerH);
-  }, [treeMetrics.leafRows, hasAnyExpanded]);
-
+  // 開啟 Modal 時計算初始 translate：將 root 置於容器左側居中
   React.useLayoutEffect(() => {
-    setTreeTranslate({ x: 60, y: Number(treeCanvasHeight) / 2 });
-  }, [treeCanvasHeight, isOpen]);
+    if (!isOpen) return;
+    const h = containerRef.current?.clientHeight || window.innerHeight - 120;
+    setTreeTranslate({ x: 80, y: Math.round(h / 2) });
+  }, [isOpen]);
 
   const handleResetDefault = useCallback(() => {
+    const h = containerRef.current?.clientHeight || window.innerHeight - 120;
     setSearchQuery('');
     setThumbnail(null);
     setExpandedLeafIds(new Set());
     setTreeKey(prev => prev + 1);
-    setTreeTranslate({ x: 60, y: Number(treeCanvasHeight) / 2 });
-  }, [treeCanvasHeight]);
+    setTreeTranslate({ x: 80, y: Math.round(h / 2) });
+  }, []);
 
   const effectiveNodeSize = useMemo(() => ({
     // react-d3-tree 內部 tree.nodeSize([nodeSize.y, nodeSize.x]):
@@ -963,7 +936,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       <div className="px-5 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
         <div className="flex items-center gap-4">
           <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-          <span>🖱️ 拖曳移動畫面 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
+          <span>🖱️ 拖曳移動畫面 · 滾輪縮放 · 點擊類別卡片展開/收合 · 點擊品號卡片彈出縮圖</span>
           {searchQuery && highlightIds.size > 0 && (
             <span className="text-amber-600 font-semibold">找到 {highlightIds.size} 個匹配節點</span>
           )}
@@ -976,34 +949,37 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
         )}
       </div>
 
-      {/* ── Canvas (react-d3-tree) ── */}
-      <div ref={containerRef} className="flex-1 overflow-auto relative" onClick={() => setThumbnail(null)} style={{ minHeight: 400 }}>
-        <div style={{ width: treeCanvasWidth, height: treeCanvasHeight, minWidth: '100%', minHeight: '100%', position: 'relative' }}>
-
-          <D3Tree
-            key={treeKey}
-            data={d3TreeData}
-            orientation="horizontal"
-            pathFunc={customStepPath}
-            separation={effectiveSeparation}
-            nodeSize={effectiveNodeSize}
-            renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
-            translate={treeTranslate}
-            zoom={1}
-            zoomable={false}
-            enableLegacyTransitions={false}
-            collapsible={true}
-            initialDepth={1}
-            pathClassFunc={() => 'mindmap-link'}
-            svgClassName="mindmap-svg"
-          />
-          <style>{`
-            .mindmap-svg { width: 100%; height: 100%; display: block; }
-            .mindmap-link { fill: none; stroke: #CBD5E1; stroke-width: 1.5px; }
-            .rd3t-leaf-node circle, .rd3t-branch-node circle { display: none; }
-            .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
-          `}</style>
-        </div>
+      {/* ── Canvas (react-d3-tree) — D3 原生 Pan/Zoom ── */}
+      {/* 容器填滿剩餘高度，overflow: hidden；由 D3 內部管理平移/縮放，不用 OS 卷軸 */}
+      <div
+        ref={containerRef}
+        className="flex-1 overflow-hidden relative"
+        onClick={() => setThumbnail(null)}
+      >
+        <D3Tree
+          key={treeKey}
+          data={d3TreeData}
+          orientation="horizontal"
+          pathFunc={customStepPath}
+          separation={effectiveSeparation}
+          nodeSize={effectiveNodeSize}
+          renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
+          translate={treeTranslate}
+          zoomable={true}
+          scaleExtent={{ min: 0.2, max: 3 }}
+          zoom={0.85}
+          enableLegacyTransitions={false}
+          collapsible={true}
+          initialDepth={1}
+          pathClassFunc={() => 'mindmap-link'}
+          svgClassName="mindmap-svg"
+        />
+        <style>{`
+          .mindmap-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+          .mindmap-link { fill: none; stroke: #CBD5E1; stroke-width: 1.5px; }
+          .rd3t-leaf-node circle, .rd3t-branch-node circle { display: none; }
+          .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
+        `}</style>
       </div>
 
       {/* ── 診斷疊加（重疊偵測結果，僅開發用） ── */}
