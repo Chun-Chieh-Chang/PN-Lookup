@@ -118,7 +118,6 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   onApplyParts,
   onResetData,
 }) => {
-  const [importText, setImportText] = useState('');
   const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
   const [copiedData, setCopiedData] = useState(false);
   const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'xlsx'>('csv');

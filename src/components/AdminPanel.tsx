@@ -19,7 +19,7 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onClose, onAddPart, onDeletePart, onRenameCustomer, onDeleteCustomer, onImportParts, onBOMUpdated }) => {
   const [children, setChildren] = useState<Record<string, string[]>>(() => ({ ...getBOMChildren() }));
-  const [parents, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
+  const [, setParents] = useState<Record<string, string[]>>(() => ({ ...getBOMParents() }));
   const [searchQuery, setSearchQuery] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [addKey, setAddKey] = useState('');

@@ -1,5 +1,35 @@
 # PN-Lookup 開發日誌
 
+## v7.5.2 — 全域優化作業：死碼清除 + 過期設定修復 (Global Optimization: Dead-Code Sweep)
+
+### 需求內容
+- 使用者執行「專案的整體程式碼與檔案優化作業」（全域規則），涵蓋階段一盤點清理、階段二文件同步、階段三 MECE 整理。
+
+### 清理項目（全部先驗證引用再移除，零功能 Regression）
+1. **未使用宣告（tsc `--noUnusedLocals --noUnusedParameters` 掃描，14 項）**：
+   - `ProductMindMapModal.tsx`：移除 `Eye` import、`CONN` 常數、`createPartLeafNodes()` 函式、一般父卡片分支的 `listH = 0`
+   - `ExportImportModal.tsx`：移除 `importText` / `setImportText` state（檔案匯入改走 FileReader 後已成死碼）
+   - `AdminPanel.tsx`：`parents` getter 改為 `[, setParents]`（值從未被讀取，僅 setter 觸發重繪）
+   - `Header.tsx`：移除 `totalCount` / `customerCount` / `onResetData` props（未使用）
+   - `OrphanImagesModal.tsx`：移除 `FileSearch` import、`bindings` prop（未使用）
+   - `PartsTable.tsx`：移除 `SortOrder` type（未使用）
+   - `excelExport.ts`：`FULL_DATA_HEADERS.map(() => ...)` 移除未用參數 `h`
+   - `App.tsx`：同步移除 Header / OrphanImagesModal 的對應 props 傳遞
+2. **無用依賴**：移除 devDependency `tsx`（全專案零引用，僅存在於 package-lock）
+3. **過期設定**：`.env.example` 原為 AI Studio 模板（GEMINI_API_KEY / APP_URL，程式碼零引用），更新為實際使用的 `PORT` / `VITE_STATIC_ONLY` / `DISABLE_HMR`
+4. **雜物**：刪除根目錄 `vite-dev.log`（未追蹤）
+
+### 確效驗證
+- `npx tsc --noEmit --noUnusedLocals --noUnusedParameters`：exit 0
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS（built in 4.42s）
+
+### 回歸規則
+- `regression_defense_and_logic_freezing`：資料不變量 565/181 不受影響
+- `data_structure_change_notification`：無資料結構變更
+- `ui_minimum_font_size`：本次未觸碰任何字級樣式
+
+---
+
 ## v7.5.1 — 心智圖展開/收合失效 + SVGLength 崩潰修復 (MindMap Toggle Regression Fix)
 
 ### 需求內容

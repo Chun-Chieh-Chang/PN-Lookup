@@ -9,7 +9,6 @@ import {
   Search,
   ArrowLeft,
   Layers,
-  Eye,
   Info,
   Image as ImageIcon,
   ExternalLink,
@@ -37,12 +36,6 @@ const CARD = {
   nodePad:   '10px 14px',
   leafPad:   '7px 12px',
   partPad:   '6px 10px',
-};
-
-const CONN = {
-  horizontalLen: 23,
-  lineW: 1,
-  nodeHeaderH: 20,
 };
 
 const GAP = {
@@ -113,21 +106,6 @@ const PALETTE = {
   unclassified:  { bg: '#F8FAFC', border: '#CBD5E1', text: '#64748B' },   // 淺灰
   partNode:      { bg: '#F8FAFC', border: '#CBD5E1', text: '#1E40AF' },   // 品號葉節點
 };
-
-function createPartLeafNodes(partsList: PartItem[], depth: number): MindMapNode[] {
-  return partsList.map((part) => ({
-    id: `part-${part.partNo}`,
-    label: part.partNo,
-    sublabel: part.name + (part.customer ? ` (${part.customer})` : ''),
-    color: PALETTE.partNode.bg,
-    textColor: PALETTE.partNode.text,
-    borderColor: PALETTE.partNode.border,
-    children: [],
-    parts: [part],
-    depth,
-    isPartNode: true,
-  }));
-}
 
 function buildMindMapTree(parts: PartItem[]): MindMapNode {
   const buckets = new Map<MindMapCategory, PartItem[]>();
@@ -847,7 +825,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     }
 
     // 一般父分類卡片
-    const listH = 0;
     const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
     const nodeH = baseHeaderH;
 

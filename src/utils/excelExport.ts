@@ -112,7 +112,7 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     'createdAt': p.createdAt ?? '',
   }));
   const wsFull = XLSX.utils.json_to_sheet(fullData, { header: FULL_DATA_HEADERS });
-  wsFull['!cols'] = FULL_DATA_HEADERS.map(h => ({ wch: 18 }));
+  wsFull['!cols'] = FULL_DATA_HEADERS.map(() => ({ wch: 18 }));
   XLSX.utils.book_append_sheet(wb, wsFull, '完整資料');
 
   return wb;

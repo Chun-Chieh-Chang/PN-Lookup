@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.1.0)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.5.2)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與產品思維導圖 (MindMap) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.1.0-indigo.svg)
+![Version](https://img.shields.io/badge/version-v7.5.2-indigo.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -33,8 +33,10 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 ```text
 PN-Lookup/
 ├── .agents/                 # AI Agent 專案全域行為規則 (AGENTS.md)
+├── .kiro/                   # Kiro 編輯器導向規則 (steering/ui-standards.md)
 ├── data/                    # [隱私隔離] 本地單一真實資料庫 (pn-lookup-master.json)
 ├── rawdata/                 # [隱私隔離] 原始 Excel 與工程圖檔
+├── docs/                    # 技術規格文件 (data-mapping.html — 欄位映射規格)
 ├── scripts/                 # 資料處理與確效驗證腳本
 │   ├── buildMaster.js       # Master Table 建置腳本
 │   └── verifyCoreLogic.js   # 核心數據不變量與防迴歸確效門禁 (npm run build 前置檢查)
@@ -54,16 +56,24 @@ PN-Lookup/
 │   │   ├── BatchSearchModal.tsx # 批次品號搜尋與比對對照
 │   │   └── StatsBar.tsx         # 統計指標列 (Morandi 微卡片)
 │   ├── utils/               # 邏輯與引擎工具庫
-│   │   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
-│   │   ├── imageResolver.ts    # 檔名/綁定/OCR 三階解析器
-│   │   ├── bomEngine.ts        # BOM 階層雙向推導引擎
-│   │   ├── excelExport.ts      # Excel/CSV 多工作表匯出引擎
-│   │   ├── mindmapClassifier.ts# 思維導圖產品分類引擎
-│   │   ├── ocr.ts              # Tesseract.js / pdf.js 本地 OCR 辨識引擎
+│   │   ├── alternates.ts        # 別稱去重規則 (dedupeAlternates)
 │   │   ├── assemblyEnglishMap.json # 132 筆組件英文品名對照
-│   │   └── ...
+│   │   ├── bomEngine.ts         # BOM 階層雙向推導引擎
+│   │   ├── bomService.ts        # BOM 持久化 (localStorage / API)
+│   │   ├── customerPartImport.ts# 客戶品號 CSV 匯入解析
+│   │   ├── excelExport.ts       # Excel/CSV 多工作表匯出引擎
+│   │   ├── idb.ts               # IndexedDB 封裝 (OCR 快取)
+│   │   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
+│   │   ├── imageResolver.ts     # 檔名/綁定/OCR 三階解析器
+│   │   ├── mindmapClassifier.ts # 思維導圖產品分類引擎
+│   │   ├── ocr.ts               # Tesseract.js / pdf.js 本地 OCR 辨識引擎
+│   │   ├── partsService.ts      # 品號資料服務 (localStorage / API)
+│   │   └── serverStatus.ts      # 伺服器狀態偵測 (IS_STATIC_MODE)
 │   ├── App.tsx              # 主應用程式入口與狀態控制
+│   ├── main.tsx             # React 掛載入口
+│   ├── types.ts             # PartItem / FilterState 型別定義
 │   └── index.css            # Taste-Skill 設計系統樣式與字型
+├── .github/workflows/       # GitHub Actions (Pages 部署)
 ├── DEV_LOG.md               # 開發日誌與版本變更歷史 (RCA & CAPA)
 ├── index.html               # Web 頁面載入點 (Google Fonts)
 ├── server.js                # 本地 Express REST API 伺服器
@@ -87,7 +97,7 @@ npm run dev
 
 ### 3. 一鍵建構與生產部署
 ```bash
-npm run start         # 自動建構 dist/ 並啟動 Express 伺服器 (http://localhost:3000)
+npm run start         # 自動建構 dist/ 並啟動 Express 伺服器 (http://localhost:3001)
 ```
 
 ---

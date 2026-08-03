@@ -1,0 +1,31 @@
+# 跨平台換行符歸一化規則 (Line Ending Normalization)
+# 原則：儲存庫一律 LF，各平台 checkout 時依作業系統自動轉換 (Windows→CRLF, macOS/Linux→LF)
+# 保障 MECE 跨平台同構性：換行符不因平台差異而失效
+
+* text=auto
+
+# 程式碼與文字檔 — 明確宣告為文字，Git 自動處理 EOL 轉換
+*.ts     text
+*.tsx    text
+*.js     text
+*.mjs    text
+*.cjs    text
+*.json   text
+*.css    text
+*.html   text
+*.md     text
+*.yml    text
+*.yaml   text
+*.env.example text
+
+# 二進位檔 — 禁止任何 EOL 轉換
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.svg    binary
+*.pdf    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary

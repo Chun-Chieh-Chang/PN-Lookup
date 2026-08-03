@@ -110,7 +110,7 @@
     <div class="pipeline-step step-ui"><div class="icon">🖥️</div><div class="label">操作介面</div><div class="sublabel">PartsTable + Modals</div></div>
   </div>
   <div class="alert alert-info">
-    <strong>雙模式架構：</strong>本地模式 (Flask + <code>node server.js</code>) 透過 <code>GET /api/parts</code> 讀取 <code>data/pn-lookup-master.json</code>；
+    <strong>雙模式架構：</strong>本地模式 (<code>node server.js</code>, Express) 透過 <code>GET /api/parts</code> 讀取 <code>data/pn-lookup-master.json</code>；
     GitHub Pages 靜態模式 (<code>VITE_STATIC_ONLY=true</code>) 不呼叫任何 API，使用者透過 ExportImportModal 手動匯入 JSON。
   </div>
 </section>
@@ -205,7 +205,7 @@
   <table class="mapping-table">
     <thead><tr><th>執行環境</th><th>品號載入</th><th>BOM 載入</th><th>持久化</th></tr></thead>
     <tbody>
-      <tr><td><strong>本地 Flask 模式</strong></td><td><code>GET /api/parts</code> → master.json <code>.parts</code></td><td><code>GET /api/bom</code> → master.json <code>.bom</code></td><td>localStorage + <code>PUT /api/parts</code> debounce 800ms</td></tr>
+      <tr><td><strong>本地模式 (Express)</strong></td><td><code>GET /api/parts</code> → master.json <code>.parts</code></td><td><code>GET /api/bom</code> → master.json <code>.bom</code></td><td>localStorage + <code>PUT /api/parts</code> debounce 800ms</td></tr>
       <tr><td><strong>GitHub Pages 靜態模式</strong></td><td>API 攔截返回 <code>[]</code>，需手動匯入</td><td>攔截返回 <code>{children:{}, parents:{}}</code></td><td>sessionStorage，不持久化</td></tr>
     </tbody>
   </table>
@@ -291,7 +291,7 @@
     </tbody>
   </table>
   <div class="alert alert-info">
-    <strong>Layout 技術細節：</strong>使用 react-d3-tree，horizontal 模式下 <code>nodeSize.x=390</code> 控制水平欄距（≥ 320px 卡片），<code>nodeSize.y=65</code> 控制垂直行高。D3 原生 pan/zoom (<code>scaleExtent: 0.2~3</code>)。
+    <strong>Layout 技術細節：</strong>使用 react-d3-tree，horizontal 模式下 <code>nodeSize.x=390</code> 控制水平欄距（≥ 320px 卡片），<code>nodeSize.y</code> 動態切換（收合 65px / 展開 155px，依展開節點數）。D3 原生 pan/zoom (<code>scaleExtent: 0.2~3</code>)。
   </div>
 </section>
 
@@ -373,7 +373,7 @@
 
 </div>
 <footer>
-  PN-Lookup Data Mapping Specification v7.5.0 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
+  PN-Lookup Data Mapping Specification v7.5.2 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
 </footer>
 </body>
 </html>

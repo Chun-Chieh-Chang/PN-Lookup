@@ -435,12 +435,9 @@ export default function App() {
       
       {/* Header */}
       <Header
-        totalCount={parts.length}
-        customerCount={allCustomers.length}
         onOpenBatchSearch={() => setIsBatchSearchOpen(true)}
 
         onOpenExportImport={() => setIsExportImportOpen(true)}
-        onResetData={handleResetData}
         onOpenGraph={() => setIsGraphModalOpen(true)}
         onEnterAdmin={() => {
           window.location.hash = 'admin';
@@ -556,7 +553,6 @@ export default function App() {
         orphanFiles={orphanInfo.orphanFiles}
         dismissedFiles={orphanInfo.dismissedFiles}
         ocrIndex={ocrIndex}
-        bindings={bindings}
         onBind={handleBind}
         onToggleDismiss={handleToggleDismiss}
         isOcrScanning={isOcrScanning}

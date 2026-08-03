@@ -2,12 +2,9 @@ import React, { useRef } from 'react';
 import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, ShieldAlert, ExternalLink, Network } from 'lucide-react';
 
 interface HeaderProps {
-  totalCount: number;
-  customerCount: number;
   onOpenBatchSearch: () => void;
 
   onOpenExportImport: () => void;
-  onResetData: () => void;
   onEnterAdmin?: () => void;
   onOpenGraph?: () => void;
   imageFolderName?: string | null;
@@ -19,12 +16,9 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  totalCount,
-  customerCount,
   onOpenBatchSearch,
 
   onOpenExportImport,
-  onResetData,
   onEnterAdmin,
   onOpenGraph,
   imageFolderName,
@@ -66,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
                   title="五擊解鎖前端「修訂」與後台「增刪」管理權限"
                   className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[13px] px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
-                  v3.6.0
+                  v7.5.2
                 </span>
 
                 {/* Show Unlocked Status Pill when unlocked */}

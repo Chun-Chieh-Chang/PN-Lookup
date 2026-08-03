@@ -35,7 +35,6 @@ interface PartsTableProps {
 }
 
 type SortField = 'customer' | 'partNo' | 'category' | 'name';
-type SortOrder = 'asc' | 'desc';
 
 export const PartsTable: React.FC<PartsTableProps> = ({
   items,

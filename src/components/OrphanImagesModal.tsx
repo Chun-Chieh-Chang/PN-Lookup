@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { X, AlertCircle, FileSearch, Link2, Check, Search, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { X, AlertCircle, Link2, Check, Search, Image as ImageIcon, Sparkles } from 'lucide-react';
 import { ImageLibrary } from '../utils/imageLibrary';
 import { PartItem } from '../types';
 
@@ -11,7 +11,6 @@ interface OrphanImagesModalProps {
   orphanFiles: string[];
   dismissedFiles?: string[];
   ocrIndex: Map<string, string>;
-  bindings: Record<string, string>;
   onBind: (partNo: string, fileName: string) => void;
   onToggleDismiss?: (fileName: string) => void;
   isOcrScanning?: boolean;
@@ -29,7 +28,6 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
   orphanFiles = [],
   dismissedFiles = [],
   ocrIndex,
-  bindings,
   onBind,
   onToggleDismiss,
   isOcrScanning = false,
