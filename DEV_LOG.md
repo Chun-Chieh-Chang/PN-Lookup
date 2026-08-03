@@ -1,5 +1,28 @@
 # PN-Lookup 開發日誌
 
+## v7.1.0 — 代碼與數據架構重構整合：融合雲端 D3 心智圖座標軸修復並固化 565 筆去重數據邏輯 (Local Data Logic & Cloud UI Integration)
+
+### 需求內容
+- 使用者要求「比較本地與雲端代碼，分析哪一個數據邏輯比較正確」，並授權按照整合建議執行修復。
+
+### 根因分析 (RCA)
+- **雲端建置崩潰 (Build Crash)**: 雲端 `scripts/buildMaster.js` 強行讀取 `ref/產品一覽表.xlsm`。但 `.gitignore` 將 `ref/` 定義為 Zero-Private-Data 隱私目錄（不推送至遠端），導致任何全新的 `git clone` 或 GitHub Actions CI 自動化建置發出 `process.exit(1)` 建置失敗崩潰。
+- **數據不變量毀損**: 雲端 parsing 產生 683 筆 parts，破壞了原本 565 筆獨一無二品號及 181 BOM 階層不變量。
+- **UI 卡片重疊**: 雲端正確診斷出 `react-d3-tree` 在橫向模式下傳遞給 D3 的 `nodeSize` 陣列為 `[y, x]` 轉置軸，需要調大列深度與動態計算高度。
+
+### 矯正與預防措施 (CAPA) & 融合處置
+1. **數據層 (Data Layer)**:
+   - 堅守本地 `scripts/buildMaster.js`（基於 JSON 種子檔）與 `scripts/verifyCoreLogic.js`（565 筆去重固化門禁與 CI 沙盒防禦）。
+2. **UI 視覺層 (ProductMindMapModal.tsx)**:
+   - 納入雲端 `GAP` 間距定數、自適應 `effectiveNodeSize` (360px 深度 / 140-300px 垂直)、`effectiveSeparation` 與 `overflow-auto` 滾動支援。
+   - 完整保留本地的雙擊卡片展開/收合、未分類單層包覆與微縮圖彈窗機制。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` → 100% PASS (565 筆品號去重 + 181 BOM 階層 + 圖像邊界匹配防禦)。
+- `npm run build` → ✓ built in 5.40s，打包 100% 成功。
+
+---
+
 ## v7.0.0 — 產品思維導圖重構：深度 PDF 解析 + ICU Spike 完整子類分類 (MindMap Tree v5.0.0)
 
 ### 需求內容

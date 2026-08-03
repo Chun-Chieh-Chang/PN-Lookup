@@ -45,6 +45,18 @@ const CONN = {
   nodeHeaderH: 20,
 };
 
+const GAP = {
+  depthLevel: 360,       // 水平深度列間距 (x)
+  collapsedSibling: 140, // 未展開時 sibling 間距 (y)
+  expandedSibling: 300,  // 展開葉卡片時 sibling 間距 (y)
+  expandSiblingsSep: 1.2,
+  collapSiblingsSep: 1.0,
+  nonSiblingsSep: 1.4,
+};
+
+type NodeDiag = { id: string; label: string; depth: number; x: number; y: number; w: number; h: number };
+
+
 // ────────────────────────────────────────────────────────────────────────────
 // Types
 // ────────────────────────────────────────────────────────────────────────────
@@ -400,9 +412,12 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
   const [treeKey, setTreeKey]         = useState(0);
   const [expandedLeafIds, setExpandedLeafIds] = useState<Set<string>>(new Set());
+  const [treeCanvasHeight, setTreeCanvasHeight] = useState<number | string>('100%');
+  const [diagInfo, setDiagInfo] = useState<string>('');
+  const diagRef = useRef<NodeDiag[]>([]);
   const containerRef                  = useRef<HTMLDivElement>(null);
   // react-d3-tree translate：等容器掛載後取真實高度置中
-  const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 300 });
+  const [treeTranslate, setTreeTranslate] = useState({ x: 40, y: 40 });
 
   const toggleLeafExpanded = useCallback((id: string) => {
     setExpandedLeafIds(prev => {
@@ -418,15 +433,11 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     setThumbnail(null);
     setExpandedLeafIds(new Set());
     setTreeKey(prev => prev + 1);
-    if (containerRef.current) {
-      setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
-    }
+    setTreeTranslate({ x: 40, y: 40 });
   }, []);
 
   React.useEffect(() => {
-    if (containerRef.current) {
-      setTreeTranslate({ x: 80, y: containerRef.current.clientHeight / 2 });
-    }
+    setTreeTranslate({ x: 40, y: 40 });
   }, [isOpen]);
 
   const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
@@ -444,6 +455,71 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     collectMatchingIds(mindMapTree, q, [], r);
     return r;
   }, [mindMapTree, searchQuery]);
+
+  const hasAnyExpanded = useMemo(() => {
+    if (expandedLeafIds.size > 0) return true;
+    if (!searchQuery.trim()) return false;
+    return highlightIds.size > 0;
+  }, [expandedLeafIds, searchQuery, highlightIds]);
+
+  React.useLayoutEffect(() => {
+    if (!mindMapTree) return;
+    const level1Count = mindMapTree.children.length;
+    let level2Count = 0;
+    mindMapTree.children.forEach(c => { level2Count += c.children.length || 1; });
+
+    const calcHeight = () => {
+      const isExpanded = hasAnyExpanded || searchQuery.trim().length > 0;
+      const nodeH = isExpanded ? GAP.expandedSibling : GAP.collapsedSibling;
+      const verticalGaps = [
+        100, // root
+        level1Count * nodeH + 40,
+        level2Count * (nodeH * 0.7) + 40,
+      ];
+      const estimatedH = verticalGaps.reduce((a, b) => Math.max(a, b), 400);
+      return Math.max(estimatedH, window.innerHeight * 0.6);
+    };
+    const h = calcHeight();
+    setTreeCanvasHeight(h);
+  }, [mindMapTree, hasAnyExpanded, searchQuery]);
+
+  const effectiveNodeSize = useMemo(() => ({
+    x: GAP.depthLevel,
+    y: hasAnyExpanded ? GAP.expandedSibling : GAP.collapsedSibling,
+  }), [hasAnyExpanded]);
+
+  const effectiveSeparation = useMemo(() => ({
+    siblings: hasAnyExpanded ? GAP.expandSiblingsSep : GAP.collapSiblingsSep,
+    nonSiblings: GAP.nonSiblingsSep,
+  }), [hasAnyExpanded]);
+
+  React.useEffect(() => {
+    const byId = new Map<string, NodeDiag>();
+    for (const n of diagRef.current) byId.set(n.id, n);
+    diagRef.current = [];
+    const nodes = [...byId.values()];
+    type Overlap = { a: NodeDiag; b: NodeDiag; dx: number; dy: number; area: number };
+    const overlaps: Overlap[] = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const A = nodes[i], B = nodes[j];
+        const dx = Math.min(A.y + A.w / 2, B.y + B.w / 2) - Math.max(A.y - A.w / 2, B.y - B.w / 2);
+        const dy = Math.min(A.x + A.h / 2, B.x + B.h / 2) - Math.max(A.x - A.h / 2, B.x - B.h / 2);
+        if (dx > 0 && dy > 0) overlaps.push({ a: A, b: B, dx, dy, area: dx * dy });
+      }
+    }
+    overlaps.sort((p, q) => q.area - p.area);
+    if (overlaps.length > 0) {
+      console.log(`%c[MindMapDiag] ${overlaps.length} 組重疊`, 'color:#EF4444;font-weight:bold', { nodeSize: effectiveNodeSize, separation: effectiveSeparation, renderedNodes: nodes.length });
+    }
+    const info = overlaps.length > 0
+      ? `重疊 ${overlaps.length} 組：\n` + overlaps.slice(0, 8).map(o =>
+          `• ${o.a.label} ↔ ${o.b.label}（水平 ${o.dx.toFixed(0)}px / 垂直 ${o.dy.toFixed(0)}px）`
+        ).join('\n')
+      : '';
+    setDiagInfo(prev => (prev === info ? prev : info));
+  }, [mindMapTree, hasAnyExpanded, searchQuery, expandedLeafIds]);
+
 
   // react-d3-tree 需要的：轉換樹狀資料
   const d3TreeData = useMemo(() => toD3Tree(mindMapTree), [mindMapTree]);
@@ -490,9 +566,10 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   };
 
   // react-d3-tree renderCustomNodeElement：每個節點渲染成自訂卡片
-  const renderNode = ({ nodeDatum, toggleNode }: {
+  const renderNode = ({ nodeDatum, toggleNode, hierarchyPointNode }: {
     nodeDatum: D3TreeNode & { __rd3t: { collapsed: boolean } };
     toggleNode: () => void;
+    hierarchyPointNode?: { x: number; y: number };
   }) => {
     const mm = nodeDatum._mmNode;
     const isCollapsed = nodeDatum.__rd3t?.collapsed ?? false;
@@ -511,6 +588,12 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     // 品號葉節點
     if (mm.isPartNode && mm.parts.length > 0) {
       const part = mm.parts[0];
+      diagRef.current.push({
+        id: mm.id, label: mm.label, depth: mm.depth,
+        x: hierarchyPointNode?.x ?? 0, y: hierarchyPointNode?.y ?? 0,
+        w: CARD.partMinW, h: 48,
+      });
+
       return (
         <foreignObject
           width={CARD.partMinW}
@@ -575,6 +658,15 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     const cardW = isLeafCategory ? 320 : getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
+
+    const diagHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+    const diagH = (isLeafCategory ? (isLeafExpanded ? diagHeaderH + Math.min(displayedParts.length * 42 + 10, 220) + 24 : diagHeaderH) : diagHeaderH) + 12;
+    diagRef.current.push({
+      id: mm.id, label: mm.label, depth: mm.depth,
+      x: hierarchyPointNode?.x ?? 0, y: hierarchyPointNode?.y ?? 0,
+      w: cardW, h: diagH,
+    });
+
 
     // 品號葉卡片特化邏輯 (預設呈收合 mini 膠囊狀態)
     if (isLeafCategory) {
@@ -869,31 +961,48 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       </div>
 
       {/* ── Canvas (react-d3-tree) ── */}
-      <div ref={containerRef} className="flex-1 overflow-hidden relative" onClick={() => setThumbnail(null)}>
-        <D3Tree
-          key={treeKey}
-          data={d3TreeData}
-          orientation="horizontal"
-          pathFunc={customStepPath}
-          separation={{ siblings: 1.5, nonSiblings: 2.0 }}
-          nodeSize={{ x: 360, y: 130 }}
-          renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
-          translate={treeTranslate}
-          zoom={1}
-          zoomable={false}
-          enableLegacyTransitions={false}
-          collapsible={true}
-          initialDepth={1}
-          pathClassFunc={() => 'mindmap-link'}
-          svgClassName="mindmap-svg"
-        />
-        <style>{`
-          .mindmap-svg { width: 100%; height: 100%; }
-          .mindmap-link { fill: none; stroke: #CBD5E1; stroke-width: 1.5px; }
-          .rd3t-leaf-node circle, .rd3t-branch-node circle { display: none; }
-          .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
-        `}</style>
+      <div ref={containerRef} className="flex-1 overflow-auto relative" onClick={() => setThumbnail(null)} style={{ minHeight: 400 }}>
+        <div style={{ width: '100%', height: treeCanvasHeight, position: 'relative' }}>
+          <D3Tree
+            key={treeKey}
+            data={d3TreeData}
+            orientation="horizontal"
+            pathFunc={customStepPath}
+            separation={effectiveSeparation}
+            nodeSize={effectiveNodeSize}
+            renderCustomNodeElement={(rd3tProps) => renderNode(rd3tProps as never)}
+            translate={treeTranslate}
+            zoom={1}
+            zoomable={false}
+            enableLegacyTransitions={false}
+            collapsible={true}
+            initialDepth={1}
+            pathClassFunc={() => 'mindmap-link'}
+            svgClassName="mindmap-svg"
+          />
+          <style>{`
+            .mindmap-svg { width: 100%; height: 100%; display: block; }
+            .mindmap-link { fill: none; stroke: #CBD5E1; stroke-width: 1.5px; }
+            .rd3t-leaf-node circle, .rd3t-branch-node circle { display: none; }
+            .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
+          `}</style>
+        </div>
       </div>
+
+      {/* ── 診斷疊加（重疊偵測結果，僅開發用） ── */}
+      {diagInfo && (
+        <div style={{
+          position: 'absolute', bottom: 8, left: 8, zIndex: 30, maxWidth: 420, maxHeight: 220,
+          overflowY: 'auto',
+          background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C',
+          fontSize: 10.5, fontWeight: 600, padding: '6px 10px', borderRadius: 8,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.1)', whiteSpace: 'pre-line',
+          fontFamily: 'monospace', textAlign: 'left',
+        }}>
+          ⚠ {diagInfo}
+        </div>
+      )}
+
 
       {/* ── Thumbnail popup ── */}
       {thumbnail && (
