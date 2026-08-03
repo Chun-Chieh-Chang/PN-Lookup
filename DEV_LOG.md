@@ -1,5 +1,38 @@
 # PN-Lookup 開發日誌
 
+## v7.2.0 — 心智圖自適應排版重構：徹底修復卡片重疊、緊湊高密度佈局與全視角滾動範圍 (MindMap Layout Overhaul & Favicon Fix)
+
+### 需求內容
+- 使用者回報心智圖圖塊間距過大且有重疊問題，要求：
+  1. 自適應調整圖塊間距，收合時縮減垂直高度（極致緊湊）。
+  2. 徹底消除跨分支與展開時的圖塊重疊 (0 組重疊)。
+  3. 卷軸捲動範圍應包含全部視野範圍（水平與垂直全覆蓋）。
+  4. 修復控制台 `/favicon.ico` 404 資源載入失敗錯誤。
+
+### 根因分析 (RCA)
+1. **D3 橫向模式座標軸轉置點點對應錯誤**：
+   `react-d3-tree` 在 `orientation="horizontal"` 時，傳遞給 D3 的 `nodeSize.x` 對應的是 **SVG Y (垂直高度)**，`nodeSize.y` 對應的是 **SVG X (水平欄距)**。
+   先前的 `nodeSize.x = 360` 導致 D3 垂直步長過大，而 `nodeSize.y = 140` 導致寬 320px 的卡片水平重疊，且 `nonSiblings` 垂直隔閡係數不足造成跨子樹重疊。
+2. **滾動畫布寬高未同步設定**：
+   原生 HTML 容器設定為 `width: 100%`，限制了 D3 SVG 畫布展算寬度，導致超出視窗時 SVG 被裁切無法滾動。
+
+### 矯正與預防措施 (CAPA)
+1. **D3 橫向矩陣自適應重算 ([ProductMindMapModal.tsx](file:///d:/Self-developed_Apps/PN-Lookup/src/components/ProductMindMapModal.tsx))**：
+   - 設定 `GAP.columnDepth = 275px` (SVG X 水平欄距)，確保各欄卡片無重疊且維持 ~30px 完美精緻留白。
+   - 設定 `GAP.collapsedRow = 68px` (SVG Y 垂直列高)，配合 `siblings: 1.0` / `nonSiblings: 2.2`，收合時卡片間距僅 ~20px，緊湊且零重疊。
+   - 展開時動態切換 `GAP.expandedRow = 150px` 配合 `siblings: 1.8` / `nonSiblings: 2.8`，確保 268px 高度之列表卡片完全不重疊。
+2. **全視野滾動畫布計算**：
+   - 動態計算樹狀圖最大深度與總可見葉節點數，展算 `treeCanvasWidth` (~1640px) 與 `treeCanvasHeight`。
+   - 將內建 Canvas 容器設定 `width: treeCanvasWidth, minWidth: '100%'` 與 `translate={{ x: 60, y: treeCanvasHeight / 2 }}`，確保上下左右全方位平滑滾動。
+3. **Favicon 404 修復 ([index.html](file:///d:/Self-developed_Apps/PN-Lookup/index.html))**：
+   - 於 `index.html` <head> 中加入 Data-URL 原生 SVG 醫療幾何圖標。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` → 100% PASS。
+- `npm run build` → ✓ built in 4.77s 成功。
+
+---
+
 ## v7.1.0 — 代碼與數據架構重構整合：融合雲端 D3 心智圖座標軸修復並固化 565 筆去重數據邏輯 (Local Data Logic & Cloud UI Integration)
 
 ### 需求內容

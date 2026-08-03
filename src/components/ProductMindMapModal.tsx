@@ -46,15 +46,13 @@ const CONN = {
 };
 
 const GAP = {
-  depthLevel: 360,       // 水平深度列間距 (x)
-  collapsedSibling: 140, // 未展開時 sibling 間距 (y)
-  expandedSibling: 300,  // 展開葉卡片時 sibling 間距 (y)
-  expandSiblingsSep: 1.2,
-  collapSiblingsSep: 1.0,
-  nonSiblingsSep: 1.4,
+  columnDepth: 275,    // 水平欄距 (nodeSize.y, SVG X)
+  collapsedRow: 68,    // 收合時垂直列步長 (nodeSize.x, SVG Y) - 緊湊不重疊
+  expandedRow: 150,    // 展開時垂直列步長 (nodeSize.x, SVG Y) - 容納展開清單
 };
 
 type NodeDiag = { id: string; label: string; depth: number; x: number; y: number; w: number; h: number };
+
 
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -412,12 +410,11 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
   const [treeKey, setTreeKey]         = useState(0);
   const [expandedLeafIds, setExpandedLeafIds] = useState<Set<string>>(new Set());
-  const [treeCanvasHeight, setTreeCanvasHeight] = useState<number | string>('100%');
   const [diagInfo, setDiagInfo] = useState<string>('');
   const diagRef = useRef<NodeDiag[]>([]);
   const containerRef                  = useRef<HTMLDivElement>(null);
-  // react-d3-tree translate：等容器掛載後取真實高度置中
-  const [treeTranslate, setTreeTranslate] = useState({ x: 40, y: 40 });
+  const [treeTranslate, setTreeTranslate] = useState({ x: 60, y: 400 });
+
 
   const toggleLeafExpanded = useCallback((id: string) => {
     setExpandedLeafIds(prev => {
@@ -427,18 +424,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       return next;
     });
   }, []);
-
-  const handleResetDefault = useCallback(() => {
-    setSearchQuery('');
-    setThumbnail(null);
-    setExpandedLeafIds(new Set());
-    setTreeKey(prev => prev + 1);
-    setTreeTranslate({ x: 40, y: 40 });
-  }, []);
-
-  React.useEffect(() => {
-    setTreeTranslate({ x: 40, y: 40 });
-  }, [isOpen]);
 
   const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
 
@@ -462,35 +447,56 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     return highlightIds.size > 0;
   }, [expandedLeafIds, searchQuery, highlightIds]);
 
-  React.useLayoutEffect(() => {
-    if (!mindMapTree) return;
-    const level1Count = mindMapTree.children.length;
-    let level2Count = 0;
-    mindMapTree.children.forEach(c => { level2Count += c.children.length || 1; });
+  const treeMetrics = useMemo(() => {
+    let maxD = 0;
+    let leafRows = 0;
+    function traverse(node: MindMapNode) {
+      if (node.depth > maxD) maxD = node.depth;
+      const isLeafCategory = node.parts.length > 0 && (!node.children || node.children.length === 0);
+      const isLeafExpanded = isLeafCategory && (searchQuery.trim() ? node.parts.length > 0 : expandedLeafIds.has(node.id));
+      if (!node.children || node.children.length === 0) {
+        leafRows += isLeafExpanded ? 3.5 : 1;
+      } else {
+        node.children.forEach(traverse);
+      }
+    }
+    traverse(mindMapTree);
+    return { maxDepth: maxD, leafRows };
+  }, [mindMapTree, expandedLeafIds, searchQuery]);
 
-    const calcHeight = () => {
-      const isExpanded = hasAnyExpanded || searchQuery.trim().length > 0;
-      const nodeH = isExpanded ? GAP.expandedSibling : GAP.collapsedSibling;
-      const verticalGaps = [
-        100, // root
-        level1Count * nodeH + 40,
-        level2Count * (nodeH * 0.7) + 40,
-      ];
-      const estimatedH = verticalGaps.reduce((a, b) => Math.max(a, b), 400);
-      return Math.max(estimatedH, window.innerHeight * 0.6);
-    };
-    const h = calcHeight();
-    setTreeCanvasHeight(h);
-  }, [mindMapTree, hasAnyExpanded, searchQuery]);
+  const treeCanvasWidth = useMemo(() => {
+    const calculatedW = (treeMetrics.maxDepth + 1) * GAP.columnDepth + 360 + 160;
+    const containerW = containerRef.current?.clientWidth || window.innerWidth;
+    return Math.max(calculatedW, containerW);
+  }, [treeMetrics.maxDepth]);
+
+  const treeCanvasHeight = useMemo(() => {
+    const rowStep = hasAnyExpanded ? GAP.expandedRow * 1.8 : GAP.collapsedRow * 1.15;
+    const calculatedH = treeMetrics.leafRows * rowStep + 240;
+    const containerH = containerRef.current?.clientHeight || window.innerHeight;
+    return Math.max(calculatedH, containerH * 0.85);
+  }, [treeMetrics.leafRows, hasAnyExpanded]);
+
+  React.useLayoutEffect(() => {
+    setTreeTranslate({ x: 60, y: Number(treeCanvasHeight) / 2 });
+  }, [treeCanvasHeight, isOpen]);
+
+  const handleResetDefault = useCallback(() => {
+    setSearchQuery('');
+    setThumbnail(null);
+    setExpandedLeafIds(new Set());
+    setTreeKey(prev => prev + 1);
+    setTreeTranslate({ x: 60, y: Number(treeCanvasHeight) / 2 });
+  }, [treeCanvasHeight]);
 
   const effectiveNodeSize = useMemo(() => ({
-    x: GAP.depthLevel,
-    y: hasAnyExpanded ? GAP.expandedSibling : GAP.collapsedSibling,
+    x: hasAnyExpanded ? GAP.expandedRow : GAP.collapsedRow, // SVG Y 軸 (垂直步長)
+    y: GAP.columnDepth,                                    // SVG X 軸 (水平欄距)
   }), [hasAnyExpanded]);
 
   const effectiveSeparation = useMemo(() => ({
-    siblings: hasAnyExpanded ? GAP.expandSiblingsSep : GAP.collapSiblingsSep,
-    nonSiblings: GAP.nonSiblingsSep,
+    siblings: hasAnyExpanded ? 1.8 : 1.0,
+    nonSiblings: hasAnyExpanded ? 2.8 : 2.2,
   }), [hasAnyExpanded]);
 
   React.useEffect(() => {
@@ -503,7 +509,9 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const A = nodes[i], B = nodes[j];
-        const dx = Math.min(A.y + A.w / 2, B.y + B.w / 2) - Math.max(A.y - A.w / 2, B.y - B.w / 2);
+        // A.y/B.y = SVG X (水平起始), A.w/B.w = 卡片寬度
+        const dx = Math.min(A.y + A.w, B.y + B.w) - Math.max(A.y, B.y);
+        // A.x/B.x = SVG Y (垂直中心), A.h/B.h = 卡片高度
         const dy = Math.min(A.x + A.h / 2, B.x + B.h / 2) - Math.max(A.x - A.h / 2, B.x - B.h / 2);
         if (dx > 0 && dy > 0) overlaps.push({ a: A, b: B, dx, dy, area: dx * dy });
       }
@@ -519,6 +527,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
       : '';
     setDiagInfo(prev => (prev === info ? prev : info));
   }, [mindMapTree, hasAnyExpanded, searchQuery, expandedLeafIds]);
+
 
 
   // react-d3-tree 需要的：轉換樹狀資料
@@ -962,7 +971,8 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
       {/* ── Canvas (react-d3-tree) ── */}
       <div ref={containerRef} className="flex-1 overflow-auto relative" onClick={() => setThumbnail(null)} style={{ minHeight: 400 }}>
-        <div style={{ width: '100%', height: treeCanvasHeight, position: 'relative' }}>
+        <div style={{ width: treeCanvasWidth, height: treeCanvasHeight, minWidth: '100%', minHeight: '100%', position: 'relative' }}>
+
           <D3Tree
             key={treeKey}
             data={d3TreeData}
