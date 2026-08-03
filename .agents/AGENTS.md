@@ -69,3 +69,29 @@
 2. 自動化確效門禁 (Automated Build Gate)：
    - 每次執行 `npm run build` 或 Git commit 前，必須自動運行 `scripts/verifyCoreLogic.js`。若有任何一項邏輯不變量失敗，強制攔截編譯與部署！
 </RULE[regression_defense_and_logic_freezing]>
+
+<RULE[ui_minimum_font_size]>
+UI/UX 介面文字最小字級規則 (Minimum Font Size Enforcement Rule)
+
+在所有 UI/UX 開發與代碼審查中，必須嚴格遵守以下字級下限規定：
+
+1. **強制最小字級：13px**
+   - 所有使用者可閱讀的介面文字（標籤、按鈕文字、表格內容、輸入框提示、說明文字、badge、tag 等）字體大小不得低於 **13px**。
+   - 包含但不限於：CSS `font-size`、Tailwind `text-xs`(12px) 以下的 class、行內 `style={{ fontSize: ... }}` 等所有設定方式。
+
+2. **例外情況（僅限以下場景，且需加入注釋說明原因）**
+   - 法律聲明、版權聲明、輔助性圖例標記：最低允許 **11px**
+   - 圖表軸標籤、資料可視化的密集標注：最低允許 **10px**
+   - 上述例外必須在代碼中加入 `/* min-font-size exception: <原因> */` 注釋
+
+3. **強制執行時機**
+   - 新增或修改任何 UI 組件時，必須自我審查所有文字元素的字級
+   - Code Review 時掃描 `text-[10px]`、`text-[11px]`、`font-size: 10`、`font-size: 11`、`text-xs` 等潛在違規用法
+   - 違規文字若無例外注釋，視為缺陷，必須修正後才能提交
+
+4. **參考基準（合規範例）**
+   - 正文、表格內容：`text-sm` (14px) ✅
+   - 輔助說明、badge：`text-[13px]` ✅
+   - 按鈕文字：`text-xs` (12px) ❌ 需改為 `text-[13px]` 或 `text-sm`
+   - 微型標籤：`text-[10px]` ❌ 需例外注釋或改為 `text-[13px]`
+</RULE[ui_minimum_font_size]>
