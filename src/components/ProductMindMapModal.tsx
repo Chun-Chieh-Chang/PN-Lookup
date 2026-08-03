@@ -46,9 +46,11 @@ const CONN = {
 };
 
 const GAP = {
-  columnDepth: 275,    // 水平欄距 (nodeSize.y, SVG X)
-  collapsedRow: 68,    // 收合時垂直列步長 (nodeSize.x, SVG Y) - 緊湊不重疊
-  expandedRow: 150,    // 展開時垂直列步長 (nodeSize.x, SVG Y) - 容納展開清單
+  // react-d3-tree horizontal mode: tree.nodeSize([nodeSize.y, nodeSize.x])
+  // → nodeSize.x 控制水平欄距 (depth columns), nodeSize.y 控制垂直列間距 (sibling rows)
+  columnDepth: 390,   // nodeSize.x → 水平欄距；需 > 最寬卡片 (320px) + margin
+  collapsedRow: 65,   // nodeSize.y → 收合時垂直列步長；卡片高 ~40px，留 25px 空白
+  expandedRow:  155,  // nodeSize.y → 展開時垂直列步長；展開清單卡片高 ~130px
 };
 
 type NodeDiag = { id: string; label: string; depth: number; x: number; y: number; w: number; h: number };
@@ -464,17 +466,19 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     return { maxDepth: maxD, leafRows };
   }, [mindMapTree, expandedLeafIds, searchQuery]);
 
+  // treeCanvasWidth: based on column depth (x in react-d3-tree nodeSize)
   const treeCanvasWidth = useMemo(() => {
-    const calculatedW = (treeMetrics.maxDepth + 1) * GAP.columnDepth + 360 + 160;
+    const calculatedW = (treeMetrics.maxDepth + 1) * GAP.columnDepth + 200;
     const containerW = containerRef.current?.clientWidth || window.innerWidth;
     return Math.max(calculatedW, containerW);
   }, [treeMetrics.maxDepth]);
 
+  // treeCanvasHeight: based on row step (y in react-d3-tree nodeSize × separation)
   const treeCanvasHeight = useMemo(() => {
-    const rowStep = hasAnyExpanded ? GAP.expandedRow * 1.8 : GAP.collapsedRow * 1.15;
-    const calculatedH = treeMetrics.leafRows * rowStep + 240;
+    const rowStep = hasAnyExpanded ? GAP.expandedRow * 2.5 : GAP.collapsedRow * 2.5;
+    const calculatedH = treeMetrics.leafRows * rowStep + 300;
     const containerH = containerRef.current?.clientHeight || window.innerHeight;
-    return Math.max(calculatedH, containerH * 0.85);
+    return Math.max(calculatedH, containerH);
   }, [treeMetrics.leafRows, hasAnyExpanded]);
 
   React.useLayoutEffect(() => {
@@ -490,13 +494,16 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   }, [treeCanvasHeight]);
 
   const effectiveNodeSize = useMemo(() => ({
-    x: hasAnyExpanded ? GAP.expandedRow : GAP.collapsedRow, // SVG Y 軸 (垂直步長)
-    y: GAP.columnDepth,                                    // SVG X 軸 (水平欄距)
+    // react-d3-tree 內部 tree.nodeSize([nodeSize.y, nodeSize.x]):
+    // .x → 水平欄距 (SVG X / depth column spacing)
+    // .y → 垂直列步長 (SVG Y / sibling row spacing)
+    x: GAP.columnDepth,
+    y: hasAnyExpanded ? GAP.expandedRow : GAP.collapsedRow,
   }), [hasAnyExpanded]);
 
   const effectiveSeparation = useMemo(() => ({
-    siblings: hasAnyExpanded ? 1.8 : 1.0,
-    nonSiblings: hasAnyExpanded ? 2.8 : 2.2,
+    siblings:    hasAnyExpanded ? 2.0 : 1.1,   // 同分支節點間距係數
+    nonSiblings: hasAnyExpanded ? 5.0 : 4.5,   // 跨分支節點間距係數（需夠大防止交疊）
   }), [hasAnyExpanded]);
 
   React.useEffect(() => {
