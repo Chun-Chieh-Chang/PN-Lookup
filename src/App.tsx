@@ -76,18 +76,14 @@ export default function App() {
     };
   }, [onHashChange]);
 
-  const [hasHydrated, setHasHydrated] = useState(true);
-  const serverDownRef = useRef(false);
-  const [serverOnline, setServerOnline] = useState(false);
-
   // Auto-open export/import when no data exists
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
 
   useEffect(() => {
-    if (hasHydrated && parts.length === 0) {
+    if (parts.length === 0) {
       setIsExportImportOpen(true);
     }
-  }, [hasHydrated, parts.length]);
+  }, [parts.length]);
 
   // 圖檔資料夾：自動恢復上次選擇；未曾指定時首次開啟提示
   const [imageLib, setImageLib] = useState<ImageLibrary | null>(null);
@@ -261,7 +257,7 @@ export default function App() {
       console.error('Failed to save parts data:', e);
     }
     const serialized = JSON.stringify(clean);
-    if (serverDownRef.current || lastSavedRef.current === serialized) return;
+    if (lastSavedRef.current === serialized) return;
     const timer = setTimeout(() => {
       saveParts(clean).then(() => {
         lastSavedRef.current = serialized;
@@ -403,19 +399,11 @@ export default function App() {
     }, [parts, filterState]);
 
 
-  const [isUnlocked, setIsUnlocked] = useState(() => route === 'admin');
-
-  useEffect(() => {
-    if (route === 'admin') {
-      setIsUnlocked(true);
-    }
-  }, [route]);
-
   if (route === 'admin') {
     return (
       <AdminPanel
         parts={parts}
-        serverOnline={serverOnline}
+        serverOnline={false}
         onClose={() => { window.location.hash = ''; }}
         onAddPart={(itemData) => {
           const newItem: PartItem = {
@@ -455,7 +443,6 @@ export default function App() {
         onResetData={handleResetData}
         onOpenGraph={() => setIsGraphModalOpen(true)}
         onEnterAdmin={() => {
-          setIsUnlocked(true);
           window.location.hash = 'admin';
         }}
         imageFolderName={imageLib?.folderName ?? null}
@@ -463,7 +450,7 @@ export default function App() {
         orphanCount={orphanInfo.orphanFiles.length}
         onPickImageFolder={handlePickImageFolder}
         onOpenOrphansModal={() => setIsOrphansModalOpen(true)}
-        isAdminMode={isUnlocked || route === 'admin'}
+        isAdminMode={route === 'admin'}
       />
 
       {/* Stats Summary Bar */}
@@ -505,7 +492,7 @@ export default function App() {
               selectedCustomers: [customerName],
             });
           }}
-          isAdmin={isUnlocked || route === 'admin'}
+          isAdmin={route === 'admin'}
         />
       </main>
 
@@ -515,9 +502,6 @@ export default function App() {
         onClose={() => setIsBatchSearchOpen(false)}
         allParts={parts}
       />
-
-
-
       <AddEditModal
         isOpen={isAddEditOpen}
         onClose={() => {

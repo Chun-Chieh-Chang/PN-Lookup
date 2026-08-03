@@ -1,5 +1,43 @@
 # PN-Lookup 開發日誌
 
+## v7.5.0 — 全專案代碼優化作業：死碼清除 + 心智圖架構根治 + DEV_LOG 同步 (Full Refactor & Dead-Code Sweep)
+
+### 需求內容
+- 使用者執行「專案的整體程式碼與檔案優化作業」，涵蓋死碼識別清理、文件同步、MECE 架構整合。
+
+### 根因分析 (RCA) — 三項已修復缺陷
+
+#### 缺陷 1：nodeSize 軸向交換 Bug（v7.3.0，commit 8ab8ff6）
+- **根因**：`react-d3-tree` 在 `orientation="horizontal"` 時內部呼叫 `tree.nodeSize([nodeSize.y, nodeSize.x])`（D3 慣例的 x/y 意義為垂直/水平），導致：
+  - 我們傳入 `{x: 68, y: 275}` → D3 實際設定「水平欄距=68px，垂直行高=275px」
+  - 卡片最寬 320px，卡進 68px 欄 → 大量水平重疊（10 組）
+  - 正確應為 `{x: 390, y: 65}` → 水平欄距 390px（>320px 卡片），垂直行高 65px（緊湊）
+
+#### 缺陷 2：OS 卷軸失效 + 展開後節點消失（v7.4.0，commit f3d0e5a）
+- **根因 A（卷軸）**：SVG 設 `width/height: 100%`，內部 `<g transform>` 超出 SVG 邊界用 `overflow:visible` 顯示，不觸發外層 `overflow:auto` 捲動
+- **根因 B（消失）**：`treeCanvasHeight` 在展開時大幅增加 → `translate.y = height/2` 把 root 推到 y>2000 → 所有節點在視野外
+- **修正**：移除固定畫布尺寸架構，改用 D3 原生 pan/zoom（`zoomable=true, scaleExtent={min:0.2, max:3}`），translate 僅在 Modal 開啟時初始化一次
+
+#### 缺陷 3：App.tsx 死碼（v7.5.0，本次）
+- `hasHydrated`：固定 `true`，`setHasHydrated` 從未呼叫，`useEffect` 條件永遠等同 `parts.length===0`
+- `serverDownRef` + `serverOnline`：`setServerOnline` 從未被呼叫（永遠 false），`serverDownRef` 作為短路條件從未為 `true`
+- `isUnlocked`：只是 `route === 'admin'` 的別名，額外的 `useEffect` + state 純屬多餘
+
+### 矯正與預防措施 (CAPA)
+1. **精準手術刀清除**：移除 3 個死 state + 1 個死 `useRef`，簡化 `isAdminMode` 與 `isAdmin` prop 為直接使用 `route === 'admin'`
+2. **功能等價保障**：`serverOnline={false}` 直接傳入 AdminPanel（原本就永遠是 false），行為完全不變
+3. **DEV_LOG 同步**：補充 v7.3.0 + v7.4.0 + v7.5.0 三個版本記錄，消除文件與代碼斷層
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` → PASS（565 筆 / 181 BOM 不變）
+- `npm run build` → ✓ zero TS errors
+
+### 遵循規則
+- `regression_defense_and_logic_freezing`：數據不變量 565/181 未受影響
+- `data_structure_change_notification`：無資料結構變更
+
+---
+
 ## v7.2.0 — 心智圖自適應排版重構：徹底修復卡片重疊、緊湊高密度佈局與全視角滾動範圍 (MindMap Layout Overhaul & Favicon Fix)
 
 ### 需求內容
