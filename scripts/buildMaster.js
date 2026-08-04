@@ -10,8 +10,15 @@ const OUTPUT_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
 export function convertUnifiedSeedToMaster(seedData) {
   const partsMap = new Map();
 
+  // 別稱只接受品號格式（排除備註/說明文字被誤錄為別稱）
+  function sanitizeAlternates(alts) {
+    if (!Array.isArray(alts)) return [];
+    return Array.from(new Set(alts.filter((a) => typeof a === 'string' && /^[A-Z0-9][A-Z0-9-]*$/i.test(a))));
+  }
+
   function addPart(p) {
     if (!p.partNo) return;
+    const alternates = sanitizeAlternates(p.alternates);
     const existing = partsMap.get(p.partNo);
     if (!existing) {
       partsMap.set(p.partNo, {
@@ -23,15 +30,15 @@ export function convertUnifiedSeedToMaster(seedData) {
         color: p.color || '',
         material: p.material || '',
         notes: p.notes || '',
-        alternates: p.alternates ? Array.from(new Set(p.alternates)) : [],
+        alternates,
       });
     } else {
       if (!existing.customer && p.customer) existing.customer = p.customer;
       if ((!existing.name || existing.name === existing.partNo) && p.name) existing.name = p.name;
       if (!existing.color && p.color) existing.color = p.color;
       if (!existing.material && p.material) existing.material = p.material;
-      if (p.alternates) {
-        existing.alternates = Array.from(new Set([...existing.alternates, ...p.alternates]));
+      if (alternates.length > 0) {
+        existing.alternates = sanitizeAlternates([...existing.alternates, ...alternates]);
       }
     }
   }
@@ -41,8 +48,10 @@ export function convertUnifiedSeedToMaster(seedData) {
     for (const ip of seedData.internalParts) {
       const partNo = ip['產品編號'] || ip['partNo'];
       if (!partNo) continue;
+      // 別稱來源：客戶零件編號 + 舊版廠內品號（舊編號亦可能出現在圖檔檔名）
       const alternates = [];
       if (ip['零件編號(客)']) alternates.push(ip['零件編號(客)']);
+      if (ip['產品編號(舊)']) alternates.push(ip['產品編號(舊)']);
       addPart({
         partNo,
         name: ip['零件名稱(中)'] || ip['零件名稱(英)'] || partNo,
@@ -57,36 +66,41 @@ export function convertUnifiedSeedToMaster(seedData) {
   // 2. customerParts
   if (Array.isArray(seedData.customerParts)) {
     for (const cp of seedData.customerParts) {
-      const partNo = cp['品號'] || cp['partNo'];
+      const partNo = cp['產品編號'] || cp['品號'] || cp['partNo'];
       if (!partNo) continue;
       addPart({
         partNo,
-        name: cp['品名'] || partNo,
+        name: cp['零件名稱(中)'] || cp['品名'] || partNo,
         customer: cp['客戶'] || '',
       });
     }
   }
 
   // 3. customerPartNumbers
+  // 欄位語意：產品編號=廠內品號、零件編號(客)=客戶料號、圖面編號=客戶圖面編號（常出現於圖檔檔名）
   if (Array.isArray(seedData.customerPartNumbers)) {
     for (const cpn of seedData.customerPartNumbers) {
-      const internalNo = cpn['對應廠內料號'] || cpn['partNo'];
-      const custNo = cpn['客戶料號'] || cpn['customerPartNo'];
+      const internalNo = cpn['產品編號'] || cpn['partNo'];
+      const custNo = cpn['零件編號(客)'] || cpn['customerPartNo'];
+      const drawingNo = cpn['圖面編號'] || '';
+      const name = cpn['零件名稱(英)'] || cpn['零件名稱(中)'] || internalNo || custNo;
+
       if (internalNo) {
-        const alternates = custNo ? [custNo] : [];
+        // 廠內品號：掛上客戶料號 + 圖面編號做別稱
         addPart({
           partNo: internalNo,
-          name: cpn['名稱'] || internalNo,
+          name,
           customer: cpn['客戶'] || '',
-          alternates,
+          alternates: [custNo, drawingNo].filter(Boolean),
         });
       }
       if (custNo && custNo !== internalNo) {
+        // 客戶料號本身亦為有效品項，圖面編號為其別稱
         addPart({
           partNo: custNo,
-          name: cpn['名稱'] || custNo,
+          name: cpn['零件名稱(英)'] || cpn['零件名稱(中)'] || custNo,
           customer: cpn['客戶'] || '',
-          alternates: internalNo ? [internalNo] : [],
+          alternates: [internalNo || drawingNo].filter(Boolean),
         });
       }
     }

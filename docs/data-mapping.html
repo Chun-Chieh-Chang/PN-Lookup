@@ -68,8 +68,8 @@
 </head>
 <body>
 <header>
-  <h1>PN-Lookup 資料流映射文件<span class="badge">v7.5.0</span></h1>
-  <p>Data Mapping Specification — 從原始種子檔案到操作介面欄位的完整資料轉換說明 &nbsp;|&nbsp; 最後更新：2026-08-03</p>
+  <h1>PN-Lookup 資料流映射文件<span class="badge">v7.5.3</span></h1>
+  <p>Data Mapping Specification — 從原始種子檔案到操作介面欄位的完整資料轉換說明 &nbsp;|&nbsp; 最後更新：2026-08-04</p>
 </header>
 
 <div class="container">
@@ -89,6 +89,7 @@
     <li><a href="#s9">搜尋與過濾邏輯 (Filter Engine)</a></li>
     <li><a href="#s10">別稱去重規則 (Alternates Dedup)</a></li>
     <li><a href="#s11">資料持久化策略 (Persistence)</a></li>
+    <li><a href="#s12">組件圖掃描增補 (Assembly Image Scan)</a></li>
   </ol>
 </div>
 
@@ -130,15 +131,16 @@
       <tr><td><code>顏色</code></td><td><code class="green">color</code></td><td></td></tr>
       <tr><td><code>原料</code></td><td><code class="green">material</code></td><td></td></tr>
       <tr><td><code>零件編號(客)</code></td><td><code class="green">alternates[]</code></td><td>客戶對應品號，加入 alternates 陣列</td></tr>
+      <tr><td><code>產品編號(舊)</code></td><td><code class="green">alternates[]</code></td><td>舊版廠內品號（如 CP96002-1、3M55203），亦可能出現在圖檔檔名，一併納入別稱</td></tr>
 
       <tr><td rowspan="3"><code>customerParts</code><br/><small>客戶品號</small></td><td><code>品號</code> / <code>partNo</code></td><td><code class="green">partNo</code> <span class="tag tag-required">主鍵</span></td><td></td></tr>
       <tr><td><code>品名</code></td><td><code class="green">name</code></td><td></td></tr>
       <tr><td><code>客戶</code></td><td><code class="green">customer</code></td><td></td></tr>
 
-      <tr><td rowspan="4"><code>customerPartNumbers</code><br/><small>廠客對照表</small></td><td><code>對應廠內料號</code></td><td><code class="green">partNo</code> (廠內) + <code class="green">alternates[]</code> ← 客戶料號</td><td rowspan="2">建立雙向品號：廠內的 alternates 包含客戶料號；客戶料號的 alternates 包含廠內品號</td></tr>
-      <tr><td><code>客戶料號</code></td><td><code class="green">partNo</code> (客戶) + <code class="green">alternates[]</code> ← 廠內品號</td></tr>
-      <tr><td><code>名稱</code></td><td><code class="green">name</code></td><td></td></tr>
-      <tr><td><code>客戶</code></td><td><code class="green">customer</code></td><td></td></tr>
+      <tr><td rowspan="4"><code>customerPartNumbers</code><br/><small>廠客對照表</small></td><td><code>產品編號</code> / <code>partNo</code></td><td><code class="green">partNo</code> (廠內) + <code class="green">alternates[]</code> ← 客戶料號與圖面編號</td><td rowspan="2">建立雙向品號：廠內的 alternates 包含客戶料號與圖面編號；客戶料號的 alternates 包含廠內品號或圖面編號</td></tr>
+      <tr><td><code>零件編號(客)</code> / <code>customerPartNo</code></td><td><code class="green">partNo</code> (客戶) + <code class="green">alternates[]</code> ← 廠內品號</td></tr>
+      <tr><td><code>圖面編號</code></td><td><code class="green">alternates[]</code></td><td>客戶圖面編號（如 27-0246-MC、R1-2255-MC）常直接出現於圖檔檔名，納入別稱避免誤判孤兒圖</td></tr>
+      <tr><td><code>零件名稱(英)</code> / <code>零件名稱(中)</code></td><td><code class="green">name</code></td><td></td></tr>
 
       <tr><td rowspan="4"><code>bomHierarchy</code><br/><small>BOM 組立關係</small></td><td><code>assemblyId</code> / <code>id</code></td><td><code class="green">partNo</code> (組件) + <code class="pink">bom.children</code></td><td>同時寫入 PartItem 記錄與 bom 映射表</td></tr>
       <tr><td><code>name</code></td><td><code class="green">name</code></td><td></td></tr>
@@ -154,7 +156,8 @@
       <li>首次出現：直接寫入完整記錄，<code>id = partNo</code></li>
       <li>重複出現：<strong>只補充空白欄位</strong>（已有值的欄位不覆蓋）</li>
       <li><code>alternates[]</code>：多次出現的別稱陣列以 <code>Set</code> union 合併去重</li>
-      <li>最終輸出 <strong>565 筆去重品號</strong> + <strong>181 組 BOM 組立關係</strong>（不變量，由 <code>verifyCoreLogic.js</code> 守護）</li>
+      <li><strong>別稱品質過濾 (sanitizeAlternates)</strong>：僅接受 <code>/^[A-Z0-9][A-Z0-9-]*$/i</code> 品號格式，排除備註/說明文字（如「Ecomed專用，黏管尺寸客製化」）被誤錄為別稱</li>
+      <li>最終輸出 <strong>693 筆去重品號</strong> + <strong>181 組 BOM 組立關係</strong>（種子轉譯不變量，由 <code>verifyCoreLogic.js</code> 守護；組件圖掃描可再增量）</li>
     </ol>
   </div>
 
@@ -163,12 +166,12 @@
     <pre>{
   "type": "pn-lookup-master",
   "version": "3.1.0",
-  "parts": [ /* PartItem[] — 565 筆 */ ],
+  "parts": [ /* PartItem[] — 693 筆（種子轉譯基線） */ ],
   "bom": {
     "children": { "SA001": ["C01-001", "C02-005"] },   // assemblyId → 子件清單
     "parents":  { "C01-001": ["SA001", "SB003"]    }   // childId → 所屬組件清單
   },
-  "totalParts": 565
+  "totalParts": 693
 }</pre>
   </div>
 </section>
@@ -371,9 +374,46 @@
   </div>
 </section>
 
+<!-- S12 -->
+<section id="s12">
+  <h2><span class="num">12</span> 組件圖掃描增補 (Assembly Image Scan)</h2>
+  <p>定義於 <code>scripts/scanAssemblyImages.js</code>。Excel 原始資料可能並非全部品項，且組件圖頁面內通常會列出組成該組件所需的全部零件（PART NO. / DESCRIPTION / MATERIAL）。本腳本從組件圖頁面文字中提取零件清單，補足 Excel 之外的品項與 BOM 關係。</p>
+  <div class="flow-card">
+    <div class="title">🔍 掃描範圍</div>
+    <ul>
+      <li><code>rawdata/圖檔/客戶圖面/Sub-Assembly</code> — 客戶組件圖（如 BD-8003875、SC0044）</li>
+      <li><code>rawdata/圖檔/產品資料/廠內組件圖面</code>（SB、SC 系列）</li>
+      <li><code>rawdata/圖檔/產品資料/綜合圖面</code></li>
+    </ul>
+  </div>
+  <div class="flow-card">
+    <div class="title">⚙️ 掃描流程</div>
+    <ol>
+      <li><strong>PDF 文字層提取</strong>：使用 <code>pdfjs-dist/legacy</code> 讀取前 6 頁的 <code>getTextContent()</code></li>
+      <li><strong>品號 token 擷取</strong>：正規化後以 <code>/^[A-Z]{0,4}\d{1,4}(?:-[A-Z0-9]+)+$/i</code> 過濾，排除日期（2023-05-15）、ISO 標準尾號（8536-4）</li>
+      <li><strong>比對 master</strong>：以 <code>partNo + alternates</code> 的正規化索引命中「已知零件」，未命中且長度 ≥ 5 者列為「候補品號」</li>
+      <li><strong>組件對應</strong>：檔名去除 <code>(Rev.X)</code> 與 <code>_Rev.X</code> 尾綴即組件品號；<code>-C</code> 客戶版本尾綴自動合併至標準品號（如 SB0083-C → SB0083）</li>
+      <li><strong>產出</strong>：報告寫入 <code>data/assembly-scan-report.json</code> 供人工確認</li>
+    </ol>
+  </div>
+  <div class="flow-card">
+    <div class="title">📝 套用參數</div>
+    <ul>
+      <li><code>--apply</code>：將已比對成功的「組件 → 已知零件」BOM 關係寫入 master（例：R1-2392 組件圖 → R1-3373、R1-3509、R1-2391）</li>
+      <li><code>--auto</code>：額外將「組件圖檔名對應、但 Excel 未收錄的組件」補建為新零件（category：組件圖候補），如 BD-8003875、SC0044</li>
+    </ul>
+  </div>
+  <div class="alert alert-warn">
+    <strong>人工確認邊界：</strong>「候補品號」僅代表在組件圖頁面內文出現但 Excel/master 未收錄，可能是真品號也可能是材質/標準文字誤擷（如 LDPE PAXOTHENE NA207-66）。腳本僅輸出報告，<strong>不會自動</strong>把候補品號加入 master，一律需人工確認。
+  </div>
+  <div class="alert alert-green">
+    <strong>不變量守護：</strong><code>verifyCoreLogic.js</code> 種子轉譯維持固定 <strong>693 筆</strong>；master 檔允許 ≥ 693（組件圖掃描可增量，當前 717 筆）。
+  </div>
+</section>
+
 </div>
 <footer>
-  PN-Lookup Data Mapping Specification v7.5.2 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
+  PN-Lookup Data Mapping Specification v7.5.3 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
 </footer>
 </body>
 </html>
