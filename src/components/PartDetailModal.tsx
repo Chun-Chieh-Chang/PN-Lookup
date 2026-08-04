@@ -2,6 +2,7 @@
 import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType, getComponentsForAssembly, getAssembliesForPart } from '../utils/bomEngine';
+import { getPartPrefix } from '../utils/partNo';
 
 interface PartDetailModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   const assembliesList = !isAssembly ? getAssembliesForPart(item, allParts) : [];
 
   // Find related items by same customer or same prefix
-  const prefix = item.partNo.split('-')[0] || item.partNo.substring(0, 3);
+  const prefix = getPartPrefix(item.partNo);
   const relatedSameCustomer = allParts
     .filter((p) => p.customer === item.customer && p.id !== item.id)
     .slice(0, 5);

@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, ShieldAlert, ExternalLink, Network } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, Network } from 'lucide-react';
+import { APP_VERSION } from '../version';
 
 interface HeaderProps {
   onOpenBatchSearch: () => void;
@@ -12,7 +13,6 @@ interface HeaderProps {
   orphanCount?: number;
   onPickImageFolder?: () => void;
   onOpenOrphansModal?: () => void;
-  isAdminMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -26,7 +26,6 @@ export const Header: React.FC<HeaderProps> = ({
   orphanCount = 0,
   onPickImageFolder,
   onOpenOrphansModal,
-  isAdminMode = false,
 }) => {
   const versionClickCount = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,19 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
                   title="五擊解鎖前端「修訂」與後台「增刪」管理權限"
                   className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[13px] px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
                 >
-                  v7.5.2
+                  {APP_VERSION}
                 </span>
-
-                {/* Show Unlocked Status Pill when unlocked */}
-                {isAdminMode && (
-                  <span
-                    onClick={onEnterAdmin}
-                    className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 text-[13px] font-bold cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
-                    title="點擊直接跳轉後台進行資料「增刪」"
-                  >
-                    <span>修訂已解鎖</span>
-                  </span>
-                )}
               </div>
               <p className="text-[13px] text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span>醫療器材與 BOM 階層規格料號即時對照平台</span>
@@ -96,19 +84,6 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
-            {/* Jump to Back-end Admin Button (Appears when unlocked) */}
-            {isAdminMode && onEnterAdmin && (
-              <button
-                onClick={onEnterAdmin}
-                className="inline-flex items-center px-3.5 py-1.5 text-sm font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95 border border-amber-300 shadow-amber-500/20"
-                title="前往後台管理頁面執行『增刪』（新增與刪除數據）"
-              >
-                <ShieldAlert className="w-4 h-4 text-slate-950" />
-                <span>後台管理 (增刪)</span>
-                <ExternalLink className="w-3 h-3 text-slate-800" />
-              </button>
-            )}
-            
             <button
               onClick={onOpenBatchSearch}
               className="inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"

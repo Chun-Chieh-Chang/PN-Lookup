@@ -1,20 +1,21 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
 import { PartsTable } from './components/PartsTable';
 import { BatchSearchModal } from './components/BatchSearchModal';
 
-import { AddEditModal } from './components/AddEditModal';
 import { PartDetailModal } from './components/PartDetailModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
-import { getItemType, enrichParts, initBOM, renamePartNo, stripDerivedFields } from './utils/bomEngine';
+import { getItemType, enrichParts, initBOM, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts } from './utils/partsService';
 import { IS_STATIC_MODE } from './utils/serverStatus';
 import { dedupeAlternates } from './utils/alternates';
+import { getPartPrefix } from './utils/partNo';
+import { APP_VERSION } from './version';
 import {
   ImageLibrary,
   pickImageFolder,
@@ -61,7 +62,6 @@ export default function App() {
           setParts(enrichParts(loadedParts));
         }
       }).catch(() => {});
-      setRoute(prev => prev);
     });
     window.addEventListener('hashchange', onHashChange);
     const onKey = (e: KeyboardEvent) => {
@@ -217,8 +217,6 @@ export default function App() {
   });
 
   // Modals state
-  const [isAddEditOpen, setIsAddEditOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<PartItem | null>(null);
   const [isBatchSearchOpen, setIsBatchSearchOpen] = useState(false);
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
@@ -279,8 +277,8 @@ export default function App() {
   const prefixCount = useMemo(() => {
     const prefixes = new Set<string>();
     parts.forEach((p) => {
-      const prefix = p.partNo.split('-')[0] || p.partNo.substring(0, 3);
-      if (prefix) prefixes.add(prefix.toUpperCase());
+      const prefix = getPartPrefix(p.partNo);
+      if (prefix) prefixes.add(prefix);
     });
     return prefixes.size;
   }, [parts]);
@@ -289,38 +287,6 @@ export default function App() {
   const handleBOMUpdated = useCallback(() => {
     setParts((prev) => enrichParts(prev));
   }, []);
-
-  // Add or Edit Part Item
-  const handleSaveItem = (itemData: Omit<PartItem, 'id'> & { id?: string }) => {
-    const cleanData = {
-      ...itemData,
-      alternates: dedupeAlternates(itemData.alternates ?? [], itemData.partNo),
-    };
-    if (itemData.id) {
-      // Edit existing — 品號變更時同步更新 BOM join key
-      const existing = parts.find((p) => p.id === itemData.id);
-      if (existing && itemData.partNo && existing.partNo !== itemData.partNo) {
-        renamePartNo(existing.partNo, itemData.partNo);
-      }
-      setParts((prev) =>
-        enrichParts(prev.map((p) => {
-          let item = p;
-          // 其他品號的替代清單中若有舊品號，一併更新為新品號
-          if (existing && itemData.partNo && p.alternates?.includes(existing.partNo)) {
-            item = { ...p, alternates: p.alternates.map((a) => (a === existing.partNo ? itemData.partNo! : a)) };
-          }
-          return item.id === itemData.id ? ({ ...item, ...cleanData } as PartItem) : item;
-        }))
-      );
-    } else {
-      // Add new
-      const newItem: PartItem = {
-        ...cleanData,
-        id: `custom-${Date.now()}`,
-      };
-      setParts((prev) => [newItem, ...prev]);
-    }
-  };
 
   // Reset Data — clear and open export/import to reload
   const handleResetData = () => {
@@ -360,7 +326,7 @@ export default function App() {
 
       // Prefix filter
       if (filterState.prefixFilter) {
-        const itemPrefix = (item.partNo.split('-')[0] || item.partNo.substring(0, 3)).toUpperCase();
+        const itemPrefix = getPartPrefix(item.partNo);
         if (!itemPrefix.startsWith(filterState.prefixFilter.toUpperCase())) {
           return false;
         }
@@ -447,7 +413,6 @@ export default function App() {
         orphanCount={orphanInfo.orphanFiles.length}
         onPickImageFolder={handlePickImageFolder}
         onOpenOrphansModal={() => setIsOrphansModalOpen(true)}
-        isAdminMode={route === 'admin'}
       />
 
       {/* Stats Summary Bar */}
@@ -473,10 +438,6 @@ export default function App() {
         <PartsTable
           items={filteredParts}
           onViewDetail={(item) => setSelectedDetailItem(item)}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setIsAddEditOpen(true);
-          }}
           searchKeyword={filterState.keyword}
           imageLib={imageLib}
           bindings={bindings}
@@ -489,7 +450,6 @@ export default function App() {
               selectedCustomers: [customerName],
             });
           }}
-          isAdmin={route === 'admin'}
         />
       </main>
 
@@ -499,17 +459,6 @@ export default function App() {
         onClose={() => setIsBatchSearchOpen(false)}
         allParts={parts}
       />
-      <AddEditModal
-        isOpen={isAddEditOpen}
-        onClose={() => {
-          setIsAddEditOpen(false);
-          setEditingItem(null);
-        }}
-        onSave={handleSaveItem}
-        initialItem={editingItem}
-        existingCustomers={allCustomers}
-      />
-
       <PartDetailModal
         isOpen={!!selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
@@ -577,7 +526,7 @@ export default function App() {
       {/* Footer */}
       <footer className="mt-auto py-3 text-xs text-slate-500 border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
         <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span className="font-semibold text-slate-700">凱益品號檢索系統 v3.4.0</span>
+          <span className="font-semibold text-slate-700">凱益品號檢索系統 {APP_VERSION}</span>
           <span className="font-mono text-slate-500 font-medium">Developed by Wesley Chang, July-2026 @Mouldex.</span>
         </div>
       </footer>

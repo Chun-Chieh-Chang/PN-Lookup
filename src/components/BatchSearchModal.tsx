@@ -22,7 +22,7 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
   const queries: string[] = Array.from(
     new Set(
       inputText
-        .split(/[\n,;]+/)
+        .split(/[\n,;，； \t]+/)
         .map((q) => q.trim())
         .filter(Boolean)
     )

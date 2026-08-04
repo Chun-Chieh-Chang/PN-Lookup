@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
 import { enrichParts, getBOMChildren } from './bomEngine';
+import { ALTERNATE_SPLIT_RE } from './alternates';
 import assemblyEngMap from './assemblyEnglishMap.json';
 
 function lookupName(partNo: string, partsLookup: Map<string, PartItem>): string {
@@ -51,7 +52,7 @@ function buildAssemblySheet(
   return ws;
 }
 
-const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
+export const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
 
 export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
@@ -141,7 +142,7 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
         if (r['color']) item.color = String(r['color']).trim();
         if (r['material']) item.material = String(r['material']).trim();
         if (r['alternates']) {
-          item.alternates = String(r['alternates']).split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+          item.alternates = String(r['alternates']).split(ALTERNATE_SPLIT_RE).map(s => s.trim()).filter(Boolean);
         }
         if (r['itemType'] === 'part' || r['itemType'] === 'assembly') item.itemType = r['itemType'];
         if (r['components']) try { item.components = JSON.parse(String(r['components'])); } catch { /* ignore */ }
@@ -175,7 +176,7 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
     if (notes) item.notes = notes;
     const alts = (r['替代品號'] || '').toString().trim();
     if (alts) {
-      item.alternates = alts.split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+      item.alternates = alts.split(ALTERNATE_SPLIT_RE).map(s => s.trim()).filter(Boolean);
     }
     parsed.push(item);
   }

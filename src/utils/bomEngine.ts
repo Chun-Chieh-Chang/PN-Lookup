@@ -58,7 +58,7 @@ export function stripDerivedFields(parts: PartItem[]): PartItem[] {
   });
 }
 
-function computeParentsMap(children: Record<string, string[]>): Record<string, string[]> {
+export function computeParentsMap(children: Record<string, string[]>): Record<string, string[]> {
   const parents: Record<string, string[]> = {};
   for (const [parent, comps] of Object.entries(children)) {
     for (const child of comps) {

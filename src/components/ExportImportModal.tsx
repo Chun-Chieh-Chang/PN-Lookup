@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { X, Download, Upload, FileSpreadsheet, Check, RefreshCw, FileJson, Table2, Tags } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
-import { generateExcelWorkbook, parseExcelToParts } from '../utils/excelExport';
+import { generateExcelWorkbook, parseExcelToParts, FULL_DATA_HEADERS } from '../utils/excelExport';
+import { ALTERNATE_SPLIT_RE } from '../utils/alternates';
 import { parseCustomerSheet, applyCustomerRows, CustomerImportReport } from '../utils/customerPartImport';
 
 interface ExportImportModalProps {
@@ -14,7 +15,7 @@ interface ExportImportModalProps {
   onResetData: () => void;
 }
 
-const CSV_HEADERS = 'id,customer,partNo,name,category,color,material,notes,alternates,itemType,components,usedInAssemblies,createdAt';
+const CSV_HEADERS = FULL_DATA_HEADERS.join(',');
 
 function csvEscape(val: unknown): string {
   const s = val == null ? '' : String(val);
@@ -91,7 +92,7 @@ function parseImportedCSV(text: string): PartItem[] {
       if (parts[6]?.trim()) item.material = parts[6].trim();
       if (parts[7]?.trim()) item.notes = parts[7].trim();
       if (parts[8]?.trim()) {
-        item.alternates = parts[8].trim().split(/[,、;；]+/).map(s => s.trim()).filter(Boolean);
+        item.alternates = parts[8].trim().split(ALTERNATE_SPLIT_RE).map(s => s.trim()).filter(Boolean);
       }
       if (parts[9]?.trim() === 'part' || parts[9]?.trim() === 'assembly') item.itemType = parts[9].trim() as 'part' | 'assembly';
       if (parts[10]?.trim()) try { item.components = JSON.parse(parts[10].trim()); } catch { /* ignore */ }
@@ -126,7 +127,6 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
   const generateExportData = (): string => {
     if (exportFormat === 'csv') return generateCSVString(parts);
-    if (exportFormat === 'xlsx') return '';
     return JSON.stringify(parts, null, 2);
   };
 

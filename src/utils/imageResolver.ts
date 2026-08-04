@@ -109,10 +109,6 @@ export function resolveImage(
   return all.length > 0 ? all[0] : null;
 }
 
-export function getPartNoAliases(item: Pick<PartItem, 'partNo' | 'alternates'>): string[] {
-  return [item.partNo, ...(item.alternates ?? [])];
-}
-
 // ---------- 統計所有受控圖檔、待處理孤兒圖檔與已排除孤兒圖檔 ----------
 export interface OrphanFilesResult {
   matchedFiles: Set<string>;

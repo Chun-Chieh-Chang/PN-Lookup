@@ -6,7 +6,6 @@ interface StatsBarProps {
   filteredCount: number;
   customerCount: number;
   prefixCount: number;
-  lastUpdated?: string;
 }
 
 export const StatsBar: React.FC<StatsBarProps> = ({

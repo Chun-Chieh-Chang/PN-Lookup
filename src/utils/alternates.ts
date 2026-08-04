@@ -1,6 +1,8 @@
+export const ALTERNATE_SPLIT_RE = /[,、;；\s]+/;
+
 export function parseAlternates(raw: string, selfPartNo?: string): string[] | undefined {
   const list = raw
-    .split(/[,、;；\s]+/)
+    .split(ALTERNATE_SPLIT_RE)
     .map((s) => s.trim())
     .filter(Boolean);
   return dedupeAlternates(list, selfPartNo);

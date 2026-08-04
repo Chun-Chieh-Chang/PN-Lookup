@@ -20,6 +20,7 @@ import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from '../utils/mindmapClassifier';
 import { ImageLibrary } from '../utils/imageLibrary';
 import { resolveImage } from '../utils/imageResolver';
+import { APP_VERSION } from '../version';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Constants – 1.2× baseline (原 1× × 1.2)
@@ -46,7 +47,10 @@ const GAP = {
   expandedRow:  155,  // nodeSize.y → 展開時垂直列步長；展開清單卡片高 ~130px
 };
 
-type NodeDiag = { id: string; label: string; depth: number; x: number; y: number; w: number; h: number };
+// 卡片標題區高度（含上下 padding 與 sublabel 佔位）
+function cardHeaderH(sublabel: string | undefined, padV: number, fontSize: number, subFontSize: number): number {
+  return padV * 2 + fontSize * 1.4 + (sublabel ? subFontSize * 1.4 + 4 : 0);
+}
 
 
 
@@ -388,14 +392,12 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   isOpen, onClose, parts, imageLib, bindings = {}, ocrIndex = new Map(), onSelectPart,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [thumbnail, setThumbnail]     = useState<ThumbnailState | null>(null);
+  const [thumbnail, setThumbnail] = useState<ThumbnailState | null>(null);
   const [expandedLeafIds, setExpandedLeafIds] = useState<Set<string>>(new Set());
-  const [diagInfo, setDiagInfo] = useState<string>('');
-  const diagRef = useRef<NodeDiag[]>([]);
-  const containerRef                  = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   // translate: 將 root 置於画布左側居中
   const [treeTranslate, setTreeTranslate] = useState({ x: 80, y: 400 });
-  const [treeZoom, setTreeZoom]           = useState(0.85);
+  const [treeZoom, setTreeZoom] = useState(0.85);
 
 
   const toggleLeafExpanded = useCallback((id: string) => {
@@ -409,11 +411,17 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
 
   const mindMapTree = useMemo(() => buildMindMapTree(parts), [parts]);
 
+  // 分類計數直接從 buildMindMapTree 的單次分類結果推導（不再重複 classifyPart）
   const [unclassifiedCount, classifiedCount] = useMemo(() => {
-    let u = 0, c = 0;
-    for (const p of parts) { if (classifyPart(p).category === 'unclassified') u++; else c++; }
-    return [u, c];
-  }, [parts]);
+    let unclassified = 0;
+    const stack: MindMapNode[] = [mindMapTree];
+    while (stack.length > 0) {
+      const node = stack.pop()!;
+      if (node.category === 'unclassified') unclassified += node.parts.length;
+      stack.push(...node.children);
+    }
+    return [unclassified, parts.length - unclassified];
+  }, [mindMapTree, parts.length]);
 
   const highlightIds = useMemo(() => {
     const q = searchQuery.trim();
@@ -490,37 +498,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     };
   }, [openBranchIds]);
 
-  React.useEffect(() => {
-    const byId = new Map<string, NodeDiag>();
-    for (const n of diagRef.current) byId.set(n.id, n);
-    diagRef.current = [];
-    const nodes = [...byId.values()];
-    type Overlap = { a: NodeDiag; b: NodeDiag; dx: number; dy: number; area: number };
-    const overlaps: Overlap[] = [];
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const A = nodes[i], B = nodes[j];
-        // A.y/B.y = SVG X (水平起始), A.w/B.w = 卡片寬度
-        const dx = Math.min(A.y + A.w, B.y + B.w) - Math.max(A.y, B.y);
-        // A.x/B.x = SVG Y (垂直中心), A.h/B.h = 卡片高度
-        const dy = Math.min(A.x + A.h / 2, B.x + B.h / 2) - Math.max(A.x - A.h / 2, B.x - B.h / 2);
-        if (dx > 0 && dy > 0) overlaps.push({ a: A, b: B, dx, dy, area: dx * dy });
-      }
-    }
-    overlaps.sort((p, q) => q.area - p.area);
-    if (overlaps.length > 0) {
-      console.log(`%c[MindMapDiag] ${overlaps.length} 組重疊`, 'color:#EF4444;font-weight:bold', { nodeSize: effectiveNodeSize, separation: effectiveSeparation, renderedNodes: nodes.length });
-    }
-    const info = overlaps.length > 0
-      ? `重疊 ${overlaps.length} 組：\n` + overlaps.slice(0, 8).map(o =>
-          `• ${o.a.label} ↔ ${o.b.label}（水平 ${o.dx.toFixed(0)}px / 垂直 ${o.dy.toFixed(0)}px）`
-        ).join('\n')
-      : '';
-    setDiagInfo(prev => (prev === info ? prev : info));
-  }, [mindMapTree, hasAnyExpanded, searchQuery, expandedLeafIds]);
-
-
-
   // react-d3-tree 需要的：轉換樹狀資料
   const d3TreeData = useMemo(() => toD3Tree(mindMapTree), [mindMapTree]);
 
@@ -566,10 +543,9 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
   };
 
   // react-d3-tree renderCustomNodeElement：每個節點渲染成自訂卡片
-  const renderNode = ({ nodeDatum, toggleNode, hierarchyPointNode }: {
+  const renderNode = ({ nodeDatum, toggleNode }: {
     nodeDatum: D3TreeNode & { __rd3t: { collapsed: boolean } };
     toggleNode: () => void;
-    hierarchyPointNode?: { x: number; y: number };
   }) => {
     const mm = nodeDatum._mmNode;
     const isCollapsed = nodeDatum.__rd3t?.collapsed ?? false;
@@ -588,11 +564,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     // 品號葉節點
     if (mm.isPartNode && mm.parts.length > 0) {
       const part = mm.parts[0];
-      diagRef.current.push({
-        id: mm.id, label: mm.label, depth: mm.depth,
-        x: hierarchyPointNode?.x ?? 0, y: hierarchyPointNode?.y ?? 0,
-        w: CARD.partMinW, h: 48,
-      });
 
       return (
         <foreignObject
@@ -658,24 +629,15 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     // min-font-size exception: 心智圖節點標題：depth2 幾何等級字高可接受 12px，depth3 儲存詳細圖說文字可接受 11px
     const fontSize = isRoot ? 16 : mm.depth === 1 ? 13 : mm.depth === 2 ? 12 : 11;
     // min-font-size exception: sublabel 為輔助圖例標記，心智圖直接建小辨識密度標注可接受 10px
-    const subFontSize = isRoot ? 10 : 10;
+    const subFontSize = 10;
     const cardW = isLeafCategory ? 320 : getNodeCardWidth(mm);
     const padH = isRoot ? 19 : mm.depth <= 2 ? 14 : 12;
     const padV = isRoot ? 14 : mm.depth <= 2 ? 10 : 8;
 
-    const diagHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
-    const diagH = (isLeafCategory ? (isLeafExpanded ? diagHeaderH + Math.min(displayedParts.length * 42 + 10, 220) + 24 : diagHeaderH) : diagHeaderH) + 12;
-    diagRef.current.push({
-      id: mm.id, label: mm.label, depth: mm.depth,
-      x: hierarchyPointNode?.x ?? 0, y: hierarchyPointNode?.y ?? 0,
-      w: cardW, h: diagH,
-    });
-
-
     // 品號葉卡片特化邏輯 (預設呈收合 mini 膠囊狀態)
     if (isLeafCategory) {
       const listH = isLeafExpanded ? Math.min(displayedParts.length * 42 + 10, 220) : 0;
-      const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+      const baseHeaderH = cardHeaderH(mm.sublabel, padV, fontSize, subFontSize);
       const nodeH = isLeafExpanded ? (baseHeaderH + listH + 24) : baseHeaderH;
 
       return (
@@ -825,7 +787,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
     }
 
     // 一般父分類卡片
-    const baseHeaderH = mm.sublabel ? (padV * 2 + fontSize * 1.4 + subFontSize * 1.4 + 4) : (padV * 2 + fontSize * 1.4);
+    const baseHeaderH = cardHeaderH(mm.sublabel, padV, fontSize, subFontSize);
     const nodeH = baseHeaderH;
 
     return (
@@ -912,7 +874,7 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           <div>
             <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
               產品識別教育訓練 — 思維導圖
-              <span className="px-2 py-0.5 rounded-full text-[13px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">v5.4.0</span>
+              <span className="px-2 py-0.5 rounded-full text-[13px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-200">{APP_VERSION}</span>
             </h2>
             <p className="text-[13px] text-slate-500">
               已分類 <span className="text-emerald-600 font-bold">{classifiedCount}</span> 件 ·
@@ -998,21 +960,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
           .rd3t-label__title, .rd3t-label__attributes-list { display: none; }
         `}</style>
       </div>
-
-      {/* ── 診斷疊加（重疊偵測結果，僅開發用） ── */}
-      {diagInfo && (
-        <div style={{
-          position: 'absolute', bottom: 8, left: 8, zIndex: 30, maxWidth: 420, maxHeight: 220,
-          overflowY: 'auto',
-          background: '#FEF2F2', border: '1px solid #FCA5A5', color: '#B91C1C',
-          fontSize: 13.5, fontWeight: 600, padding: '6px 10px', borderRadius: 8,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.1)', whiteSpace: 'pre-line',
-          fontFamily: 'monospace', textAlign: 'left',
-        }}>
-          ⚠ {diagInfo}
-        </div>
-      )}
-
 
       {/* ── Thumbnail popup ── */}
       {thumbnail && (

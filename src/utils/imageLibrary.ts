@@ -13,8 +13,6 @@ export interface ImageLibrary {
   matchAll(partNo: string, aliases?: string[]): string[];
   /** 依檔名取得 object URL（快取） */
   urlForFile(fileName: string): string | null;
-  urlFor(partNo: string, aliases?: string[]): string | null;
-  nameFor(partNo: string, aliases?: string[]): string | null;
   debug: {
     totalFiles: number;
     sampleNames: string[];
@@ -142,7 +140,6 @@ function matchAllFiles(files: File[], partNo: string, aliases?: string[]): File[
 
 function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
   const urlCache = new Map<string, string | null>();
-  const nameCache = new Map<string, string | null>();
   const fileByName = new Map<string, File>();
   for (const f of files) fileByName.set(f.name, f);
   const fileNames = files.map((f) => f.name);
@@ -172,29 +169,10 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
       urlCache.set(fileName, url);
       return url;
     },
-  urlFor(partNo: string, aliases?: string[]): string | null {
-    const key = `${partNo}\u0000${(aliases ?? []).join('\u0000')}`;
-    if (urlCache.has(key)) return urlCache.get(key) ?? null;
-    const hit = matchFile(files, partNo, aliases);
-    if (!hit) {
-      urlCache.set(key, null);
-      return null;
-    }
-    const url = URL.createObjectURL(hit);
-    urlCache.set(key, url);
-    return url;
-  },
-  nameFor(partNo: string, aliases?: string[]): string | null {
-    const key = `${partNo}\u0000${(aliases ?? []).join('\u0000')}`;
-    if (nameCache.has(key)) return nameCache.get(key) ?? null;
-    const hit = matchFile(files, partNo, aliases);
-    nameCache.set(key, hit ? hit.name : null);
-    return nameCache.get(key) ?? null;
-  },
-  debug: {
-    totalFiles,
-    sampleNames: files.slice(0, 10).map((f) => f.name),
-  },
+    debug: {
+      totalFiles,
+      sampleNames: files.slice(0, 10).map((f) => f.name),
+    },
   };
 }
 
@@ -262,10 +240,6 @@ export async function restoreImageFolder(): Promise<ImageLibrary | null> {
 
 export function isImageFolderDismissed(): boolean {
   return localStorage.getItem(FLAG_DISMISSED) === '1';
-}
-
-export function setImageFolderDismissed() {
-  localStorage.setItem(FLAG_DISMISSED, '1');
 }
 
 export function clearImageFolderDismissed() {

@@ -3,7 +3,6 @@ import {
   Copy,
   Check,
   Eye,
-  Edit2,
   ArrowUpDown,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +22,6 @@ import { resolveAllImages, ImageResolution } from '../utils/imageResolver';
 interface PartsTableProps {
   items: PartItem[];
   onViewDetail: (item: PartItem) => void;
-  onEdit: (item: PartItem) => void;
   searchKeyword: string;
   imageLib?: ImageLibrary | null;
   bindings?: Record<string, string>;
@@ -31,7 +29,6 @@ interface PartsTableProps {
   ocrProgress?: { done: number; total: number } | null;
   onBindClick?: (item: PartItem) => void;
   onCustomerClick: (customerName: string) => void;
-  isAdmin?: boolean;
 }
 
 type SortField = 'customer' | 'partNo' | 'category' | 'name';
@@ -39,7 +36,6 @@ type SortField = 'customer' | 'partNo' | 'category' | 'name';
 export const PartsTable: React.FC<PartsTableProps> = ({
   items,
   onViewDetail,
-  onEdit,
   searchKeyword,
   imageLib,
   bindings = {},
@@ -47,7 +43,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
   ocrProgress,
   onBindClick,
   onCustomerClick,
-  isAdmin = false,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedFullId, setCopiedFullId] = useState<string | null>(null);
@@ -640,16 +635,6 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
-
-                      {isAdmin && (
-                        <button
-                          onClick={() => onEdit(item)}
-                          className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          title="修訂此料號（既有數據修改）"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
 
                     </div>
                   </td>

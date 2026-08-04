@@ -9,10 +9,6 @@ interface SearchControlsProps {
   onKeywordChange: (kw: string) => void;
   searchField: 'all' | 'partNo' | 'name' | 'customer';
   onSearchFieldChange: (field: 'all' | 'partNo' | 'name' | 'customer') => void;
-  sortField: string;
-  onSortFieldChange: (field: string) => void;
-  sortOrder?: 'asc' | 'desc';
-  onSortOrderChange?: (order: 'asc' | 'desc') => void;
   filterCustomer: string | null;
   onClearCustomerFilter: () => void;
 }
