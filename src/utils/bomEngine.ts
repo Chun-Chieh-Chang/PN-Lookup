@@ -10,7 +10,7 @@ let initPromise: Promise<void> | null = null;
 // 字首規則：以這些開頭的品號一律視為組件（不需在 BOM 階層登記）
 const ASSEMBLY_PART_NO_PREFIXES = ['MDXE'];
 
-export function isAssemblyPartNo(partNo: string): boolean {
+function isAssemblyPartNo(partNo: string): boolean {
   const upper = partNo.toUpperCase();
   if (assemblySet.has(upper) || assemblySet.has(partNo)) return true;
   return ASSEMBLY_PART_NO_PREFIXES.some((p) => upper.startsWith(p));

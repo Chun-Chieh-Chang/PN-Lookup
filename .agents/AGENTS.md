@@ -63,7 +63,7 @@
 
 為了徹底杜絕「改 A 錯 B (Side-effects & Regression)」之混亂：
 1. 核心數據不變量 (Data Invariants)：
-   - 主資料庫 parts 實體必須 100% 保持依 `partNo` 去重，數值嚴格鎖定 565 筆實體。
+   - 主資料庫 parts 實體必須 100% 保持依 `partNo` 去重，種子轉譯基線嚴格鎖定 693 筆實體（組件圖掃描 --apply 可增量，master ≥ 693）。
    - BOM 關聯必須嚴格鎖定 181 組組件。
    - 圖檔解析器 `resolveAllImages` 必須同時比對 `partNo` 與所有 `alternates` 別稱。
 2. 自動化確效門禁 (Automated Build Gate)：

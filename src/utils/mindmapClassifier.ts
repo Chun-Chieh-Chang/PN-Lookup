@@ -54,7 +54,7 @@ export type MindMapCategory =
   // 未分類
   | 'unclassified';                  // 待人工分類
 
-export interface ClassificationResult {
+interface ClassificationResult {
   category: MindMapCategory;
   breadcrumb: string[];         // 完整路徑，如 ['廠內品號', '零件', 'T接頭 (A01~A03)']
   subLabel?: string;            // 額外子標籤 (例如 "透氣-透氣口 Side port")

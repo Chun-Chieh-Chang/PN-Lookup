@@ -78,11 +78,6 @@ export async function recognizeFile(file: File): Promise<string> {
   return ocrImage(file);
 }
 
-export interface OcrEntry {
-  key: string;
-  text: string;
-}
-
 export async function loadOcrCache(): Promise<Map<string, string>> {
   const entries = await idbGetAll('ocr');
   const map = new Map<string, string>();

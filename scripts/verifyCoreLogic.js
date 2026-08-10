@@ -3,7 +3,7 @@
  * 
  * 核心數據邏輯固化確效驗證腳本 (Core Data Logic Freeze & Anti-Regression Verification Suite)
  * 於 npm run build 與部署前自動執行，確保以下核心不變量 100% 成立：
- *   1. 主資料庫 parts 陣列必須獨一無二去重（565 筆），不得包含任何重複品號。
+ *   1. 主資料庫 parts 陣列必須獨一無二去重（693 筆種子基線），不得包含任何重複品號。
  *   2. 種子轉譯器 (convertUnifiedSeedToMaster) 必須 100% 保持 MECE 去重歸併邏輯。
  *   3. 圖檔比對邊界防禦 (isMatchedSegment) 必須能防範 B-003 貪婪匹配 B-0030。
  * 

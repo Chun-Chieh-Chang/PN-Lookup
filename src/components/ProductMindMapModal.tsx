@@ -708,7 +708,6 @@ export const ProductMindMapModal: React.FC<ProductMindMapModalProps> = ({
                   </span>
                 </div>
                 <div
-                  className="custom-scrollbar"
                   onWheel={(e) => e.stopPropagation()}
                   style={{
                     maxHeight: 220,

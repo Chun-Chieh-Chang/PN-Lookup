@@ -68,8 +68,8 @@
 </head>
 <body>
 <header>
-  <h1>PN-Lookup 資料流映射文件<span class="badge">v7.5.3</span></h1>
-  <p>Data Mapping Specification — 從原始種子檔案到操作介面欄位的完整資料轉換說明 &nbsp;|&nbsp; 最後更新：2026-08-04</p>
+  <h1>PN-Lookup 資料流映射文件<span class="badge">v7.5.4</span></h1>
+  <p>Data Mapping Specification — 從原始種子檔案到操作介面欄位的完整資料轉換說明 &nbsp;|&nbsp; 最後更新：2026-08-10</p>
 </header>
 
 <div class="container">
@@ -351,7 +351,7 @@
     </ul>
   </div>
   <div class="alert alert-info">
-    <strong>觸發時機：</strong>① 用戶在 AddEditModal 儲存品號時；② buildMaster.js <code>addPart()</code> 合併 alternates 時（Set union）
+    <strong>觸發時機：</strong>① 使用者在 AdminPanel 新增/修訂品號儲存時；② buildMaster.js <code>addPart()</code> 合併 alternates 時（Set union）
   </div>
 </section>
 
@@ -407,13 +407,13 @@
     <strong>人工確認邊界：</strong>「候補品號」僅代表在組件圖頁面內文出現但 Excel/master 未收錄，可能是真品號也可能是材質/標準文字誤擷（如 LDPE PAXOTHENE NA207-66）。腳本僅輸出報告，<strong>不會自動</strong>把候補品號加入 master，一律需人工確認。
   </div>
   <div class="alert alert-green">
-    <strong>不變量守護：</strong><code>verifyCoreLogic.js</code> 種子轉譯維持固定 <strong>693 筆</strong>；master 檔允許 ≥ 693（組件圖掃描可增量，當前 717 筆）。
+    <strong>不變量守護：</strong><code>verifyCoreLogic.js</code> 種子轉譯維持固定 <strong>693 筆</strong>；master 檔允許 ≥ 693（組件圖掃描 --apply 可增量，當前 693 筆基線）。
   </div>
 </section>
 
 </div>
 <footer>
-  PN-Lookup Data Mapping Specification v7.5.3 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
+  PN-Lookup Data Mapping Specification v7.5.4 &nbsp;|&nbsp; 凱益品號檢索系統 &nbsp;|&nbsp; Developed by Wesley Chang, 2026 @Mouldex
 </footer>
 </body>
 </html>

@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.5.2)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.5.4)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與產品思維導圖 (MindMap) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.5.2-indigo.svg)
+![Version](https://img.shields.io/badge/version-v7.5.4-indigo.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -17,7 +17,7 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
   - 基於 D3 座標轉置軸與動態適應性間距，提供直覺的產品結構展開與滾動檢視。
   - 完整支援雙擊卡片展開/收合、未分類品號包覆與點擊預覽工程圖面微縮彈窗。
 - 🛡️ **數據固化與防迴歸確效門禁 (`verifyCoreLogic.js`)**：
-  - 於 `npm run build` 時自動運行測試，鎖定 565 筆去重品號、181 組 BOM 關聯階層與圖檔邊界匹配防禦。
+  - 於 `npm run build` 時自動運行測試，鎖定 693 筆種子轉譯去重品號（master 檔允許組件圖掃描增量）、181 組 BOM 關聯階層與圖檔邊界匹配防禦。
   - 包含 CI 沙盒防禦模式（遵循 Zero Private Data 規範，跳過敏感離線檔測試）。
 - 🖼️ **圖檔全自動超連結與 0 孤兒圖檔管理**：
   - 全自動遞迴掃描工程圖面檔，支援檔名高級正規化匹配、PDF 文字層提取與視覺 OCR 雙軌辨識。
@@ -38,7 +38,8 @@ PN-Lookup/
 ├── rawdata/                 # [隱私隔離] 原始 Excel 與工程圖檔
 ├── docs/                    # 技術規格文件 (data-mapping.html — 欄位映射規格)
 ├── scripts/                 # 資料處理與確效驗證腳本
-│   ├── buildMaster.js       # Master Table 建置腳本
+│   ├── buildMaster.js       # Master Table 建置腳本（種子檔 → pn-lookup-master.json）
+│   ├── scanAssemblyImages.js# 組件圖 PDF 文字層掃描增補 (--apply / --auto)
 │   └── verifyCoreLogic.js   # 核心數據不變量與防迴歸確效門禁 (npm run build 前置檢查)
 ├── src/                     # 前端應用程式原始碼
 │   ├── components/          # 視覺 UI 元件 (MECE 分類)
@@ -52,7 +53,6 @@ PN-Lookup/
 │   │   ├── ExportImportModal.tsx# 資料備份與多格式匯出匯入
 │   │   ├── ImageBindModal.tsx   # 手動圖檔對應綁定彈窗
 │   │   ├── ImageFolderModal.tsx # 本地圖檔資料夾選擇彈窗
-│   │   ├── AddEditModal.tsx     # 品號資料新增/修改彈窗
 │   │   ├── BatchSearchModal.tsx # 批次品號搜尋與比對對照
 │   │   └── StatsBar.tsx         # 統計指標列 (Morandi 微卡片)
 │   ├── utils/               # 邏輯與引擎工具庫
@@ -67,11 +67,14 @@ PN-Lookup/
 │   │   ├── imageResolver.ts     # 檔名/綁定/OCR 三階解析器
 │   │   ├── mindmapClassifier.ts # 思維導圖產品分類引擎
 │   │   ├── ocr.ts               # Tesseract.js / pdf.js 本地 OCR 辨識引擎
+│   │   ├── partNo.ts            # 品號前綴工具 (getPartPrefix)
 │   │   ├── partsService.ts      # 品號資料服務 (localStorage / API)
-│   │   └── serverStatus.ts      # 伺服器狀態偵測 (IS_STATIC_MODE)
+│   │   └── serverStatus.ts      # 靜態模式旗標 (IS_STATIC_MODE)
 │   ├── App.tsx              # 主應用程式入口與狀態控制
 │   ├── main.tsx             # React 掛載入口
 │   ├── types.ts             # PartItem / FilterState 型別定義
+│   ├── types/               # 全域環境型別宣告 (file-system-access.d.ts)
+│   ├── version.ts           # APP_VERSION 單一版本真源
 │   └── index.css            # Taste-Skill 設計系統樣式與字型
 ├── .github/workflows/       # GitHub Actions (Pages 部署)
 ├── DEV_LOG.md               # 開發日誌與版本變更歷史 (RCA & CAPA)

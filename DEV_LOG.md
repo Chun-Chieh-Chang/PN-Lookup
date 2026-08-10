@@ -1,5 +1,75 @@
 # PN-Lookup 開發日誌
 
+## v7.5.4 — 全域優化作業：死檔清除 + 死碼匯出收斂 + 文件全面同步 (Global Optimization: Dead-File Sweep & Doc Sync)
+
+### 需求內容
+- 使用者執行「專案的整體程式碼與檔案優化作業」五步 SOP：①盤點清理 ②文件同步 ③MECE 整合 ④Git 還原基準 ⑤推送 GitHub。
+- 清理清單經使用者確認後執行（全部先驗證零引用，零功能 Regression）。
+
+### 清理項目（全部先驗證引用再移除）
+1. **死檔刪除（零 import 驗證）**：
+   - `src/data/bomData.ts`、`src/data/partsData.ts`：全專案零 import（grep 驗證），且已被 `.gitignore` 的 `data/` 規則遮蔽（DEV_LOG v2.8.x 本就應自版本控制移除，v2.8.0 曾以 CI 空殼名義重新加入）
+   - `src/data/` 空目錄、`assets/.aistudio/` 空目錄（未追蹤，僅含 2 bytes 自忽略檔）
+2. **死碼匯出收斂（tsc / grep 交叉驗證）**：
+   - `serverStatus.ts`：刪除 `getServerStatus()` 與 `ServerStatus` type（零外部引用；App.tsx 以 `serverOnline={false}` 硬編碼，此探測函式已成死路徑）
+   - `bomEngine.ts`：`isAssemblyPartNo` 取消 export（僅模組內部使用）
+   - `ocr.ts`：刪除完全無引用之 `OcrEntry` interface
+   - `customerPartImport.ts` / `imageResolver.ts` / `mindmapClassifier.ts`：`CustomerRow` / `OrphanFilesResult` / `ClassificationResult` 取消 export（僅內部型別契約）
+3. **樣式與配置清理**：
+   - `index.css`：移除零引用 `.glass-card` 樣式（DEV_LOG v3.2.0 導入後已無元件使用）
+   - `ProductMindMapModal.tsx`：移除無定義的 `custom-scrollbar` class（inert，全域 scrollbar 樣式已覆蓋）
+   - `vite.config.ts`：移除零使用之 `@` alias
+   - `.gitignore`：`data/` / `rawdata/` / `ref/` 收斂為根目錄限定 `/data/` 等，避免誤遮蔽任何 `src/` 子目錄同名檔
+
+### 文件同步（階段二）
+- **README.md**：版本 v7.5.2 → v7.5.4；目錄樹修正（移除已刪除之 `AddEditModal.tsx`，補齊 `partNo.ts` / `version.ts` / `types/` / `scanAssemblyImages.js`）；數據不變量 565 → 693 更新
+- **DEV_LOG.md**：補記 v7.5.3 兩筆 commit（f55b4f1 + 477f741）歷史斷層，本條為 v7.5.4
+- **docs/data-mapping.html**：版本 badge v7.5.4；S10 觸發時機改寫（AddEditModal 已刪除 → AdminPanel）；S12 筆數更新（717 → 693 種子基線）
+- **scripts/verifyCoreLogic.js**：檔頭註解不變量 565 → 693（與實作一致）
+
+### 確效驗證
+- `npm run lint`（tsc --noEmit）：zero errors
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS（693 筆 / 181 組 BOM 不變量）
+- `node scripts/buildMaster.js`：重新生成 master table 693 筆 / 181 組，與既有檔零差異
+
+### 回歸規則
+- `regression_defense_and_logic_freezing`：數據不變量 693/181 未受影響（verifyCoreLogic 全數 PASS）
+- `data_structure_change_notification`：無資料結構變更（master 檔未改動）
+- `ui_minimum_font_size`：本次未觸碰任何字級樣式
+
+---
+
+## v7.5.3 — 全域優化作業：死 UI 清除 + 版本單一化 + BOM 映射修正 (Global Optimization: Version Unification & BOM Mapping Fix)
+
+### 需求內容
+- 兩筆 commit 合併執行：`f55b4f1`（BOM 映射修正）與 `477f741`（全域優化），版本統一為 v7.5.3。
+
+### 修正與清理項目
+1. **BOM 欄位映射修正 (f55b4f1)**：
+   - `buildMaster.js`：`sanitizeAlternates` 收斂為僅接受品號格式（排除備註/說明文字誤錄）
+   - 別稱來源擴充：`產品編號(舊)`（舊版廠內品號）與 `圖面編號`（客戶圖面編號，常見於圖檔檔名）納入 alternates
+   - `customerParts` 欄位語意改為 `產品編號` / `零件名稱(中)`，保留向後相容 fallback
+   - 新增 `scripts/scanAssemblyImages.js`：以 pdfjs 文字層掃描 274 張組件圖，`--apply` / `--auto` 套用 BOM 增補
+   - `verifyCoreLogic.js`：種子基線 565 → 693，master ≥ 693（掃描可增量）
+2. **死 UI 清除與版本單一化 (477f741)**：
+   - 新增 `src/version.ts` 作為 `APP_VERSION` 單一真源（Header / Footer / MindMap 統一引用）
+   - 刪除 `AddEditModal.tsx` 與不可達的新增/編輯鏈（handleSaveItem、isAddEditOpen）及永遠為 false 的管理員 UI（Header pill/按鈕、PartsTable 編輯鈕）
+   - MindMap：移除 NodeDiag 診斷子系統、重疊覆蓋層、`[MindMapDiag]` console 日誌、subFontSize 三元式、重複 classifyPart 傳遞；`cardHeaderH` 去重
+   - 邏輯去重：`computeParentsMap`（bomEngine 匯出）、`ALTERNATE_SPLIT_RE`、`FULL_DATA_HEADERS`、`getPartPrefix`（新檔 `src/utils/partNo.ts`）
+   - 移除未呼叫之 `imageLibrary` urlFor/nameFor 快取與 `setImageFolderDismissed`；移除 `getPartNoAliases`；清除死 props（StatsBar lastUpdated、SearchControls sort props）
+   - BatchSearch 分隔符擴充：中文逗點/分號/space/tab
+
+### 確效驗證
+- `npx tsc --noEmit`：zero errors
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS
+- master table 重新生成：693 筆品號 / 181 組 BOM（組件圖掃描可增量）
+
+### 回歸規則
+- `regression_defense_and_logic_freezing`：數據不變量 693/181 未受影響
+- `data_structure_change_notification`：種子轉譯基線 565 → 693（customerPartNumbers 映射修正後新增 128 筆正確實體，非資料遺失）
+
+---
+
 ## v7.5.2 — 全域優化作業：死碼清除 + 過期設定修復 (Global Optimization: Dead-Code Sweep)
 
 ### 需求內容

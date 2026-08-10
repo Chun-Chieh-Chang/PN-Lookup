@@ -9,9 +9,9 @@ coverage/
 !.env.example
 
 # Sensitive Data & Privacy Files — NEVER push to GitHub
-data/
-rawdata/
-ref/
+/data/
+/rawdata/
+/ref/
 *.xlsm
 *.xlsx
 *.csv

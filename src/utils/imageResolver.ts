@@ -110,7 +110,7 @@ export function resolveImage(
 }
 
 // ---------- 統計所有受控圖檔、待處理孤兒圖檔與已排除孤兒圖檔 ----------
-export interface OrphanFilesResult {
+interface OrphanFilesResult {
   matchedFiles: Set<string>;
   orphanFiles: string[];
   dismissedFiles: string[];

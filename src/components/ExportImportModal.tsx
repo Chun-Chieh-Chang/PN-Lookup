@@ -5,6 +5,7 @@ import { PartItem } from '../types';
 import { generateExcelWorkbook, parseExcelToParts, FULL_DATA_HEADERS } from '../utils/excelExport';
 import { ALTERNATE_SPLIT_RE } from '../utils/alternates';
 import { parseCustomerSheet, applyCustomerRows, CustomerImportReport } from '../utils/customerPartImport';
+import { updateBOMData } from '../utils/bomEngine';
 
 interface ExportImportModalProps {
   isOpen: boolean;
@@ -248,9 +249,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
       try {
         const json = JSON.parse(trimmed);
         if (json && json.bom && json.bom.children && json.bom.parents) {
-          import('../utils/bomEngine').then(({ updateBOMData }) => {
-            updateBOMData(json.bom.children, json.bom.parents);
-          });
+          updateBOMData(json.bom.children, json.bom.parents);
         }
         const rawParts = Array.isArray(json)
           ? json
