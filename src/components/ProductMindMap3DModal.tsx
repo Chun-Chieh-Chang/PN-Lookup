@@ -481,10 +481,10 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
   const [autoRotate, setAutoRotate] = useState(true);
   const [, setVizTick] = useState(0);
 
-  // 展開節點 ID 集合（支援動態展開/收合層級）
-  // 預設展開 root 以及三大主分支 (廠內、客戶、待人工分類)
+  // 展開節點 ID 集合（支援動態按需展開/收合層級）
+  // 預設僅開展單一主體系（廠內品號編碼），保持視野極致簡潔清晰
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    () => new Set(['root', 'factory', 'customer', 'unclassified']),
+    () => new Set(['root', 'factory']),
   );
 
   // 原始樹與 3D 圖資料
@@ -586,14 +586,34 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     [adjacency, fullLinks, fullNodes],
   );
 
-  // 開啟視窗初始化
+  // 取得某節點之所有子孫節點集合 (用於階層遞迴收合)
+  const getDescendants = useCallback(
+    (rootId: string): Set<string> => {
+      const desc = new Set<string>();
+      const queue = [rootId];
+      while (queue.length > 0) {
+        const curr = queue.shift()!;
+        const kids = childrenOf.get(curr) ?? [];
+        for (const k of kids) {
+          if (!desc.has(k)) {
+            desc.add(k);
+            queue.push(k);
+          }
+        }
+      }
+      return desc;
+    },
+    [childrenOf],
+  );
+
+  // 開啟視窗初始化（預設單一體系開展）
   useLayoutEffect(() => {
     if (!isOpen) return;
     setSearchQuery('');
     setMatchIds(new Set());
     setSelectedNode(null);
     setHoverId(null);
-    setExpandedIds(new Set(['root', 'factory', 'customer', 'unclassified']));
+    setExpandedIds(new Set(['root', 'factory']));
     applyVisual(null, 'hover', new Set());
     didInitialZoom.current = false;
   }, [isOpen, applyVisual]);
@@ -650,18 +670,34 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     applyVisual(null, 'hover', new Set());
   }, [applyVisual]);
 
-  // 點擊節點：展開子節點 + 側邊欄呈現完整資訊與從屬關係
+  // 點擊節點：自由切換展開 / 收合（按需展開，避免眼花撩亂）+ 側邊欄呈現完整資訊與從屬關係
   const handleNodeClick = useCallback(
     (node: MM3DNode & { x?: number; y?: number; z?: number }) => {
       const id = node.id;
+      const isAlreadyExpanded = expandedIds.has(id);
+      const isAlreadySelected = selectedNode?.id === id;
+      const hasChildren = (childrenOf.get(id)?.length ?? 0) > 0;
+
       setSelectedNode(node);
 
-      // 若有子節點，自動展開其子分支
-      const hasChildren = (childrenOf.get(id)?.length ?? 0) > 0;
       if (hasChildren) {
         setExpandedIds((prev) => {
           const next = new Set(prev);
-          next.add(id);
+          if (isAlreadyExpanded && isAlreadySelected && id !== 'root') {
+            // 已選中且已展開時再次點擊：遞迴收合子節點 (Cascading Collapse)
+            next.delete(id);
+            const desc = getDescendants(id);
+            for (const d of desc) next.delete(d);
+          } else {
+            // 展開此節點並確保祖先鏈完整
+            next.add(id);
+            let curr: string | undefined = id;
+            while (curr) {
+              const pid = parentOf.get(curr);
+              if (pid) next.add(pid);
+              curr = pid;
+            }
+          }
           return next;
         });
       }
@@ -679,7 +715,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
         );
       }
     },
-    [applyVisual, childrenOf],
+    [applyVisual, childrenOf, expandedIds, getDescendants, parentOf, selectedNode],
   );
 
   const handleNodeHover = useCallback(
@@ -767,12 +803,53 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     graphRef.current?.zoomToFit(650, 75);
   }, [clearFocus]);
 
-  // 返回預設狀態
+  // 返回預設狀態（單一體系第 1 階開展）
   const handleResetDefault = useCallback(() => {
-    setExpandedIds(new Set(['root', 'factory', 'customer', 'unclassified']));
+    setExpandedIds(new Set(['root', 'factory']));
     clearFocus();
     graphRef.current?.zoomToFit(650, 75);
   }, [clearFocus]);
+
+  // 三大體系專屬切換（支援「開」與「收」自由控制與聚焦）
+  const handleSystemToggle = useCallback(
+    (systemId: string) => {
+      const isExpanded = expandedIds.has(systemId);
+      if (isExpanded) {
+        // 收合體系：清除此體系與其所有子孫
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(systemId);
+          const desc = getDescendants(systemId);
+          for (const d of desc) next.delete(d);
+          return next;
+        });
+        if (selectedNode && (selectedNode.id === systemId || getDescendants(systemId).has(selectedNode.id))) {
+          clearFocus();
+        }
+      } else {
+        // 展開體系並相機聚焦
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          next.add('root');
+          next.add(systemId);
+          return next;
+        });
+        const node = byId.get(systemId);
+        if (node) {
+          setSelectedNode(node);
+          applyVisual(systemId, 'selected', new Set());
+          if (node.x !== undefined && node.y !== undefined && node.z !== undefined) {
+            graphRef.current?.cameraPosition(
+              { x: node.x * 1.8 + 25, y: node.y * 1.8 + 15, z: node.z * 1.8 + 35 },
+              { x: node.x, y: node.y, z: node.z },
+              650,
+            );
+          }
+        }
+      }
+    },
+    [applyVisual, byId, clearFocus, expandedIds, getDescendants, selectedNode],
+  );
 
   // 點選祖先或子節點快速導航
   const navigateToNode = useCallback(
@@ -989,8 +1066,13 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
             return (
               <button
                 key={b.id}
-                onClick={() => navigateToNode(b.id)}
-                className="flex items-center gap-2 text-[13px] p-1.5 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 text-left transition-all cursor-pointer"
+                onClick={() => handleSystemToggle(b.id)}
+                className={`flex items-center gap-2 text-[13px] p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                  isExpanded
+                    ? 'bg-slate-800 border-indigo-500/50 shadow-sm'
+                    : 'bg-slate-800/40 hover:bg-slate-800/70 border-slate-700/60 opacity-85 hover:opacity-100'
+                }`}
+                title={isExpanded ? `點擊收合【${b.label}】` : `點擊展開【${b.label}】並聚焦`}
               >
                 <span className="w-3 h-3 rounded-full shrink-0" style={{ background: b.borderColor }} />
                 <div className="flex-1 min-w-0">
@@ -999,7 +1081,15 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
                     {partCount > 0 ? `${partCount} 件品號` : '分類體系'}
                   </div>
                 </div>
-                <span className="text-[13px] text-indigo-300 font-semibold">{isExpanded ? '開' : '收'}</span>
+                <span
+                  className={`text-[13px] px-1.5 py-0.5 rounded font-mono font-bold transition-colors ${
+                    isExpanded
+                      ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                      : 'bg-slate-700/50 text-slate-400 border border-transparent'
+                  }`}
+                >
+                  {isExpanded ? '開' : '收'}
+                </span>
               </button>
             );
           })}

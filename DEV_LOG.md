@@ -1,5 +1,32 @@
 # PN-Lookup 開發日誌
 
+## v7.7.5 — 3D 思維導圖按需展開與體系自由開關 (On-Demand Progressive Disclosure & System Toggle)
+
+### 需求內容
+- 使用者回饋：「思維導圖應按需展開才不會眼花撩亂，預設為單一體系的第一階展開，目前三大體系只開不關，不是好的設計。好的設計是簡潔清晰，請幫忙檢視如何往這樣的目標優化與推進。」
+
+### 根因分析（RCA）
+1. **全體系一次性爆發展開 (Visual Clutter on Start)**：
+   - 舊版預設將 `root`, `factory`, `customer`, `unclassified` 同時全開，導致 3D 空間充斥過多花瓣節點與品號，干擾視覺焦點。
+2. **缺乏收合與遞迴剪裁能力 (One-Way Expansion Bug)**：
+   - 舊版 `handleNodeClick` 與三大體系圖例僅有 `next.add(id)` 邏輯，無法再次點擊收合，導致「只開不關」。
+
+### 矯正與預防措施（CAPA）
+1. **預設單一體系開展 (Clean Default State)**：
+   - 預設僅開展 `root` 與主要體系 `factory`（廠內品號編碼），客戶品號與待分類體系預設收合於第 1 階，畫面極致簡潔大氣。
+2. **階層遞迴收合演算法 (Cascading Prune & True Toggle)**：
+   - 實作 `getDescendants(id)`：當節點被收合時，自動遞迴移除該節點下的所有子類別與品號節點 ID，確保空間瞬間乾淨。
+   - 點擊已選中節點可自由切換【展開 / 收合】。
+3. **左側三大體系圖例智慧開關 (`handleSystemToggle`)**：
+   - 每個體系提供明確的「開 / 收」狀態指示與按鈕；點擊即可隨時獨立展開或整枝收合，並相機自動移近聚焦。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.4 — 3D 思維導圖相機軌道自轉動畫修復 (OrbitControls & rAF Rotation Loop)
 
 ### 需求內容
