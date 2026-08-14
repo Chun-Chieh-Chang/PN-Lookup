@@ -80,16 +80,10 @@ export default function App() {
     };
   }, [onHashChange]);
 
-  // Auto-open export/import when no data exists
+  // 資料匯出/匯入視窗狀態（預設關閉，僅由使用者手動點擊 Header「匯入 / 匯出」開啟）
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
 
-  useEffect(() => {
-    if (parts.length === 0) {
-      setIsExportImportOpen(true);
-    }
-  }, [parts.length]);
-
-  // 圖檔資料夾：自動恢復上次選擇；未曾指定時首次開啟提示
+  // 圖檔資料夾：自動靜默恢復上次選擇；預設不主動彈窗干擾使用者（僅由 Header「圖檔資料夾」手動開啟）
   const [imageLib, setImageLib] = useState<ImageLibrary | null>(null);
   const [isImagePromptOpen, setIsImagePromptOpen] = useState(false);
   const [isPickingImages, setIsPickingImages] = useState(false);
@@ -100,8 +94,6 @@ export default function App() {
       if (cancelled) return;
       if (lib) {
         setImageLib(lib);
-      } else if (!isImageFolderDismissed()) {
-        setIsImagePromptOpen(true);
       }
     });
     return () => { cancelled = true; };

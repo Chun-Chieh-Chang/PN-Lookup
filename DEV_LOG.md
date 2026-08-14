@@ -1,5 +1,30 @@
 # PN-Lookup 開發日誌
 
+## v7.7.6 — 靜默啟動零干擾與彈窗行為收斂 (Silent Startup & Zero-Intrusion Modal Fix)
+
+### 需求內容
+- 使用者指示：「啟動時不要自動彈出"圖檔"與"資料匯出與匯入"」。
+
+### 根因分析（RCA）
+1. **無資料時強制彈窗 (Eager Empty State Popup)**：
+   - 舊版 `App.tsx` 在 `parts.length === 0` 時透過 `useEffect` 自動觸發 `setIsExportImportOpen(true)`，導致首次載入或靜態模式下強制彈出匯出/匯入視窗。
+2. **圖檔資料夾首次未設定提示 (Eager Image Prompt)**：
+   - 舊版 `restoreImageFolder()` 若未找到已存 handle，會因 `!isImageFolderDismissed()` 主動觸發 `setIsImagePromptOpen(true)` 彈窗提示。
+
+### 矯正與預防措施（CAPA）
+1. **移除啟動時所有自動彈窗 `useEffect`**：
+   - 移除 `parts.length === 0` 觸發 `setIsExportImportOpen(true)` 的監聽副作用。
+   - `restoreImageFolder()` 僅保留「靜默恢復 handle」，不再主動彈出「圖檔資料夾提示」視窗。
+2. **操作觸發權限 100% 回歸使用者 (User-Initiated Trigger Only)**：
+   - 「資料匯出/匯入」與「圖檔資料夾」視窗預設恆為 `false`，僅在使用者主動點擊導航欄 Header 按鈕時才開啟，提供乾淨、專注、零干擾的初次進入體驗。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.5 — 3D 思維導圖按需展開與體系自由開關 (On-Demand Progressive Disclosure & System Toggle)
 
 ### 需求內容

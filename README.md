@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.7.5)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.7.6)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算、3D 空間花瓣產品思維導圖與知識本體論 (Ontology) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.7.5-indigo.svg)
+![Version](https://img.shields.io/badge/version-v7.7.6-indigo.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
