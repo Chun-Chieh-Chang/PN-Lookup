@@ -598,7 +598,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     didInitialZoom.current = false;
   }, [isOpen, applyVisual]);
 
-  // 開啟後自動對焦全景與綁定自轉控制器
+  // 開啟後自動對焦全景
   useEffect(() => {
     if (!isOpen) return;
     const timer = window.setTimeout(() => {
@@ -606,24 +606,42 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
         didInitialZoom.current = true;
         graphRef.current?.zoomToFit(700, 75);
       }
-      const ctrl = graphRef.current?.controls?.() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
-      if (ctrl) {
-        ctrl.autoRotate = autoRotate;
-        ctrl.autoRotateSpeed = 0.6;
-      }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [isOpen, autoRotate]);
+  }, [isOpen]);
 
-  // 監聽 autoRotate 開關變更即時生效
+  // 空間緩慢自轉控制 (requestAnimationFrame 驅動相機平滑環繞，冷卻/靜態模式下保證 100% 旋轉)
   useEffect(() => {
-    if (!isOpen) return;
-    const ctrl = graphRef.current?.controls?.() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
-    if (ctrl) {
-      ctrl.autoRotate = autoRotate;
-      ctrl.autoRotateSpeed = 0.6;
-    }
-  }, [isOpen, autoRotate]);
+    if (!isOpen || !autoRotate || selectedNode) return;
+
+    let animId: number;
+
+    const rotateLoop = () => {
+      const fg = graphRef.current;
+      if (fg) {
+        const camera = fg.camera?.() as THREE.PerspectiveCamera | undefined;
+        if (camera) {
+          const radius = Math.hypot(camera.position.x, camera.position.z);
+          if (radius > 10) {
+            const currentAngle = Math.atan2(camera.position.z, camera.position.x);
+            const nextAngle = currentAngle + 0.0016; // 柔和緩慢自轉速度
+            camera.position.x = radius * Math.cos(nextAngle);
+            camera.position.z = radius * Math.sin(nextAngle);
+            camera.lookAt(0, 0, 0);
+          }
+        }
+        const ctrl = fg.controls?.() as { update?: () => void } | undefined;
+        ctrl?.update?.();
+      }
+      animId = requestAnimationFrame(rotateLoop);
+    };
+
+    animId = requestAnimationFrame(rotateLoop);
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [isOpen, autoRotate, selectedNode]);
 
   const clearFocus = useCallback(() => {
     setSelectedNode(null);
@@ -921,6 +939,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
         <ForceGraph3D<MM3DNode, MM3DLink>
           ref={graphRef}
           graphData={graphData}
+          controlType="orbit"
           backgroundColor="#0B1220"
           showNavInfo={false}
           nodeRelSize={NODE_REL_SIZE}

@@ -1,5 +1,30 @@
 # PN-Lookup 開發日誌
 
+## v7.7.4 — 3D 思維導圖相機軌道自轉動畫修復 (OrbitControls & rAF Rotation Loop)
+
+### 需求內容
+- 使用者回報：「空間緩慢自轉失效」。
+
+### 根因分析（RCA）
+1. **Three-Render-Objects 預設控制器為 TrackballControls**：
+   - `three-render-objects` 預設 `controlType` 為 `trackball`，此控制器並不具備 OrbitControls 的 `autoRotate` 屬性。
+2. **靜態節點冷卻後物理模擬幀停止 (Physics Cooldown Idle)**：
+   - 3D 思維導圖採用固定座標 (`fx, fy, fz`) 與 `cooldownTicks: 0`，物理模擬停止後 WebGL 不會主動觸發額外重繪，導致單純設定屬性無法驅動相機旋轉。
+
+### 矯正與預防措施（CAPA）
+1. **明確配置 `controlType="orbit"`**：
+   - 在 `ForceGraph3D` 上指明 `controlType="orbit"`，正確啟用 Three.js 原生 OrbitControls。
+2. **requestAnimationFrame 獨立相機軌道自轉動畫循環**：
+   - 建立獨立的高效能 rAF 旋轉循環：讀取相機水平半徑與角度，以 `0.0016 rad/frame` 柔和角速度更新相機 X/Z 座標並 `lookAt(0,0,0)`，同步呼叫 `controls.update()`。
+   - 當選中節點（`selectedNode !== null`）或關閉自轉時，rAF 自動暫停，確保使用者點選檢視與操作時畫面鎖定、無震盪。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.3 — 3D 節點名稱常駐自動高清顯示 (3D Mind Map Always-On Retina Billboard Labels)
 
 ### 需求內容
