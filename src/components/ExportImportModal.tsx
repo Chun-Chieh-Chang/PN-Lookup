@@ -3,6 +3,7 @@ import { X, Download, Upload, FileSpreadsheet, Check, RefreshCw, FileJson, Table
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
 import { generateExcelWorkbook, parseExcelToParts, FULL_DATA_HEADERS } from '../utils/excelExport';
+import { generateJsonLdOntology } from '../utils/jsonLdExport';
 import { ALTERNATE_SPLIT_RE } from '../utils/alternates';
 import { parseCustomerSheet, applyCustomerRows, CustomerImportReport } from '../utils/customerPartImport';
 import { updateBOMData } from '../utils/bomEngine';
@@ -122,22 +123,29 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 }) => {
   const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
   const [copiedData, setCopiedData] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'xlsx'>('csv');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'xlsx' | 'jsonld'>('csv');
 
   if (!isOpen) return null;
 
   const generateExportData = (): string => {
     if (exportFormat === 'csv') return generateCSVString(parts);
+    if (exportFormat === 'jsonld') return generateJsonLdOntology(parts);
     return JSON.stringify(parts, null, 2);
   };
 
   const getMimeType = () => {
     if (exportFormat === 'csv') return 'text/csv;charset=utf-8;';
     if (exportFormat === 'xlsx') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (exportFormat === 'jsonld') return 'application/ld+json;charset=utf-8;';
     return 'application/json;charset=utf-8;';
   };
-  const getExtension = () => exportFormat === 'csv' ? '.csv' : exportFormat === 'xlsx' ? '.xlsx' : '.json';
-  const getFileName = () => `品號資料庫_${new Date().toISOString().slice(0, 10)}${getExtension()}`;
+  const getExtension = () => {
+    if (exportFormat === 'csv') return '.csv';
+    if (exportFormat === 'xlsx') return '.xlsx';
+    if (exportFormat === 'jsonld') return '.jsonld';
+    return '.json';
+  };
+  const getFileName = () => `品號知識本體_${new Date().toISOString().slice(0, 10)}${getExtension()}`;
   const getIcon = () => {
     if (exportFormat === 'csv') return <FileSpreadsheet className="w-5 h-5" />;
     if (exportFormat === 'xlsx') return <Table2 className="w-5 h-5" />;
@@ -161,6 +169,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           ? [{ description: 'Excel Workbook', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }]
           : exportFormat === 'csv'
           ? [{ description: 'CSV Document', accept: { 'text/csv': ['.csv'] } }]
+          : exportFormat === 'jsonld'
+          ? [{ description: 'JSON-LD Knowledge Ontology', accept: { 'application/ld+json': ['.jsonld', '.json'] } }]
           : [{ description: 'JSON Document', accept: { 'application/json': ['.json'] } }];
 
         const handle = await win.showSaveFilePicker({
@@ -448,8 +458,19 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   onChange={() => setExportFormat('json')}
                   className="text-emerald-600 focus:ring-emerald-500"
                 />
-                <FileJson className="w-3.5 h-3.5 text-blue-500" />
+                <FileJson className="w-3.5 h-3.5 text-amber-500" />
                 <span className="text-gray-700">JSON</span>
+              </label>
+              <label className="flex items-center space-x-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  checked={exportFormat === 'jsonld'}
+                  onChange={() => setExportFormat('jsonld')}
+                  className="text-emerald-600 focus:ring-emerald-500"
+                />
+                <FileJson className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="text-gray-700 font-semibold text-indigo-700">JSON-LD 知識本體 (@Schema.org)</span>
               </label>
             </div>
             <p className="text-gray-500 text-sm">
@@ -457,6 +478,8 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
                 : exportFormat === 'csv'
                 ? '匯出包含所有欄位（id, customer, partNo, name, category, color, material, notes, alternates, itemType 等）。'
+                : exportFormat === 'jsonld'
+                ? '匯出為 Schema.org JSON-LD 語義化格式，適合搜尋引擎與知識圖譜整合。'
                 : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
             </p>
             <div className="flex items-center space-x-3 pt-1">

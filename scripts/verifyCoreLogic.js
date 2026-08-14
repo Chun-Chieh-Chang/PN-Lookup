@@ -111,11 +111,60 @@ assert(
 );
 
 // ----------------------------------------------------------------------------
+// 測試 4: 本體語意關聯一致性約束 (Ontological Invariants & Semantic Constraints)
+// ----------------------------------------------------------------------------
+if (existsSync(MASTER_PATH)) {
+  const master = JSON.parse(readFileSync(MASTER_PATH, 'utf-8'));
+  const bom = master.bom || { children: {}, parents: {} };
+  const children = bom.children || {};
+  const parents = bom.parents || {};
+
+  // 4.1 BOM 雙向映射一致性
+  let bidirectionalMismatch = 0;
+  for (const [parentPn, childList] of Object.entries(children)) {
+    for (const childPn of childList) {
+      if (!parents[childPn] || !parents[childPn].includes(parentPn)) {
+        bidirectionalMismatch++;
+      }
+    }
+  }
+  assert(
+    bidirectionalMismatch === 0,
+    `本體雙向映射一致性: BOM children 與 parents 100% 雙向對稱 (異常數: ${bidirectionalMismatch})`
+  );
+
+  // 4.2 BOM 無自環循環防護
+  let selfLoopCount = 0;
+  for (const [parentPn, childList] of Object.entries(children)) {
+    if (childList.includes(parentPn)) {
+      selfLoopCount++;
+    }
+  }
+  assert(
+    selfLoopCount === 0,
+    `本體無環約束: BOM 階層中不得存在自我循環引用 (自環數: ${selfLoopCount})`
+  );
+
+  // 4.3 替代品號本體反對稱性
+  const parts = master.parts || [];
+  let selfAlternateCount = 0;
+  for (const p of parts) {
+    if (p.alternates && p.alternates.includes(p.partNo)) {
+      selfAlternateCount++;
+    }
+  }
+  assert(
+    selfAlternateCount === 0,
+    `本體替代品號約束: 品號不可將自身宣告為替代料號 (自我替代數: ${selfAlternateCount})`
+  );
+}
+
+// ----------------------------------------------------------------------------
 // 結算與防禦攔截
 // ----------------------------------------------------------------------------
 if (failedTests > 0) {
   console.error(`\n💥 [CRITICAL ERROR] 共有 ${failedTests} 項數據邏輯驗證失敗！已攔截打包/部署。`);
   process.exit(1);
 } else {
-  console.log(`\n🎉 [SUCCESS] 數據邏輯固化測試全數 100% 通過！\n`);
+  console.log(`\n🎉 [SUCCESS] 數據邏輯與本體約束固化測試全數 100% 通過！\n`);
 }

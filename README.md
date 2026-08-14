@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.5.4)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.7.1)
 
-PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與產品思維導圖 (MindMap) 平台**。
+PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算、3D 空間花瓣產品思維導圖與知識本體論 (Ontology) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.5.4-indigo.svg)
+![Version](https://img.shields.io/badge/version-v7.7.1-indigo.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -13,14 +13,19 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 ## 🌟 核心功能亮點
 
 - 🔍 **極速全域與欄位比對**：支援品號 (Part No)、客戶名稱、中文品名規格、替代料號 (Alternates) 即時模糊與前綴檢索，提供鍵盤快捷鍵與全域排序。
-- 🌳 **產品分類思維導圖 (MindMap Tree v5.4.0)**：
-  - 基於 D3 座標轉置軸與動態適應性間距，提供直覺的產品結構展開與滾動檢視。
-  - 完整支援雙擊卡片展開/收合、未分類品號包覆與點擊預覽工程圖面微縮彈窗。
+- 🪐 **3D 空間花瓣產品思維導圖 (ProductMindMap3DModal v7.7.1)**：
+  - 基於 Three.js 空間球殼向度演算法，消除 2D 導圖「看得到全局卻看不清局部」的視角拉伸問題。
+  - 支援點擊節點自動在 3D 空間中動態展開子分類與品號，智能平滑相機對焦與路徑粒子提亮。
+  - 即時父子從屬側邊欄：祖先麵包屑路徑穿梭導航、BOM 雙向組成清單、工程圖檔預覽與一鍵查 BOM。
+- 🧬 **知識本體論 (Knowledge Ontology) 3 大輕量級優化**：
+  - **本體約束門禁**：自動化校驗 BOM 雙向 100% 對稱、無自環循環依賴與替代品號反對稱性。
+  - **語意推理圖檔匹配**：當單品無直接圖檔時，自動沿 `usedInAssemblies` 父組件關係鏈推導圖面，並顯性標註「語意推導」徽章。
+  - **Schema.org / JSON-LD 標準匯出**：產出符合國際 W3C / Schema.org (`@type: "MedicalDevice"`) 標準之知識本體檔案，支援 OS 原生另存新檔。
 - 🛡️ **數據固化與防迴歸確效門禁 (`verifyCoreLogic.js`)**：
-  - 於 `npm run build` 時自動運行測試，鎖定 693 筆種子轉譯去重品號（master 檔允許組件圖掃描增量）、181 組 BOM 關聯階層與圖檔邊界匹配防禦。
+  - 於 `npm run build` 時自動運行 11 項測試，鎖定 693 筆種子去重品號、181 組 BOM 關聯階層、邊界防禦與本體約束。
   - 包含 CI 沙盒防禦模式（遵循 Zero Private Data 規範，跳過敏感離線檔測試）。
 - 🖼️ **圖檔全自動超連結與 0 孤兒圖檔管理**：
-  - 全自動遞迴掃描工程圖面檔，支援檔名高級正規化匹配、PDF 文字層提取與視覺 OCR 雙軌辨識。
+  - 全自動遞迴掃描工程圖面檔，支援檔名高級正規化匹配、PDF 文字層提取、視覺 OCR 與本體語意推導多軌解析。
 - ⚡ **效能防禦按需 OCR 引擎 (On-Demand OCR)**：
   - 載入資料夾時僅讀取本地快取，零背景資源消耗。
 - 🔒 **ISO 13485 / GMP 權限與數據維護分工**：
@@ -40,21 +45,21 @@ PN-Lookup/
 ├── scripts/                 # 資料處理與確效驗證腳本
 │   ├── buildMaster.js       # Master Table 建置腳本（種子檔 → pn-lookup-master.json）
 │   ├── scanAssemblyImages.js# 組件圖 PDF 文字層掃描增補 (--apply / --auto)
-│   └── verifyCoreLogic.js   # 核心數據不變量與防迴歸確效門禁 (npm run build 前置檢查)
+│   └── verifyCoreLogic.js   # 核心數據不變量與本體約束確效門禁 (npm run build 前置檢查)
 ├── src/                     # 前端應用程式原始碼
 │   ├── components/          # 視覺 UI 元件 (MECE 分類)
-│   │   ├── Header.tsx           # 頂部導覽與全域功能按鈕
-│   │   ├── SearchControls.tsx   # 搜尋列與欄位篩選控制
-│   │   ├── PartsTable.tsx       # 品號清單表格與 Morandi 標籤
-│   │   ├── PartDetailModal.tsx  # 品號詳情與 BOM 階層雙向展開
-│   │   ├── AdminPanel.tsx       # 後台管理與 BOM 維護面板
-│   │   ├── ProductMindMapModal.tsx # 產品分類思維導圖與樹狀展開 (react-d3-tree)
-│   │   ├── OrphanImagesModal.tsx# 未對應孤兒圖檔管理中心
-│   │   ├── ExportImportModal.tsx# 資料備份與多格式匯出匯入
-│   │   ├── ImageBindModal.tsx   # 手動圖檔對應綁定彈窗
-│   │   ├── ImageFolderModal.tsx # 本地圖檔資料夾選擇彈窗
-│   │   ├── BatchSearchModal.tsx # 批次品號搜尋與比對對照
-│   │   └── StatsBar.tsx         # 統計指標列 (Morandi 微卡片)
+│   │   ├── Header.tsx               # 頂部導覽與 3D 思維導圖入口按鈕
+│   │   ├── SearchControls.tsx       # 搜尋列與欄位篩選控制
+│   │   ├── PartsTable.tsx           # 品號清單表格與 Morandi 標籤
+│   │   ├── PartDetailModal.tsx      # 品號詳情與 BOM 階層雙向展開
+│   │   ├── AdminPanel.tsx           # 後台管理與 BOM 維護面板
+│   │   ├── ProductMindMap3DModal.tsx# 3D 空間花瓣產品思維導圖與從屬抽屜
+│   │   ├── OrphanImagesModal.tsx    # 未對應孤兒圖檔管理中心
+│   │   ├── ExportImportModal.tsx    # 資料備份、Excel / CSV / JSON-LD 本體匯出匯入
+│   │   ├── ImageBindModal.tsx       # 手動圖檔對應綁定彈窗
+│   │   ├── ImageFolderModal.tsx     # 本地圖檔資料夾選擇彈窗
+│   │   ├── BatchSearchModal.tsx     # 批次品號搜尋與比對對照
+│   │   └── StatsBar.tsx             # 統計指標列 (Morandi 微卡片)
 │   ├── utils/               # 邏輯與引擎工具庫
 │   │   ├── alternates.ts        # 別稱去重規則 (dedupeAlternates)
 │   │   ├── assemblyEnglishMap.json # 132 筆組件英文品名對照
@@ -64,13 +69,14 @@ PN-Lookup/
 │   │   ├── excelExport.ts       # Excel/CSV 多工作表匯出引擎
 │   │   ├── idb.ts               # IndexedDB 封裝 (OCR 快取)
 │   │   ├── imageLibrary.ts      # 圖檔掃描與優化匹配演算法
-│   │   ├── imageResolver.ts     # 檔名/綁定/OCR 三階解析器
-│   │   ├── mindmapClassifier.ts # 思維導圖產品分類引擎
+│   │   ├── imageResolver.ts     # 檔名/綁定/OCR/本體語意推導 四階解析器
+│   │   ├── jsonLdExport.ts      # Schema.org / JSON-LD 本體生成引擎
+│   │   ├── mindmapClassifier.ts # 產品思維導圖分類引擎與標籤常數
 │   │   ├── ocr.ts               # Tesseract.js / pdf.js 本地 OCR 辨識引擎
 │   │   ├── partNo.ts            # 品號前綴工具 (getPartPrefix)
 │   │   ├── partsService.ts      # 品號資料服務 (localStorage / API)
 │   │   └── serverStatus.ts      # 靜態模式旗標 (IS_STATIC_MODE)
-│   ├── App.tsx              # 主應用程式入口與狀態控制
+│   ├── App.tsx              # 主應用程式入口與狀態控制 (動態代碼分割)
 │   ├── main.tsx             # React 掛載入口
 │   ├── types.ts             # PartItem / FilterState 型別定義
 │   ├── types/               # 全域環境型別宣告 (file-system-access.d.ts)

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, Network } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, FolderTree } from 'lucide-react';
 import { APP_VERSION } from '../version';
 
 interface HeaderProps {
@@ -7,7 +7,7 @@ interface HeaderProps {
 
   onOpenExportImport: () => void;
   onEnterAdmin?: () => void;
-  onOpenGraph?: () => void;
+  onOpenMindMap?: () => void;
   imageFolderName?: string | null;
   imageCount?: number;
   orphanCount?: number;
@@ -20,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   onOpenExportImport,
   onEnterAdmin,
-  onOpenGraph,
+  onOpenMindMap,
   imageFolderName,
   imageCount,
   orphanCount = 0,
@@ -73,14 +73,14 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
 
-            {onOpenGraph && (
+            {onOpenMindMap && (
               <button
-                onClick={onOpenGraph}
+                onClick={onOpenMindMap}
                 className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer active:scale-95 border border-indigo-400/30"
-                title="開啟 2D / 3D 全景醫療產品知識與 BOM 網絡圖譜"
+                title="開啟 3D 空間花瓣產品思維導圖"
               >
-                <Network className="w-4 h-4 text-indigo-200" />
-                <span>產品圖譜</span>
+                <FolderTree className="w-4 h-4 text-indigo-200" />
+                <span>3D 思維導圖</span>
               </button>
             )}
 

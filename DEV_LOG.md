@@ -1,5 +1,124 @@
 # PN-Lookup 開發日誌
 
+## v7.7.1 — 專注 3D 產品思維導圖 (YAGNI 剪裁) 與 3 項知識本體論 (Ontology) 輕量級優化實作
+
+### 需求內容
+1. **專注 3D 思維導圖**：依據使用者明確指示「我只需要 3D 思維導圖，其他的 3D 知識圖譜、2D 思維導圖我不需要」，依 YAGNI / MECE 原則徹底精簡導航與視窗，移除多餘的 2D 導圖與 3D 知識圖譜切換器，Header 僅保留單一且純粹的 **「3D 思維導圖」**。
+2. **知識本體論 (Knowledge Ontology) 3 項輕量級優化落地**：
+   - **優化 1 (本體關聯一致性約束)**：在 `scripts/verifyCoreLogic.js` 中新增本體層級語意單元測試（BOM children/parents 100% 雙向對稱性、無自環循環約束、替代料號反對稱性）。
+   - **優化 2 (語意推理圖檔匹配)**：在 `src/utils/imageResolver.ts` 中引入第 4 級本體語意推理匹配（`via: 'inference'`），當單品料號無直接圖檔時，自動沿 `usedInAssemblies` 父組件關係鏈推導工程圖面，並於 UI 顯性標註「語意推導（來自組件 XXX）」徽章。
+   - **優化 3 (Schema.org / JSON-LD 本體標準對齊與匯出)**：新增 `src/utils/jsonLdExport.ts`，支援產出符合 `Schema.org` (`@type: "MedicalDevice"` / `"Product"`) 與語意三元組結構之標準本體；於 `ExportImportModal.tsx` 新增「JSON-LD 知識本體 (@Schema.org)」匯出功能，支援 OS 原生另存新檔視窗 (`window.showSaveFilePicker`)。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項數據邏輯與本體約束測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功（僅產出極簡 `ProductMindMap3DModal` chunk，無多餘代碼）。
+
+---
+
+## v7.7.0 — 3D 產品思維導圖完整建構 (3D Product Mind Map Initial Construction)
+
+### 需求內容
+- 使用者指示「3D思維導圖建構到一半尚未完成，請繼續完成」。
+- 核心 UX 與空間理念：
+  1. **空間利用效率極大化**：傳統 2D 思維導圖展開時視野大幅橫向/縱向拉伸（「看得到全局卻看不清局部」）；3D 透過縮放與立體旋轉，清晰呈現整體花瓣向度與局部細節。
+  2. **點擊動態展開子節點**：在 3D 空間中點擊任一節點時，自動於 3D 空間展開其直接子節點與品號，相機平滑移近對焦。
+  3. **即時側邊欄呈現完整訊息與父子/從屬關係**：點擊任一節點（Root、主體系、分類、子分類、品號），右側面板即時顯示完整的規格資訊、祖先層級麵包屑路徑（可點選即時穿梭）、直接子節點清單、包含品號列表、BOM 雙向關聯（組成子零件/用於上層組件）、工程圖檔縮圖（支援 PDF 預覽與 OCR/綁定標記）與查 BOM 跳轉。
+  4. **三合一多維視角整合**：整合「🪐 3D 思維導圖（空間層級）」、「🕸️ 3D 知識圖譜（BOM 多維網絡）」、「🌳 2D 思維導圖（經典樹狀閱讀）」，支援頂部一鍵無縫穿梭切換。
+
+### 根因分析（RCA）
+- 先前在 `src/components/ProductMindMap3DModal.tsx` 開發過程中，在第 313 行葉節點展開處理迴圈中斷，遺失了 `mm.parts.forEach` 的區塊宣告；且第 398 行未實作 Modal 元件本體（`/*__MODAL_COMPONENT__*/`），導致 3D 思維導圖無法編譯與掛載。
+
+### 矯正與預防措施（CAPA）
+1. **重構 3D 空間花瓣佈局演算法 (`buildMindMap3DGraph`)**：
+   - 建立 Root (r=0)、Level 1 (r=68, 3 大花瓣方向向量)、Level 2 (r=138)、Level 3 (r=208)、Level 4/5 (r=272~332) 的精準立體球形層級。
+   - 採用固定座標 (`fx, fy, fz`) 消除隨機碰撞晃動，視覺穩定優雅。
+   - 導入 `expandedIds` 動態過濾機制，實現「點擊節點自動在 3D 空間開展/收合子節點」。
+2. **實作完整 3D 思維導圖元件 (`ProductMindMap3DModal.tsx`)**：
+   - **Header 工具列**：多維度視角切換器、即時搜尋過濾（金光高亮 `#FBBF24` + 自動相機對焦）、一鍵全部展開 / 一鍵收合頂層 / 返回預設狀態。
+   - **左側圖例與控制**：三大體系統計（廠內/客戶/待分類）、節點名稱標籤開關、空間緩慢自轉開關。
+   - **右側從屬關係與全功能詳情抽屜**：
+     - 從屬階層路徑（祖先鏈麵包屑，可點選穿梭相機導航）。
+     - 品號規格、工程圖檔預覽（支援 PDF iframe）、替代料號、BOM 組成零件（可點選導航）、用於組件（可點選導航）、一鍵「查 BOM」跳轉。
+     - 分類/體系節點之直接子節點與所屬品號清單（支援品號點選定位與跳轉）。
+3. **多維度視角切換與路由整合**：
+   - 在 `App.tsx` 中將 `ProductMindMap3DModal`、`KnowledgeGraphModal`、`ProductMindMapModal` 以 `React.lazy` 動態代碼分割載入（首屏極速零負擔）。
+   - 在 `Header.tsx` 增加 `3D 思維導圖` 入口按鈕。
+   - 在三大 Modal 頂部統一提供「🪐 3D 思維導圖 | 🕸️ 3D 知識圖譜 | 🌳 2D 導圖」切換器。
+4. **確效驗證與合規**：
+   - 全介面文字嚴格遵守 `>= 13px`（符合 `<RULE[ui_minimum_font_size]>`）。
+   - 通過 `node scripts/verifyCoreLogic.js` 數據固化驗證（693 筆品號去重與 181 組 BOM）。
+   - `npx tsc --noEmit` 零錯誤與 Vite `npm run build` 成功打包。
+
+---
+
+### 問題回報（v7.6.0 驗收）
+1. **滑鼠懸停時整個圖譜崩潰**（凍結/黑畫面，GPU 記憶體耗盡）。
+2. 節點名稱應**預設顯示**（無須點選展開才見標籤）。
+
+### 根因分析（RCA）
+- v7.6.0 的自訂節點/邊物件（`buildNodeObject` 球體 + `buildLinkObject` 圓柱）在 `applyVisual()` 中每次視覺狀態變更都呼叫 `graphRef.current?.refresh()`（`_flushObjects=true`）→ **全量重建 751 節點 + 1705 邊的 Three 物件且不 dispose 舊 geometry/material** → 每次懸停都製造數千個 GPU 物件，記憶體持續洩漏 → 最終崩潰。
+- 查證 3d-force-graph 原始碼確認：`refresh()` 存在（`_flushObjects=true` 全量重建）；`update()` 有 **digest 快取機制** — 球體 geometry 依 `nodeVal` 快取、material 依 `nodeColor` 快取；邊 Line 材質依 `linkColor` 快取；僅 `nodeThreeObject(Extend)` / `linkThreeObject` / `linkWidth` 改變才重建物件；`nodeVal/nodeColor/linkColor/linkOpacity` 改變只觸發低成本消化更新，且**不重啟 d3 佈局**。
+
+### 修正方案（重寫渲染架構，v7.6.1）
+1. **移除自訂物件與 refresh() 全量重建**：節點改為圖譜庫原生球體，以 `nodeVal`/`nodeColor` accessor 驅動（快取 geometry/material，零重建零洩漏）；邊改為原生 Line + `linkColor`/`linkOpacity` accessor（保留 composed_of 流動粒子）。
+2. **標籤預設常駐顯示**：`nodeThreeObjectExtend` 回傳「光暈 + 名稱標籤」靜態 Sprite（共用快取 texture），一經建立不再隨狀態重建；圖例新增「節點名稱標籤」ON/OFF 開關（僅切換時重建一次）。附註：react-force-graph-3d 1.29.1 型別宣告誤標此 prop 為 boolean accessor（執行期實際接受 Object3D accessor），以型別斷言處理並註解。
+3. **視覺狀態改 vizTick 驅動消化**：懸停/展開/搜尋/淡化全部只 mutate 節點 `_val`/`_color` 與邊 `_color`，再 `setVizTick(t+1)` 改變 accessor 身份 → 觸發原生 digest（快取材質換色/換大小），**不再 refresh()、不重啟佈局**。
+4. 懸停僅做「該節點放大+提亮」局部高亮；展開/搜尋焦點期間懸停不搶視覺。
+5. 詳情面板 / 搜尋 / 邊開關 / 圖例 / 統計浮標功能全部保留。
+
+### 確效驗證
+- `npm run lint`（tsc --noEmit）：zero errors
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS
+- 伺服器重啟（3001 API / 3000 Vite 皆 HTTP 200），瀏覽器頁面重新載入驗證
+
+### 回歸規則
+- `ui_minimum_font_size`：標籤維持 13px 畫布基準（既有例外註釋），UI 元件全 13px 以上
+- 檔案刪除保護：未刪除任何既有檔案（ProductMindMapModal.tsx 仍為死碼待許可）
+
+---
+
+## v7.6.0 — 思維導圖升級為 3D 知識圖譜 (Mind Map → 3D Knowledge Graph)
+
+### 需求內容
+- 將「產品識別教育訓練 — 思維導圖」改為**知識圖譜**：思維導圖僅有「分類」一種樹狀關係，知識圖譜納入 4 種真實關聯（分類 / BOM 組成 / 替代對應 / 客戶），並採用 **3D 力導向圖譜**（避免 2D 重疊的視覺干擾）。
+- 節點**預設收合**（僅小型球體），點選後才展開資訊（光暈 + 光圈 + 標籤 + 詳情面板）。
+- 依使用者指示，透過 Tool-Calling 系統（`d:/Self-developed_Apps/Tool-Calling`）搜索知識圖譜工具：結果（GitNexus / Understand Anything / Codegraph / Cognee / Graphify）皆為「程式碼知識圖譜」工具，無前端產品資料圖譜專用工具，故採 **react-force-graph-3d + three.js** 自建（tool registry 無適用者，精選採行業標準前端圖譜引擎）。
+
+### 圖譜資料模型（`src/utils/knowledgeGraph.ts` 新增）
+- **節點 (751)**：品號節點 693（分類為 廠內零件/組件/Set/客戶品號/待分類）+ 分類節點 27 + 客戶節點 31
+- **邊 (1705)**：
+  - `classified` 分類邊 693（沿用 mindmapClassifier 分類知識）
+  - `composed_of` BOM 組成邊 369（組件→子零件，來自 bomEngine components）
+  - `alternate` 替代/對應邊 81（alternates 之間的實體關聯，含客戶品號↔廠內品號）
+  - `customer` 客戶邊 562（品號→客戶節點）
+- 零孤立節點、零重複邊、未解析 BOM 子件 1 / alternates 0
+- 資料不變量：master 693 筆 / 181 組 BOM 不受影響（**零資料結構變更**，圖譜純為執行期衍生視圖）
+
+### 3D 視覺化（`src/components/KnowledgeGraphModal.tsx` 新增，直接替換 ProductMindMapModal）
+- `react-force-graph-3d` 力導向 3D 圖譜：拖曳旋轉 / 滾輪縮放 / 節點拖曳 / 自動緩慢旋轉
+- 節點收合→展開狀態機：`normal / hover / expanded / matched / dimmed`（mutate 節點 + `refresh()` 重建 Three 物件）
+- 展開視覺：發光光暈 + 光圈 + 品號標籤 Sprite + 1-hop 鄰居高亮、其餘淡化
+- 邊視覺：圓柱（WebGL Line 不支援寬度）依類型著色、BOM 邊有流動粒子
+- 詳情面板（右側）：縮圖預覽（沿用 resolveImage / 檔名比對 / 手動綁定 / OCR）、BOM 組成 / 用於組件 / 替代品號 雙向跳轉展開、查 BOM 跳轉主頁
+- 搜尋：品號/名稱/客戶/替代品號即時比對，高亮 + 相機縮放至匹配節點
+- 左側圖例：7 節點類型 + 4 邊類型開關（可獨立關閉分類/BOM/替代/客戶關係）
+- 性能：three.js 以 `React.lazy` 拆分為獨立 chunk（首屏主套件 2.2MB → 774KB），僅開啟圖譜時載入 1.4MB chunk
+- 暗色圖譜場景（`#0B1220`）符合 Color Master Palette 暗色規範；畫布標籤 13px 基準
+
+### 確效驗證
+- `npm run lint`（tsc --noEmit）：zero errors
+- `npm run build`（含 verifyCoreLogic 門禁）：PASS（693 筆 / 181 組 BOM 不變量）
+- 圖譜模型以 esbuild 打包 + 真實 master/BOM 資料執行驗證：751 節點 / 1705 邊 / 0 孤立 / 0 重複
+
+### 回歸規則
+- `regression_defense_and_logic_freezing`：master 693 / 181 不變量 PASS，未動任何種子資料
+- `data_structure_change_notification`：零資料結構變更（知識圖譜為執行期衍生，不落檔）
+- `ui_minimum_font_size`：全 UI 13px 以上；畫布節點標籤以 13px 為基準並附例外註釋
+- 檔案刪除保護：`ProductMindMapModal.tsx` 與 `react-d3-tree` 依賴暫保留（零引用），待使用者許可後清理
+
+---
+
 ## v7.5.4 — 全域優化作業：死檔清除 + 死碼匯出收斂 + 文件全面同步 (Global Optimization: Dead-File Sweep & Doc Sync)
 
 ### 需求內容

@@ -4,7 +4,8 @@ import { ImageLibrary, normalize } from './imageLibrary';
 export interface ImageResolution {
   url: string;
   name: string;
-  via: 'file' | 'binding' | 'ocr';
+  via: 'file' | 'binding' | 'ocr' | 'inference';
+  inferenceSource?: string;
 }
 
 const BINDINGS_KEY = 'pn_lookup_image_bindings';
@@ -46,13 +47,14 @@ export function saveDismissedOrphans(dismissed: Set<string>): void {
   } catch { /* ignore */ }
 }
 
-// ---------- 解析：多圖檔與單圖檔檔名 → 手動綁定 → OCR 內容 ----------
+// ---------- 解析：多圖檔與單圖檔檔名 → 手動綁定 → OCR 內容 → 本體語意推理 ----------
 export function resolveAllImages(
   partNo: string,
   alternates: string[] | undefined,
   lib: ImageLibrary | null,
   bindings: Record<string, string>,
   ocrIndex: Map<string, string>,
+  relatedParts?: string[],
 ): ImageResolution[] {
   if (!lib) return [];
   const aliases = alternates ?? [];
@@ -95,6 +97,26 @@ export function resolveAllImages(
     }
   }
 
+  // 4. 本體語意推理匹配 (Semantic Inference via Ontological Relations e.g. usedInAssemblies)
+  if (results.length === 0 && relatedParts && relatedParts.length > 0) {
+    for (const relPn of relatedParts) {
+      if (!relPn) continue;
+      const relMatched = lib.matchAll ? lib.matchAll(relPn, []) : [lib.match(relPn, [])].filter(Boolean) as string[];
+      for (const fname of relMatched) {
+        if (fname && !seenFiles.has(fname)) {
+          seenFiles.add(fname);
+          results.push({
+            url: lib.urlForFile(fname) as string,
+            name: fname,
+            via: 'inference',
+            inferenceSource: relPn,
+          });
+        }
+      }
+      if (results.length > 0) break; // 取得第一組父組件推理圖面即可
+    }
+  }
+
   return results;
 }
 
@@ -104,8 +126,9 @@ export function resolveImage(
   lib: ImageLibrary | null,
   bindings: Record<string, string>,
   ocrIndex: Map<string, string>,
+  relatedParts?: string[],
 ): ImageResolution | null {
-  const all = resolveAllImages(partNo, alternates, lib, bindings, ocrIndex);
+  const all = resolveAllImages(partNo, alternates, lib, bindings, ocrIndex, relatedParts);
   return all.length > 0 ? all[0] : null;
 }
 

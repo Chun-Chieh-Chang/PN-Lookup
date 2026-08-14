@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
@@ -27,7 +27,11 @@ import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils
 import { loadBindings, saveBindings, getOrphanFiles, loadDismissedOrphans, saveDismissedOrphans } from './utils/imageResolver';
 import { ImageBindModal } from './components/ImageBindModal';
 import { OrphanImagesModal } from './components/OrphanImagesModal';
-import { ProductMindMapModal } from './components/ProductMindMapModal';
+
+// 3D 思維導圖視窗僅在開啟時按需載入（three.js 避免拖慢首屏）
+const ProductMindMap3DModalLazy = lazy(() =>
+  import('./components/ProductMindMap3DModal').then((m) => ({ default: m.ProductMindMap3DModal }))
+);
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -221,7 +225,7 @@ export default function App() {
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
   const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
-  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
+  const [isMindMap3DOpen, setIsMindMap3DOpen] = useState(false);
 
   // 標記排除/重複別稱孤兒圖檔（本機限定）
   const [dismissedOrphans, setDismissedOrphans] = useState<Set<string>>(() => loadDismissedOrphans());
@@ -404,7 +408,7 @@ export default function App() {
         onOpenBatchSearch={() => setIsBatchSearchOpen(true)}
 
         onOpenExportImport={() => setIsExportImportOpen(true)}
-        onOpenGraph={() => setIsGraphModalOpen(true)}
+        onOpenMindMap={() => setIsMindMap3DOpen(true)}
         onEnterAdmin={() => {
           window.location.hash = 'admin';
         }}
@@ -511,17 +515,21 @@ export default function App() {
         onSingleOcr={handleSingleOcr}
       />
 
-      <ProductMindMapModal
-        isOpen={isGraphModalOpen}
-        onClose={() => setIsGraphModalOpen(false)}
-        parts={parts}
-        imageLib={imageLib}
-        bindings={bindings}
-        ocrIndex={ocrIndex}
-        onSelectPart={(pn) => {
-          setFilterState((prev) => ({ ...prev, keyword: pn, searchField: 'partNo' }));
-        }}
-      />
+      <Suspense fallback={null}>
+        {isMindMap3DOpen && (
+          <ProductMindMap3DModalLazy
+            isOpen={true}
+            onClose={() => setIsMindMap3DOpen(false)}
+            parts={parts}
+            imageLib={imageLib}
+            bindings={bindings}
+            ocrIndex={ocrIndex}
+            onSelectPart={(pn) => {
+              setFilterState((prev) => ({ ...prev, keyword: pn, searchField: 'partNo' }));
+            }}
+          />
+        )}
+      </Suspense>
 
       {/* Footer */}
       <footer className="mt-auto py-3 text-xs text-slate-500 border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
