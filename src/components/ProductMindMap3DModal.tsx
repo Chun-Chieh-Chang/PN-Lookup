@@ -40,11 +40,19 @@ import { APP_VERSION } from '../version';
 const NODE_REL_SIZE = 3.4;
 const PART_R = 2.4;
 const DIM_NODE_COLOR = 'rgba(15,23,42,0.22)';
-const DIM_LINK_COLOR = 'rgba(30,41,59,0.12)';
+const DIM_LINK_COLOR = 'rgba(51,65,85,0.20)';
 const MATCH_COLOR = '#FBBF24';
 const SELECTED_COLOR = '#38BDF8';
-const LINK_COLOR = '#475569';
+const LINK_COLOR = 'rgba(100,116,139,0.65)';
 const LINK_ACTIVE_COLOR = '#38BDF8';
+
+function getLinkId(nodeOrId: string | MM3DNode | { id?: string | number } | undefined): string {
+  if (!nodeOrId) return '';
+  if (typeof nodeOrId === 'object' && nodeOrId !== null) {
+    return String((nodeOrId as { id?: string | number }).id ?? '');
+  }
+  return String(nodeOrId);
+}
 
 const LAYER_RADIUS = [0, 68, 138, 208, 272, 332];
 const R_BY_DEPTH: Record<number, number> = { 0: 10.5, 1: 7.2, 2: 5.2, 3: 4.4, 4: 3.6, 5: 3.0 };
@@ -479,7 +487,18 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     }
 
     const nodes = fullNodes.filter((n) => visibleNodeIds.has(n.id));
-    const links = fullLinks.filter((l) => visibleNodeIds.has(l.source) && visibleNodeIds.has(l.target));
+    const links = fullLinks
+      .filter((l) => {
+        const s = getLinkId(l.source);
+        const t = getLinkId(l.target);
+        return visibleNodeIds.has(s) && visibleNodeIds.has(t);
+      })
+      .map((l) => ({
+        id: l.id,
+        source: getLinkId(l.source),
+        target: getLinkId(l.target),
+        _color: l._color,
+      }));
     return { nodes, links };
   }, [expandedIds, fullLinks, fullNodes, parentOf]);
 
@@ -524,7 +543,9 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
       }
 
       for (const l of fullLinks) {
-        const isRel = relevant.has(l.source) && relevant.has(l.target);
+        const s = getLinkId(l.source);
+        const t = getLinkId(l.target);
+        const isRel = relevant.has(s) && relevant.has(t);
         l._color = !active ? LINK_COLOR : isRel ? LINK_ACTIVE_COLOR : DIM_LINK_COLOR;
       }
 
@@ -545,7 +566,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     didInitialZoom.current = false;
   }, [isOpen, applyVisual]);
 
-  // 開啟後自動對焦全景
+  // 開啟後自動對焦全景與綁定自轉控制器
   useEffect(() => {
     if (!isOpen) return;
     const timer = window.setTimeout(() => {
@@ -553,17 +574,22 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
         didInitialZoom.current = true;
         graphRef.current?.zoomToFit(700, 75);
       }
+      const ctrl = graphRef.current?.controls?.() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
+      if (ctrl) {
+        ctrl.autoRotate = autoRotate;
+        ctrl.autoRotateSpeed = 0.6;
+      }
     }, 450);
     return () => window.clearTimeout(timer);
-  }, [isOpen]);
+  }, [isOpen, autoRotate]);
 
-  // 自動旋轉控制
+  // 監聽 autoRotate 開關變更即時生效
   useEffect(() => {
     if (!isOpen) return;
-    const ctrl = graphRef.current?.controls() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
+    const ctrl = graphRef.current?.controls?.() as { autoRotate?: boolean; autoRotateSpeed?: number } | undefined;
     if (ctrl) {
       ctrl.autoRotate = autoRotate;
-      ctrl.autoRotateSpeed = 0.55;
+      ctrl.autoRotateSpeed = 0.6;
     }
   }, [isOpen, autoRotate]);
 
@@ -869,7 +895,8 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
           nodeOpacity={1}
           nodeVal={(n) => n._val ?? 1}
           nodeColor={(n) => n._color ?? n.color}
-          nodeThreeObjectExtend={labelsOn ? (nodeExtendObject as unknown as (n: MM3DNode) => boolean) : null}
+          nodeThreeObject={labelsOn ? nodeExtendObject : undefined}
+          nodeThreeObjectExtend={true}
           nodeLabel={(n) => {
             const lines = [n.label];
             if (n.sublabel) lines.push(n.sublabel);
@@ -880,11 +907,11 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
             }
             return lines.join('\n');
           }}
-          linkColor={(l) => l._color ?? LINK_COLOR}
-          linkOpacity={0.85}
-          linkWidth={(l) => (l._color === LINK_ACTIVE_COLOR ? 1.8 : 0.8)}
-          linkDirectionalParticles={(l) => (l._color === LINK_ACTIVE_COLOR ? 2 : 0)}
-          linkDirectionalParticleWidth={1.2}
+          linkColor={(l) => (l as MM3DLink)._color ?? LINK_COLOR}
+          linkOpacity={0.75}
+          linkWidth={(l) => ((l as MM3DLink)._color === LINK_ACTIVE_COLOR ? 2.2 : 1.2)}
+          linkDirectionalParticles={(l) => ((l as MM3DLink)._color === LINK_ACTIVE_COLOR ? 3 : 0)}
+          linkDirectionalParticleWidth={1.6}
           linkDirectionalParticleColor={() => SELECTED_COLOR}
           linkDirectionalParticleSpeed={0.008}
           onNodeHover={handleNodeHover}

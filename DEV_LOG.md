@@ -1,5 +1,33 @@
 # PN-Lookup 開發日誌
 
+## v7.7.2 — 3D 思維導圖節點連線修復與視覺質感優化 (3D Mind Map Link Visibility & Elegance Tuning)
+
+### 需求內容
+- 使用者回饋：「節點之間的連線雖不能過於明顯但也不能消失不見，請解決目前連線都不可見的問題」。
+
+### 根因分析（RCA）
+1. **d3-force 內部物件引用變更導致過濾失效**：
+   - 在 ForceGraph3D 執行過程中，d3-force-3d 會將 `link.source` 與 `link.target` 由原本的字串 ID（例如 `'root'`, `'factory'`）就地轉譯突變（mutate）為 `NodeObject` 實體物件引用（`{ id: 'root', ... }`）。
+   - 在 `graphData` 的 `useMemo` 中，使用 `visibleNodeIds.has(l.source)` 進行過濾（其中 `visibleNodeIds` 為 `Set<string>`），因傳入物件導致 `Set.has(object)` 恆為 `false`，導致連線在初次渲染後全數被過濾為空陣列 `[]`。
+2. **連線粗細與顏色邊界**：
+   - 預設連線線寬 `0.8px` 且未解構字串 ID，在深色星空背景下難以肉眼清晰辨識。
+
+### 矯正與預防措施（CAPA）
+1. **建立通用 `getLinkId` ID 提取器**：
+   - 不論 `l.source` / `l.target` 處於字串 ID 或已突變為 `NodeObject`，均統一安全提取為字串 ID。
+2. **重構 `graphData` 與 `applyVisual` 連線過濾映射**：
+   - `graphData` 在傳遞 `links` 時，透過 `getLinkId` 確保向 ForceGraph 提供明確的來源與目標 ID，解決物件引用丟失連線的問題。
+3. **優雅微調連線視覺表現**：
+   - 基準連線顏色調整為 `rgba(100, 116, 139, 0.65)`（精緻微透 slate-500 質感），線寬提升至 `1.2px`（`linkWidth: 1.2`，選中分支 `2.2px`，發光粒子數 `3`）。
+   - 達成「線條清晰可見、結構分明，但絕不喧賓奪主、不過於刺眼」的優雅視覺層次。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.1 — 專注 3D 產品思維導圖 (YAGNI 剪裁) 與 3 項知識本體論 (Ontology) 輕量級優化實作
 
 ### 需求內容
