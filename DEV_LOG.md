@@ -1,5 +1,29 @@
 # PN-Lookup 開發日誌
 
+## v7.7.3 — 3D 節點名稱常駐自動高清顯示 (3D Mind Map Always-On Retina Billboard Labels)
+
+### 需求內容
+- 使用者指示：「3D節點名稱都需要自動顯示，否則無法一眼識別」。
+
+### 根因分析（RCA）
+1. **Three.js 深度遮擋 (Z-Buffer Depth Occlusion)**：
+   - 舊版 SpriteMaterial 未設定 `depthTest: false` 與 `renderOrder`，導致部分文字標籤在 3D 旋轉或靠近球體時，被節點球體或背景幾何線條遮擋，無法常駐清晰呈現。
+2. **紋理畫布解析度限制 (Low DPI Blur)**：
+   - 舊版以 1x 低解析度畫布（13px 基準字體）產製 Texture，在 3D 空間世界座標縮放時產生羽化模糊。
+
+### 矯正與預防措施（CAPA）
+1. **3x Retina 高解析度畫布生成 (`labelTexture`)**：
+   - 升級為 3x 高清 Canvas（`font = bold 45px`、大圓角半透明膠囊背景 `rgba(11, 18, 32, 0.94)`、發光彩色邊框、純白標題文字），消除空間放大時的鋸齒與模糊。
+2. **Sprite 材質層級防遮擋 (`nodeExtendObject`)**：
+   - 標籤材質設定 `depthTest: false`、`depthWrite: false`，並指派 `renderOrder = 999` 最高渲染層級，確保所有可見節點名稱常駐懸浮於頂層，100% 絕不被球體或連線遮蔽，一眼即可清晰識別！
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.2 — 3D 思維導圖節點連線修復與視覺質感優化 (3D Mind Map Link Visibility & Elegance Tuning)
 
 ### 需求內容

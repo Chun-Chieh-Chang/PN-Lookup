@@ -124,38 +124,54 @@ function labelTexture(text: string, color: string): THREE.CanvasTexture {
   const key = `${text}|${color}`;
   const cached = LABEL_CACHE.get(key);
   if (cached) return cached;
-  // min-font-size exception: 3D 思維導圖節點名稱為資料可視化密集標注，13px 為畫布基準字級
-  const font = '600 13px "JetBrains Mono", Consolas, "PingFang TC", "Microsoft JhengHei", monospace';
+
+  const scale = 3; // 3x 高解析度 Retina 渲染，徹底消除 3D 空間字體模糊
+  const fontSize = 15 * scale; // 45px
+  const font = `bold ${fontSize}px "JetBrains Mono", Consolas, "PingFang TC", "Microsoft JhengHei", sans-serif`;
+
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   ctx.font = font;
+
   let shown = text;
   let tw = Math.ceil(ctx.measureText(shown).width);
-  const maxW = 240;
+  const maxW = 300 * scale;
   while (tw > maxW && shown.length > 6) {
     shown = shown.slice(0, shown.length - 2) + '…';
     tw = Math.ceil(ctx.measureText(shown).width);
   }
-  const padX = 8;
-  const padY = 4;
-  const w = Math.max(tw + padX * 2, 20);
-  const h = 13 + padY * 2;
+
+  const padX = 12 * scale;
+  const padY = 6 * scale;
+  const w = Math.max(tw + padX * 2, 40 * scale);
+  const h = fontSize + padY * 2;
   canvas.width = w;
   canvas.height = h;
+
   const c2 = canvas.getContext('2d')!;
   c2.font = font;
-  c2.fillStyle = 'rgba(15,23,42,0.88)';
-  roundedRect(c2, 0, 0, w, h, 7);
+
+  // 1. 高對比暗黑背景（半透明深 Slate 900 膠囊）
+  c2.fillStyle = 'rgba(11, 18, 32, 0.94)';
+  roundedRect(c2, 0, 0, w, h, 7 * scale);
   c2.fill();
-  c2.strokeStyle = color;
-  c2.lineWidth = 1.5;
+
+  // 2. 節點分類專屬色彩外框 (Glowing Border)
+  c2.strokeStyle = color || '#38BDF8';
+  c2.lineWidth = 2.2 * scale;
   c2.lineJoin = 'round';
-  roundedRect(c2, 1, 1, w - 2, h - 2, 6);
+  roundedRect(c2, 1.2 * scale, 1.2 * scale, w - 2.4 * scale, h - 2.4 * scale, 6 * scale);
   c2.stroke();
-  c2.fillStyle = '#F1F5F9';
+
+  // 3. 極致清晰白色標題文字
+  c2.fillStyle = '#FFFFFF';
   c2.textBaseline = 'middle';
-  c2.fillText(shown, padX, h / 2 + 0.5);
+  c2.fillText(shown, padX, h / 2 + 1 * scale);
+
   const tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
   LABEL_CACHE.set(key, tex);
   return tex;
 }
@@ -395,19 +411,35 @@ function nodeExtendObject(node: MM3DNode): THREE.Group {
   const color = node.color;
   const baseR = node.r;
 
+  // 1. 節點底部呼吸光暈
   const glow = new THREE.Sprite(
-    new THREE.SpriteMaterial({ map: glowTexture(color), transparent: true, opacity: 0.45, depthWrite: false }),
+    new THREE.SpriteMaterial({
+      map: glowTexture(color),
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+      depthTest: false,
+    }),
   );
-  glow.scale.set(baseR * 7.5, baseR * 7.5, 1);
+  glow.scale.set(baseR * 6.5, baseR * 6.5, 1);
   glow.raycast = () => {};
   group.add(glow);
 
-  const tex = labelTexture(node.label, node.textColor);
+  // 2. 節點常駐高解析度文字名稱標籤（Billboard Sprite）
+  const tex = labelTexture(node.label, color);
   const aspect = tex.image.width / tex.image.height;
-  const worldH = 5.2 + baseR * 0.5;
-  const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  const worldH = Math.max(6.0, baseR * 0.95 + 4.5);
+  const label = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+      depthTest: false, // 確保名稱標籤永遠懸浮於頂層，不被其他節點或幾何體遮擋
+    }),
+  );
   label.scale.set(worldH * aspect, worldH, 1);
-  label.position.y = baseR * 2.2 + 8;
+  label.position.y = baseR + worldH * 0.55 + 1.2;
+  label.renderOrder = 999; // 最高渲染順序
   label.raycast = () => {};
   group.add(label);
 
