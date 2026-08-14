@@ -79,8 +79,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
         {/* Body */}
         <div className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto max-h-[75vh]">
           
-          {/* Main Info Card */}
-          <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3.5">
+          {/* Main Info Card — 清淡柔和冷灰/基本規格 */}
+          <div className="p-4 bg-slate-50/70 rounded-xl border border-slate-200 shadow-2xs space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               
               <div>
@@ -100,7 +100,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   <span className="text-base font-mono font-bold text-slate-900">{item.partNo}</span>
                   <button
                     onClick={handleCopyPartNo}
-                    className="btn-tactile p-1 text-slate-400 hover:text-slate-700 rounded bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                    className="btn-tactile p-1 text-slate-400 hover:text-slate-700 rounded bg-white border border-slate-200 transition-colors cursor-pointer"
                     title="複製品號"
                   >
                     {copiedPart ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
@@ -110,7 +110,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
             </div>
 
-            <div className="pt-2.5 border-t border-slate-100">
+            <div className="pt-2.5 border-t border-slate-200/80">
               <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
                 <FileText className="w-3.5 h-3.5 text-slate-400" />
                 <span>品名規格 (Part Name)</span>
@@ -119,11 +119,11 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             </div>
 
             {(item.category || item.color || item.material) && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-200/80">
                 {item.category && (
                   <div>
                     <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">物料類別</span>
-                    <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 font-semibold rounded text-[13px] border border-slate-300">
+                    <span className="inline-block px-2 py-0.5 bg-white text-slate-800 font-semibold rounded text-[13px] border border-slate-300">
                       {item.category}
                     </span>
                   </div>
@@ -150,14 +150,14 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             )}
 
             {item.alternates && item.alternates.length > 0 && (
-              <div className="pt-2.5 border-t border-slate-100">
+              <div className="pt-2.5 border-t border-slate-200/80">
                 <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
                   <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
                   <span>別稱 / 替代品號</span>
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {item.alternates.map((a) => (
-                    <span key={a} className="px-2 py-0.5 bg-slate-100 text-slate-800 font-mono rounded border border-slate-300 text-[13px] font-semibold">
+                    <span key={a} className="px-2 py-0.5 bg-white text-slate-800 font-mono rounded border border-slate-300 text-[13px] font-semibold">
                       {a}
                     </span>
                   ))}
@@ -166,9 +166,9 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             )}
 
             {item.notes && (
-              <div className="pt-2.5 border-t border-slate-100">
+              <div className="pt-2.5 border-t border-slate-200/80">
                 <span className="text-[13px] text-slate-500 mb-1 block font-medium">備註說明</span>
-                <p className="text-[13px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                <p className="text-[13px] text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed">
                   {item.notes}
                 </p>
               </div>
@@ -177,13 +177,13 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
           {/* BOM Section: If Assembly, show components; If Part, show assemblies it can form */}
           {isAssembly ? (
-            <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
-                  <Boxes className="w-4 h-4 text-sky-700" />
+            <div className="p-3.5 sm:p-4 bg-emerald-50/40 rounded-xl border border-emerald-200/80 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
+                <h3 className="font-bold text-emerald-900 flex items-center space-x-2 text-[13px]">
+                  <Boxes className="w-4 h-4 text-emerald-700" />
                   <span>組成該組件的所有零件 (Components)</span>
                 </h3>
-                <span className="text-[13px] text-slate-500 font-mono">共 {componentsList.length} 項關聯零件</span>
+                <span className="text-[13px] text-emerald-800/80 font-mono">共 {componentsList.length} 項關聯零件</span>
               </div>
 
               {componentsList.length > 0 ? (
@@ -192,24 +192,24 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                     <button
                       key={`${rel.relatedItem.id}-${idx}`}
                       onClick={() => onSelectRelated(rel.relatedItem)}
-                      className="btn-tactile group flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200 hover:border-slate-300 transition-all text-left cursor-pointer"
+                      className="btn-tactile group flex items-center justify-between p-2.5 bg-white hover:bg-emerald-50/50 rounded-lg border border-emerald-200/80 hover:border-emerald-300 transition-all text-left cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="p-1.5 rounded bg-white text-slate-700 border border-slate-200">
+                        <span className="p-1.5 rounded bg-emerald-100/80 text-emerald-800 border border-emerald-200">
                           <Component className="w-3.5 h-3.5" />
                         </span>
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.relatedItem.partNo}</span>
-                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-200 font-mono">
+                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-100 font-mono border border-slate-200">
                               {rel.relatedItem.customer}
                             </span>
                           </div>
                           <p className="text-[13px] text-slate-700 mt-0.5">{rel.relatedItem.name}</p>
-                          <p className="text-[13px] text-sky-800 font-medium mt-0.5">{rel.note}</p>
+                          <p className="text-[13px] text-emerald-800 font-medium mt-0.5">{rel.note}</p>
                         </div>
                       </div>
-                      <div className="text-slate-400 group-hover:text-slate-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
+                      <div className="text-emerald-700/60 group-hover:text-emerald-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
                         <span>查看零件</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -223,13 +223,13 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               )}
             </div>
           ) : (
-            <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+            <div className="p-3.5 sm:p-4 bg-sky-50/40 rounded-xl border border-sky-200/80 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between border-b border-sky-200/60 pb-2">
+                <h3 className="font-bold text-sky-900 flex items-center space-x-2 text-[13px]">
                   <Component className="w-4 h-4 text-sky-700" />
                   <span>本零件可組成的組件 (Assemblies using this Part)</span>
                 </h3>
-                <span className="text-[13px] text-slate-500 font-mono">共 {assembliesList.length} 項可組裝目標</span>
+                <span className="text-[13px] text-sky-800/80 font-mono">共 {assembliesList.length} 項可組裝目標</span>
               </div>
 
               {assembliesList.length > 0 ? (
@@ -238,16 +238,16 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                     <button
                       key={`${rel.relatedItem.id}-${idx}`}
                       onClick={() => onSelectRelated(rel.relatedItem)}
-                      className="btn-tactile group flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200 hover:border-slate-300 transition-all text-left cursor-pointer"
+                      className="btn-tactile group flex items-center justify-between p-2.5 bg-white hover:bg-sky-50/50 rounded-lg border border-sky-200/80 hover:border-sky-300 transition-all text-left cursor-pointer shadow-2xs"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="p-1.5 rounded bg-white text-slate-700 border border-slate-200">
+                        <span className="p-1.5 rounded bg-sky-100/80 text-sky-800 border border-sky-200">
                           <Boxes className="w-3.5 h-3.5" />
                         </span>
                         <div>
                           <div className="flex items-center space-x-2">
                             <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.relatedItem.partNo}</span>
-                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-200 font-mono">
+                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-100 font-mono border border-slate-200">
                               {rel.relatedItem.customer}
                             </span>
                           </div>
@@ -255,7 +255,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                           <p className="text-[13px] text-sky-800 font-medium mt-0.5">{rel.note}</p>
                         </div>
                       </div>
-                      <div className="text-slate-400 group-hover:text-slate-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
+                      <div className="text-sky-700/60 group-hover:text-sky-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
                         <span>查看組件</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -270,11 +270,11 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             </div>
           )}
 
-          {/* Same Customer items */}
+          {/* Same Customer items — 清淡柔和靛藍色 */}
           {relatedSameCustomer.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-bold text-slate-800 flex items-center space-x-1.5 text-[13px]">
-                <User className="w-3.5 h-3.5 text-slate-400" />
+            <div className="p-3.5 sm:p-4 bg-indigo-50/40 rounded-xl border border-indigo-200/80 shadow-2xs space-y-2.5">
+              <h3 className="font-bold text-indigo-900 flex items-center space-x-1.5 text-[13px] border-b border-indigo-200/60 pb-1.5">
+                <User className="w-3.5 h-3.5 text-indigo-700" />
                 <span>相同客戶 ({item.customer}) 的其他品號</span>
               </h3>
               <div className="grid gap-1.5">
@@ -282,7 +282,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   <button
                     key={rel.id}
                     onClick={() => onSelectRelated(rel)}
-                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors text-left cursor-pointer"
+                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-indigo-50/50 rounded-lg border border-indigo-200/70 transition-colors text-left cursor-pointer shadow-2xs"
                   >
                     <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.partNo}</span>
                     <span className="text-slate-600 truncate max-w-[250px] text-[13px]">{rel.name}</span>
@@ -292,11 +292,11 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             </div>
           )}
 
-          {/* Same Prefix items */}
+          {/* Same Prefix items — 清淡柔和琥珀/暖黃色 */}
           {relatedSamePrefix.length > 0 && (
-            <div className="space-y-2">
-              <h3 className="font-bold text-slate-800 flex items-center space-x-1.5 text-[13px]">
-                <Layers className="w-3.5 h-3.5 text-slate-400" />
+            <div className="p-3.5 sm:p-4 bg-amber-50/40 rounded-xl border border-amber-200/80 shadow-2xs space-y-2.5">
+              <h3 className="font-bold text-amber-900 flex items-center space-x-1.5 text-[13px] border-b border-amber-200/60 pb-1.5">
+                <Layers className="w-3.5 h-3.5 text-amber-700" />
                 <span>相同字頭系列 ({prefix}) 的品號</span>
               </h3>
               <div className="grid gap-1.5">
@@ -304,10 +304,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   <button
                     key={rel.id}
                     onClick={() => onSelectRelated(rel)}
-                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors text-left cursor-pointer"
+                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-amber-50/50 rounded-lg border border-amber-200/70 transition-colors text-left cursor-pointer shadow-2xs"
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[13px] font-mono border border-slate-200">
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100/70 text-amber-900 text-[13px] font-mono border border-amber-200">
                         {rel.customer}
                       </span>
                       <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.partNo}</span>

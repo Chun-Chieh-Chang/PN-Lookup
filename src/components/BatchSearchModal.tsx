@@ -80,40 +80,40 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white border border-gray-200 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-xl text-gray-900 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl text-slate-900 my-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 rounded-t-2xl">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-teal-100 text-teal-600 border border-teal-200">
-              <ListChecks className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-sky-100/80 text-sky-800 border border-sky-200 flex items-center justify-center">
+              <ListChecks className="w-4 h-4 text-sky-700" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">批次品號對照檢索</h2>
-              <p className="text-sm text-gray-500">貼上多筆品號，迅速一次對照客戶與品名規格</p>
+              <h2 className="text-base font-bold text-slate-900">批次品號對照檢索</h2>
+              <p className="text-[13px] text-slate-500">貼上多筆品號，迅速一次對照客戶與品名規格</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            className="btn-tactile p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-200"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 text-sm">
           
           {/* Input Area */}
-          <div className="space-y-2">
+          <div className="p-3.5 sm:p-4 bg-slate-50/70 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
             <div className="flex items-center justify-between">
-              <label className="font-semibold text-gray-700">
+              <label className="font-semibold text-slate-800 text-[13px]">
                 請輸入或貼上品號清單 (每行一筆或以逗號/空格隔開):
               </label>
               <button
                 onClick={handleSampleInput}
-                className="text-teal-600 hover:underline text-sm cursor-pointer"
+                className="text-sky-700 hover:text-sky-900 hover:underline text-[13px] font-semibold cursor-pointer"
               >
                 載入範例資料
               </button>
@@ -123,25 +123,25 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder="例：&#10;C09-240-211&#10;D10-240-211&#10;3M41459"
-              className="w-full p-3 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              className="w-full p-3 bg-white border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 font-mono text-[13px] focus:outline-none focus:ring-2 focus:ring-sky-500/15 focus:border-sky-500 shadow-2xs"
             />
           </div>
 
           {/* Results Summary & Action */}
           {queries.length > 0 && (
-            <div className="space-y-4 pt-2">
-              <div className="flex flex-wrap items-center justify-between bg-gray-50 p-3.5 rounded-xl border border-gray-200 gap-3">
-                <div className="flex items-center space-x-4">
-                  <span className="text-gray-600">
-                    輸入 <strong className="text-gray-900">{queries.length}</strong> 項品號
+            <div className="space-y-4 pt-1">
+              <div className="flex flex-wrap items-center justify-between bg-white p-3.5 rounded-xl border border-slate-200 gap-3 shadow-2xs">
+                <div className="flex flex-wrap items-center gap-3 text-[13px]">
+                  <span className="text-slate-600 font-medium">
+                    輸入 <strong className="text-slate-900 font-mono">{queries.length}</strong> 項品號
                   </span>
-                  <span className="text-emerald-600 font-medium flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="text-emerald-800 font-semibold flex items-center space-x-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-mono">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                     <span>成功比對 {matchedList.length} 項 ({totalMatchedCount} 筆記錄)</span>
                   </span>
                   {missingQueries.length > 0 && (
-                    <span className="text-rose-600 font-medium flex items-center space-x-1">
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                    <span className="text-rose-800 font-semibold flex items-center space-x-1 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 font-mono">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
                       <span>未找到 {missingQueries.length} 項</span>
                     </span>
                   )}
@@ -149,41 +149,41 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
 
                 <button
                   onClick={handleCopyReport}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                  className="btn-tactile inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[13px] font-semibold border border-slate-700 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-3.5 h-3.5 text-sky-400" />
                   <span>{copied ? '對照報告已複製！' : '複製對照報告'}</span>
                 </button>
               </div>
 
-              {/* Matched List */}
+              {/* Matched List — 清淡柔和翠綠色卡片 */}
               {matchedList.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-bold text-gray-700 flex items-center space-x-2 text-sm">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <div className="p-3.5 sm:p-4 bg-emerald-50/40 rounded-xl border border-emerald-200/80 shadow-2xs space-y-2.5">
+                  <h3 className="font-bold text-emerald-900 flex items-center space-x-2 text-[13px] border-b border-emerald-200/60 pb-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                     <span>成功對照項目 ({matchedList.length})</span>
                   </h3>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-200">
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {matchedList.map(({ query, items }) => (
-                      <div key={query} className="bg-gray-50/50 p-3 space-y-2">
-                        <div className="flex items-center justify-between font-mono font-bold text-teal-700">
+                      <div key={query} className="bg-white p-2.5 rounded-lg border border-emerald-200/80 space-y-1.5 shadow-2xs">
+                        <div className="flex items-center justify-between font-mono font-bold text-emerald-900 text-[13px]">
                           <span>查詢字串: {query}</span>
-                          <span className="text-sm text-gray-400 font-sans font-normal">
+                          <span className="text-[13px] text-slate-500 font-sans font-normal">
                             對應 {items.length} 筆
                           </span>
                         </div>
-                        <div className="grid gap-1.5 pl-2">
+                        <div className="grid gap-1 pl-1">
                           {items.map((item) => (
                             <div
                               key={item.id}
-                              className="flex items-center justify-between p-2 rounded bg-white border border-gray-200 text-sm"
+                              className="flex items-center justify-between p-2 rounded bg-slate-50 border border-slate-200/90 text-[13px]"
                             >
-                              <div className="flex items-center space-x-3">
-                                <span className="px-2 py-0.5 rounded bg-gray-100 text-indigo-700 border border-gray-200 text-sm">
+                              <div className="flex items-center space-x-2.5">
+                                <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 border border-slate-300 font-mono text-[13px]">
                                   {item.customer}
                                 </span>
-                                <span className="font-mono font-bold text-gray-900">{item.partNo}</span>
-                                <span className="text-gray-600">{item.name}</span>
+                                <span className="font-mono font-bold text-slate-900">{item.partNo}</span>
+                                <span className="text-slate-600 truncate max-w-sm">{item.name}</span>
                               </div>
                             </div>
                           ))}
@@ -194,18 +194,18 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
                 </div>
               )}
 
-              {/* Missing List */}
+              {/* Missing List — 清淡柔和暖紅/玫瑰色卡片 */}
               {missingQueries.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-bold text-gray-700 flex items-center space-x-2 text-sm">
-                    <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <div className="p-3.5 sm:p-4 bg-rose-50/40 rounded-xl border border-rose-200/80 shadow-2xs space-y-2.5">
+                  <h3 className="font-bold text-rose-900 flex items-center space-x-2 text-[13px] border-b border-rose-200/60 pb-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-700" />
                     <span>查無比對結果項目 ({missingQueries.length})</span>
                   </h3>
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-mono space-y-1">
+                  <div className="bg-white p-2.5 border border-rose-200 rounded-lg text-rose-900 font-mono space-y-1 text-[13px] shadow-2xs max-h-48 overflow-y-auto">
                     {missingQueries.map((q) => (
-                      <div key={q} className="flex items-center justify-between">
-                        <span>• {q}</span>
-                        <span className="text-sm text-rose-500/80 font-sans">資料庫中無此品號</span>
+                      <div key={q} className="flex items-center justify-between py-0.5">
+                        <span className="font-bold">• {q}</span>
+                        <span className="text-[13px] text-slate-400 font-sans">資料庫中無此品號</span>
                       </div>
                     ))}
                   </div>
@@ -218,12 +218,12 @@ export const BatchSearchModal: React.FC<BatchSearchModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
+        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-end rounded-b-2xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="btn-tactile px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-700 rounded-lg text-[13px] font-semibold border border-slate-300 transition-colors cursor-pointer shadow-2xs"
           >
-            關閉視窗
+            關閉
           </button>
         </div>
 

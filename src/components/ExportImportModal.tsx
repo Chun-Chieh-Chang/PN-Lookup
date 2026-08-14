@@ -356,9 +356,9 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         {/* Body */}
         <div className="p-4 sm:p-6 space-y-4 text-sm">
 
-          {/* Import Section */}
-          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+          {/* Import Section — 清淡柔和天藍色 */}
+          <div className="p-3.5 sm:p-4 bg-sky-50/40 rounded-xl border border-sky-200/80 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-sky-900 flex items-center space-x-2 text-[13px]">
               <Download className="w-4 h-4 text-sky-700" />
               <span>匯入自訂資料</span>
             </h3>
@@ -395,20 +395,20 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 type="file"
                 accept=".csv,.txt,.json,.xlsx,.xlsm"
                 onChange={handleFileUpload}
-                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-[13px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-sky-300 file:text-[13px] file:font-semibold file:bg-white file:text-sky-900 hover:file:bg-sky-100 cursor-pointer"
               />
             </div>
           </div>
 
-          {/* 客戶料號工作表匯入 */}
-          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
-              <Tags className="w-4 h-4 text-slate-600" />
+          {/* 客戶料號工作表匯入 — 清淡柔和靛藍色 */}
+          <div className="p-3.5 sm:p-4 bg-indigo-50/40 rounded-xl border border-indigo-200/80 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-indigo-900 flex items-center space-x-2 text-[13px]">
+              <Tags className="w-4 h-4 text-indigo-700" />
               <span>客戶料號工作表匯入（三碼互換）</span>
             </h3>
             <p className="text-slate-500 text-[13px] leading-relaxed">
               從「產品一覽表.xlsm」的「客戶料號」工作表匯入：圖面編號、產品編號、零件編號(客) 三欄互為可替代品號。
-              主品號以 <strong className="text-slate-800">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
+              主品號以 <strong className="text-indigo-950">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
               既有資料任一碼命中即自動合併（不重複建檔），全資料庫代碼唯一性檢查。
             </p>
             <div className="pt-1">
@@ -416,14 +416,14 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 type="file"
                 accept=".xlsx,.xlsm"
                 onChange={handleCustomerSheetUpload}
-                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-[13px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
+                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-indigo-300 file:text-[13px] file:font-semibold file:bg-white file:text-indigo-900 hover:file:bg-indigo-100 cursor-pointer"
               />
             </div>
           </div>
 
-          {/* Export Section */}
-          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
-            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+          {/* Export Section — 清淡柔和薄荷/翠綠色 */}
+          <div className="p-3.5 sm:p-4 bg-emerald-50/40 rounded-xl border border-emerald-200/80 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-emerald-900 flex items-center space-x-2 text-[13px]">
               <Upload className="w-4 h-4 text-emerald-700" />
               <span>匯出目前資料庫 ({parts.length} 筆)</span>
             </h3>
@@ -434,7 +434,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'xlsx'}
                   onChange={() => setExportFormat('xlsx')}
-                  className="text-slate-700 focus:ring-slate-500"
+                  className="text-emerald-700 focus:ring-emerald-500"
                 />
                 <Table2 className="w-3.5 h-3.5 text-emerald-700" />
                 <span className="text-slate-700 font-medium">Excel (.xlsx)</span>
@@ -445,7 +445,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'csv'}
                   onChange={() => setExportFormat('csv')}
-                  className="text-slate-700 focus:ring-slate-500"
+                  className="text-emerald-700 focus:ring-emerald-500"
                 />
                 <FileSpreadsheet className="w-3.5 h-3.5 text-slate-600" />
                 <span className="text-slate-700 font-medium">CSV</span>
@@ -456,7 +456,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'json'}
                   onChange={() => setExportFormat('json')}
-                  className="text-slate-700 focus:ring-slate-500"
+                  className="text-emerald-700 focus:ring-emerald-500"
                 />
                 <FileJson className="w-3.5 h-3.5 text-slate-600" />
                 <span className="text-slate-700 font-medium">JSON</span>
@@ -467,7 +467,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'jsonld'}
                   onChange={() => setExportFormat('jsonld')}
-                  className="text-slate-700 focus:ring-slate-500"
+                  className="text-emerald-700 focus:ring-emerald-500"
                 />
                 <FileJson className="w-3.5 h-3.5 text-sky-700" />
                 <span className="text-slate-800 font-semibold">JSON-LD 知識本體 (@Schema.org)</span>
@@ -485,14 +485,14 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             <div className="flex items-center space-x-2.5 pt-1">
               <button
                 onClick={handleDownload}
-                className="btn-tactile px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg flex items-center space-x-1.5 border border-slate-700 cursor-pointer shadow-2xs"
+                className="btn-tactile px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white text-[13px] font-semibold rounded-lg flex items-center space-x-1.5 border border-emerald-700 cursor-pointer shadow-2xs"
               >
-                <Upload className="w-3.5 h-3.5 text-sky-400" />
+                <Upload className="w-3.5 h-3.5 text-emerald-200" />
                 <span>下載 {exportFormat.toUpperCase()} 檔</span>
               </button>
               <button
                 onClick={handleCopyData}
-                className="btn-tactile px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[13px] font-medium rounded-lg flex items-center space-x-1.5 border border-slate-300 cursor-pointer shadow-2xs"
+                className="btn-tactile px-3 py-1.5 bg-white hover:bg-emerald-50 text-slate-700 text-[13px] font-medium rounded-lg flex items-center space-x-1.5 border border-emerald-300 cursor-pointer shadow-2xs"
               >
                 {copiedData ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : getIcon()}
                 <span>{copiedData ? '已複製內容！' : `複製 ${exportFormat.toUpperCase()} 內文`}</span>
@@ -500,11 +500,11 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             </div>
           </div>
 
-          {/* Reset section */}
-          <div className="p-3.5 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+          {/* Reset section — 清淡柔和暖紅/玫瑰色 */}
+          <div className="p-3.5 sm:p-4 bg-rose-50/40 rounded-xl border border-rose-200/80 flex items-center justify-between shadow-2xs">
             <div>
-              <h4 className="font-semibold text-slate-700 text-[13px]">恢復系統初始資料</h4>
-              <p className="text-[13px] text-slate-400">重置為種子資料庫設定</p>
+              <h4 className="font-semibold text-rose-900 text-[13px]">恢復系統初始資料</h4>
+              <p className="text-[13px] text-slate-500">重置為種子資料庫設定</p>
             </div>
             <button
               onClick={() => {
@@ -513,7 +513,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   onClose();
                 }
               }}
-              className="btn-tactile px-3 py-1.5 bg-white text-slate-700 hover:text-red-700 hover:bg-red-50 border border-slate-300 hover:border-red-200 rounded-lg text-[13px] font-medium transition-colors cursor-pointer flex items-center space-x-1"
+              className="btn-tactile px-3 py-1.5 bg-white text-rose-700 hover:text-rose-800 hover:bg-rose-50 border border-rose-300 rounded-lg text-[13px] font-semibold transition-colors cursor-pointer flex items-center space-x-1 shadow-2xs"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>重置為預設值</span>

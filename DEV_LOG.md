@@ -1,5 +1,43 @@
 # PN-Lookup 開發日誌
 
+## v7.8.1 — 同一頁面多屬性卡片清淡色彩區分優化 (Subtle Pastel Card Color Distinction)
+
+### 需求內容
+- 使用者指示：「同一頁面裡，屬性不同的卡片用不同的顏色區分，顏色清淡就好，不必厚重」。
+
+### 根因分析（RCA）
+1. **卡片色彩過於單一中性 (Monochromatic Visual Fatigue)**：
+   - 先前重構將所有卡片一律改為純白底或灰底，在同一頁面（如 `StatsBar`、`ExportImportModal`、`PartDetailModal`、`BatchSearchModal`）存在多種不同業務屬性的卡片時，使用者無法一眼透過視覺感知區分其功能邊界。
+2. **避免厚重飽和度 (Avoid Heavy/Loud Colors)**：
+   - 需採用極低飽和度、清淡通透的莫蘭迪柔色（淡天藍、淡紫藍、淡琥珀、淡薄荷綠、淡玫瑰紅），背景採用 `50/40`~`50/50` 柔光色，搭配 `200/80` 柔邊框與深色高對比文字。
+
+### 矯正與預防措施（CAPA）
+1. **主頁統計指標卡片 (`StatsBar.tsx`)**：
+   - 品號總數：淡天藍 (`bg-sky-50/50 border-sky-200/80`)
+   - 涵蓋客戶：淡紫藍 (`bg-indigo-50/40 border-indigo-200/80`)
+   - 字頭分類：淡琥珀 (`bg-amber-50/40 border-amber-200/80`)
+   - 系統狀態：淡薄荷綠 (`bg-emerald-50/40 border-emerald-200/80`)
+2. **資料匯出匯入彈窗 (`ExportImportModal.tsx`)**：
+   - 匯入自訂資料：淡天藍
+   - 客戶料號工作表（三碼互換）：淡紫藍
+   - 匯出資料庫：淡薄荷綠
+   - 恢復預設資料庫：淡玫瑰紅
+3. **品號詳細規格彈窗 (`PartDetailModal.tsx`)**：
+   - 基本規格：淡冷碳灰 (`bg-slate-50/70 border-slate-200`)
+   - BOM 組成零件：淡薄荷綠 / 可組成目標：淡天藍
+   - 相同客戶其他品號：淡紫藍
+   - 相同字頭系列品號：淡琥珀
+4. **批次品號對照檢索與孤兒圖檔彈窗 (`BatchSearchModal.tsx`, `OrphanImagesModal.tsx`)**：
+   - 成功比對項目：淡薄荷綠；未找到品號項目：淡玫瑰紅；綁定操作區：淡琥珀。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功 (10.93s)。
+- 字級規範驗證：全專案介面文字均 `>= 13px`。
+
+---
+
 ## v7.8.0 — 全站視覺去 AI 味與現代醫療工業儀表風重構 (Clean Medical Industrial UI Refinement)
 
 ### 需求內容
