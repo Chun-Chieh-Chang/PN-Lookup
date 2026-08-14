@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   Copy,
   Check,
@@ -388,10 +388,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Customer Badge */}
-                  <td className="p-3 font-medium py-3.5">
+                  <td className="p-3 font-medium py-3">
                     <button
                       onClick={() => onCustomerClick(item.customer)}
-                      className="inline-flex items-center px-2.5 py-1 rounded-lg bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition-all font-mono text-[13px] font-bold cursor-pointer hover:shadow-xs"
+                      className="btn-tactile inline-flex items-center px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 font-mono text-[13px] font-semibold cursor-pointer shadow-2xs"
                       title="點擊篩選該客戶"
                     >
                       <span>{highlightText(item.customer, searchKeyword)}</span>
@@ -399,7 +399,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Part Number */}
-                  <td className="p-3 font-mono font-bold text-slate-900 py-3.5">
+                  <td className="p-3 font-mono font-bold text-slate-900 py-3">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center space-x-2">
                         <span
@@ -408,8 +408,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                               ? () => openImage(firstImage.url)
                               : undefined
                           }
-                          className={`text-teal-800 bg-teal-50 px-2.5 py-0.5 rounded-md border border-teal-200/80 font-bold ${
-                            firstImage ? 'cursor-pointer hover:bg-teal-100 hover:shadow-xs' : ''
+                          className={`px-2.5 py-0.5 rounded border font-bold font-mono tracking-tight ${
+                            firstImage
+                              ? 'text-sky-900 bg-sky-50 border-sky-300 cursor-pointer hover:bg-sky-100 shadow-2xs'
+                              : 'text-slate-800 bg-slate-100/80 border-slate-300'
                           }`}
                           title={
                             allImages.length > 1
@@ -423,10 +425,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         </span>
                         <button
                           onClick={() => handleCopyPartNo(item.id, item.partNo)}
-                          className={`p-1 rounded-md transition-colors cursor-pointer ${
+                          className={`btn-tactile p-1 rounded transition-colors cursor-pointer border ${
                             isCopied
-                              ? 'text-emerald-600 bg-emerald-100'
-                              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                              ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                              : 'text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border-slate-200'
                           }`}
                           title="複製品號"
                         >
@@ -435,7 +437,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {firstImage && (
                           <button
                             onClick={() => openImage(firstImage.url)}
-                            className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                            className="btn-tactile p-1 rounded text-slate-500 hover:text-sky-700 bg-white hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                             title={allImages.length > 1 ? `對應 ${allImages.length} 張圖檔（點擊開啟首張）` : '開啟圖檔'}
                           >
                             <ImageIcon className="w-3.5 h-3.5" />
@@ -445,12 +447,12 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                       {item.alternates && item.alternates.length > 0 && (
                         <div className="flex flex-wrap items-center gap-1">
-                          <span className="text-[13px] text-slate-400 uppercase tracking-wide font-sans">別名</span>
+                          <span className="text-[13px] text-slate-400 font-medium font-sans">別名</span>
                           {item.alternates.map((alt) => (
                             <button
                               key={alt}
                               onClick={() => handleCopyPartNo(item.id, alt)}
-                              className="text-[13px] font-medium text-slate-600 bg-slate-100 border border-slate-200/80 rounded px-1.5 py-px hover:bg-slate-200 hover:text-slate-800 font-mono cursor-pointer transition-colors"
+                              className="text-[13px] font-medium text-slate-700 bg-slate-100 border border-slate-300 rounded px-1.5 py-px hover:bg-slate-200 font-mono cursor-pointer transition-colors"
                               title={`別名：${alt}（點擊複製）`}
                             >
                               {highlightText(alt, searchKeyword)}
@@ -462,17 +464,17 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Item Type Badge */}
-                  <td className="p-3 py-3.5">
+                  <td className="p-3 py-3">
                     <button
                       onClick={() => onViewDetail(item)}
-                      className={`inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold border transition-all cursor-pointer shadow-2xs hover:shadow-xs ${
+                      className={`btn-tactile inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold border transition-all cursor-pointer shadow-2xs ${
                         (item.category && item.category.includes('組件')) || isAssembly
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200/80 hover:bg-indigo-100'
+                          ? 'bg-slate-900 text-sky-400 border-slate-700 hover:bg-slate-800'
                           : (item.category && item.category.includes('客戶特規'))
-                          ? 'bg-rose-50 text-rose-700 border-rose-200/80 hover:bg-rose-100'
+                          ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
                           : (item.category && (item.category.includes('輔料') || item.category.includes('包材')))
-                          ? 'bg-cyan-50 text-cyan-800 border-cyan-200/80 hover:bg-cyan-100'
-                          : 'bg-emerald-50 text-emerald-800 border-emerald-200/80 hover:bg-emerald-100'
+                          ? 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
                       }`}
                       title={isAssembly ? '查看組成此組件的所有零件' : '查看可組成該零件的相應組件'}
                     >
@@ -505,24 +507,26 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* 圖檔連結 */}
-                  <td className="p-3 py-3.5">
+                  <td className="p-3 py-3">
                     {allImages.length === 1 ? (
                       <button
                         onClick={() => openImage(allImages[0].url)}
                         onMouseEnter={(e) => handleImageMouseEnter(allImages[0].url, allImages[0].name, e)}
                         onMouseMove={handleImageMouseMove}
                         onMouseLeave={handleImageMouseLeave}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold bg-sky-50 text-sky-700 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs hover:shadow-xs"
+                        className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold bg-sky-50 text-sky-900 border border-sky-300 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs"
                         title={
                           `開啟圖檔：${item.partNo} → ${allImages[0].name}\n` +
                           (allImages[0].via === 'file'
                             ? '（檔名比對命中）'
                             : allImages[0].via === 'binding'
                             ? '（手動綁定）'
+                            : allImages[0].via === 'inference'
+                            ? `（語意推導自組件 ${allImages[0].inferenceSource || ''}）`
                             : '（OCR 內容辨識命中）')
                         }
                       >
-                        <ImageIcon className="w-3.5 h-3.5" />
+                        <ImageIcon className="w-3.5 h-3.5 text-sky-700" />
                         <span>開啟圖檔</span>
                       </button>
                     ) : allImages.length > 1 ? (
@@ -532,10 +536,10 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                             e.stopPropagation();
                             setOpenMultiId(openMultiId === item.id ? null : item.id);
                           }}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[13px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                          className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200 transition-all cursor-pointer shadow-2xs"
                           title={`此品號對應 ${allImages.length} 張圖檔，點擊展開選擇`}
                         >
-                          <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
+                          <ImageIcon className="w-3.5 h-3.5 text-slate-600" />
                           <span>開啟圖檔 ({allImages.length}張)</span>
                           <ChevronDown className={`w-3.5 h-3.5 transition-transform ${openMultiId === item.id ? 'rotate-180' : ''}`} />
                         </button>
@@ -543,16 +547,16 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {openMultiId === item.id && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 z-40 py-2 text-[13px]"
+                            className="absolute right-0 mt-1 w-64 bg-white rounded-xl shadow-xl border border-slate-200 z-40 py-2 text-[13px]"
                           >
-                            <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div className="px-3 py-1.5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                               <span className="font-bold text-slate-700">對應圖檔 ({allImages.length} 張)</span>
                               <button
                                 onClick={() => {
                                   allImages.forEach((img) => openImage(img.url));
                                   setOpenMultiId(null);
                                 }}
-                                className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold text-[13px] cursor-pointer"
+                                className="text-sky-700 hover:text-sky-900 hover:underline font-bold text-[13px] cursor-pointer"
                                 title="在瀏覽器新分頁一次打開所有關聯圖檔"
                               >
                                 ⚡ 一鍵開啟全部
@@ -569,18 +573,24 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                                   onMouseEnter={(e) => handleImageMouseEnter(img.url, img.name, e)}
                                   onMouseMove={handleImageMouseMove}
                                   onMouseLeave={handleImageMouseLeave}
-                                  className="w-full text-left px-3 py-2 hover:bg-indigo-50/70 flex items-center justify-between group transition-colors cursor-pointer"
+                                  className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between group transition-colors cursor-pointer"
                                 >
                                   <div className="min-w-0 pr-2">
-                                    <p className="font-mono font-bold text-slate-800 group-hover:text-indigo-700 truncate" title={img.name}>
+                                    <p className="font-mono font-bold text-slate-800 group-hover:text-sky-700 truncate" title={img.name}>
                                       {img.name}
                                     </p>
                                      {/* min-font-size exception: 圖檔匹配方式輔助說明，密集清單場景 */}
-                                    <span className="text-[13px] text-slate-400">
-                                      {img.via === 'file' ? '檔名比對命中' : img.via === 'binding' ? '手動綁定' : 'OCR 內容辨識'}
+                                    <span className="text-[13px] text-slate-500">
+                                      {img.via === 'file'
+                                        ? '檔名比對命中'
+                                        : img.via === 'binding'
+                                        ? '手動綁定'
+                                        : img.via === 'inference'
+                                        ? `語意推導 (組件 ${img.inferenceSource || ''})`
+                                        : 'OCR 內容辨識'}
                                     </span>
                                   </div>
-                                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 shrink-0" />
+                                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-700 shrink-0" />
                                 </button>
                               ))}
                             </div>
@@ -598,7 +608,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         {imageLib && onBindClick && (
                           <button
                             onClick={() => onBindClick(item)}
-                            className="text-[13px] text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg px-1.5 py-0.5 border border-slate-200 hover:border-indigo-300 transition-colors cursor-pointer"
+                            className="btn-tactile text-[13px] text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded px-1.5 py-0.5 border border-slate-200 hover:border-slate-300 transition-colors cursor-pointer"
                             title="手動指定此品號對應的圖檔"
                           >
                             綁定
@@ -609,20 +619,20 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   </td>
 
                   {/* Actions */}
-                  <td className="p-3 text-right pr-6 py-3.5">
+                  <td className="p-3 text-right pr-6 py-3">
                     <div className="flex items-center justify-end space-x-1">
                       
                       <button
                         onClick={() => handleCopyFullRow(item)}
-                        className={`p-1.5 rounded-lg text-sm transition-colors cursor-pointer ${
+                        className={`btn-tactile p-1.5 rounded text-sm transition-colors cursor-pointer border ${
                           isCopiedFull
-                            ? 'text-emerald-600 bg-emerald-100'
-                            : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+                            ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                            : 'text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border-slate-200'
                         }`}
                         title="複製完整列資訊"
                       >
                         {isCopiedFull ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <Check className="w-3.5 h-3.5 text-emerald-700" />
                         ) : (
                           <Copy className="w-3.5 h-3.5" />
                         )}
@@ -630,7 +640,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
                       <button
                         onClick={() => onViewDetail(item)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer flex items-center space-x-1"
+                        className="btn-tactile p-1.5 text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border border-slate-200 rounded transition-colors cursor-pointer flex items-center space-x-1"
                         title="檢視 BOM 與詳細資料"
                       >
                         <Eye className="w-3.5 h-3.5" />

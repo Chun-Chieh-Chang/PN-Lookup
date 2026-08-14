@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw } from 'lucide-react';
 import { PartItem } from '../types';
 import { getItemType, getComponentsForAssembly, getAssembliesForPart } from '../utils/bomEngine';
@@ -47,19 +47,19 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md overflow-y-auto">
-      <div className="bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl max-w-2xl w-full flex flex-col shadow-2xl text-slate-900 my-8 overflow-hidden transition-all">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full flex flex-col shadow-2xl text-slate-900 my-8 overflow-hidden transition-all">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-slate-200/80 bg-slate-50/50">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 rounded-t-2xl">
           <div className="flex items-center space-x-3">
-            <span className="px-3.5 py-1 bg-teal-50 text-teal-800 font-mono font-bold rounded-lg border border-teal-200/80 text-sm shadow-2xs">
+            <span className="px-3 py-1 bg-sky-50 text-sky-900 font-mono font-bold rounded-lg border border-sky-300 text-sm shadow-2xs">
               {item.partNo}
             </span>
-            <span className={`px-2.5 py-1 rounded-full text-[13px] font-bold flex items-center space-x-1.5 border shadow-2xs ${
+            <span className={`px-2.5 py-0.5 rounded-full text-[13px] font-semibold flex items-center space-x-1.5 border shadow-2xs ${
               isAssembly
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                ? 'bg-slate-900 text-sky-400 border-slate-700'
+                : 'bg-slate-100 text-slate-800 border-slate-300'
             }`}>
               {isAssembly ? <Boxes className="w-3.5 h-3.5" /> : <Component className="w-3.5 h-3.5" />}
               <span>{isAssembly ? '組合配件 / 組立 (Assembly)' : '單一零件 (Single Part)'}</span>
@@ -69,61 +69,61 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="btn-tactile p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-200"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 text-sm overflow-y-auto max-h-[75vh]">
+        <div className="p-4 sm:p-6 space-y-4 text-sm overflow-y-auto max-h-[75vh]">
           
           {/* Main Info Card */}
-          <div className="p-5 bg-gray-50 rounded-2xl border border-gray-200 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               
               <div>
-                <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
-                  <User className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
+                  <User className="w-3.5 h-3.5 text-slate-400" />
                   <span>客戶名稱</span>
                 </span>
-                <p className="text-base font-bold text-indigo-700">{item.customer}</p>
+                <p className="text-base font-bold text-slate-900">{item.customer}</p>
               </div>
 
               <div>
-                <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
-                  <Tag className="w-3.5 h-3.5 text-teal-500" />
+                <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
+                  <Tag className="w-3.5 h-3.5 text-slate-400" />
                   <span>品號 (Part Number)</span>
                 </span>
                 <div className="flex items-center space-x-2">
-                  <span className="text-base font-mono font-bold text-teal-700">{item.partNo}</span>
+                  <span className="text-base font-mono font-bold text-slate-900">{item.partNo}</span>
                   <button
                     onClick={handleCopyPartNo}
-                    className="p-1 text-gray-400 hover:text-gray-600 rounded bg-gray-100 transition-colors cursor-pointer"
+                    className="btn-tactile p-1 text-slate-400 hover:text-slate-700 rounded bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
                     title="複製品號"
                   >
-                    {copiedPart ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copiedPart ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
 
             </div>
 
-            <div className="pt-2 border-t border-gray-200">
-              <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
-                <FileText className="w-3.5 h-3.5 text-blue-500" />
+            <div className="pt-2.5 border-t border-slate-100">
+              <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
+                <FileText className="w-3.5 h-3.5 text-slate-400" />
                 <span>品名規格 (Part Name)</span>
               </span>
-              <p className="text-base font-medium text-gray-900">{item.name}</p>
+              <p className="text-base font-medium text-slate-900">{item.name}</p>
             </div>
 
             {(item.category || item.color || item.material) && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-gray-200">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-100">
                 {item.category && (
                   <div>
-                    <span className="text-[13px] text-gray-500 block mb-0.5">物料類別</span>
-                    <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-700 font-medium rounded text-[13px] border border-indigo-200">
+                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">物料類別</span>
+                    <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 font-semibold rounded text-[13px] border border-slate-300">
                       {item.category}
                     </span>
                   </div>
@@ -131,8 +131,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
                 {item.color && (
                   <div>
-                    <span className="text-[13px] text-gray-500 block mb-0.5">顏色</span>
-                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 font-medium rounded text-[13px] border border-amber-200">
+                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">顏色</span>
+                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-900 font-semibold rounded text-[13px] border border-amber-300">
                       {item.color}
                     </span>
                   </div>
@@ -140,8 +140,8 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
                 {item.material && (
                   <div className="sm:col-span-1">
-                    <span className="text-[13px] text-gray-500 block mb-0.5">原料</span>
-                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-700 font-mono text-[13px] rounded border border-emerald-200">
+                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">原料</span>
+                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-900 font-mono font-semibold text-[13px] rounded border border-emerald-300">
                       {item.material}
                     </span>
                   </div>
@@ -150,14 +150,14 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             )}
 
             {item.alternates && item.alternates.length > 0 && (
-              <div className="pt-2 border-t border-gray-200">
-                <span className="text-sm text-gray-500 flex items-center space-x-1 mb-1">
-                  <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
+              <div className="pt-2.5 border-t border-slate-100">
+                <span className="text-[13px] text-slate-500 flex items-center space-x-1 mb-1 font-medium">
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
                   <span>別稱 / 替代品號</span>
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {item.alternates.map((a) => (
-                    <span key={a} className="px-2 py-0.5 bg-amber-50 text-amber-700 font-mono rounded border border-amber-200 text-sm">
+                    <span key={a} className="px-2 py-0.5 bg-slate-100 text-slate-800 font-mono rounded border border-slate-300 text-[13px] font-semibold">
                       {a}
                     </span>
                   ))}
@@ -166,9 +166,9 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             )}
 
             {item.notes && (
-              <div className="pt-2 border-t border-gray-200">
-                <span className="text-sm text-gray-500 mb-1 block">備註說明</span>
-                <p className="text-sm text-gray-600 bg-white p-2.5 rounded-lg border border-gray-200">
+              <div className="pt-2.5 border-t border-slate-100">
+                <span className="text-[13px] text-slate-500 mb-1 block font-medium">備註說明</span>
+                <p className="text-[13px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-200 leading-relaxed">
                   {item.notes}
                 </p>
               </div>
@@ -177,13 +177,13 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
 
           {/* BOM Section: If Assembly, show components; If Part, show assemblies it can form */}
           {isAssembly ? (
-            <div className="p-4 bg-gray-50/80 rounded-2xl border border-emerald-200 space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                <h3 className="font-bold text-emerald-700 flex items-center space-x-2 text-sm">
-                  <Boxes className="w-4 h-4 text-emerald-500" />
+            <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+                  <Boxes className="w-4 h-4 text-sky-700" />
                   <span>組成該組件的所有零件 (Components)</span>
                 </h3>
-                <span className="text-sm text-gray-500">共 {componentsList.length} 項關聯零件</span>
+                <span className="text-[13px] text-slate-500 font-mono">共 {componentsList.length} 項關聯零件</span>
               </div>
 
               {componentsList.length > 0 ? (
@@ -192,24 +192,24 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                     <button
                       key={`${rel.relatedItem.id}-${idx}`}
                       onClick={() => onSelectRelated(rel.relatedItem)}
-                      className="group flex items-center justify-between p-3 bg-white hover:bg-gray-50 rounded-xl border border-gray-200 hover:border-emerald-400 transition-all text-left cursor-pointer"
+                      className="btn-tactile group flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200 hover:border-slate-300 transition-all text-left cursor-pointer"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="p-1.5 rounded-lg bg-sky-100 text-sky-600 border border-sky-200">
+                        <span className="p-1.5 rounded bg-white text-slate-700 border border-slate-200">
                           <Component className="w-3.5 h-3.5" />
                         </span>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-mono font-bold text-teal-700">{rel.relatedItem.partNo}</span>
-                            <span className="text-sm text-gray-500 px-1.5 py-0.2 rounded bg-gray-100">
+                            <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.relatedItem.partNo}</span>
+                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-200 font-mono">
                               {rel.relatedItem.customer}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700 mt-0.5">{rel.relatedItem.name}</p>
-                          <p className="text-sm text-emerald-600 mt-0.5">{rel.note}</p>
+                          <p className="text-[13px] text-slate-700 mt-0.5">{rel.relatedItem.name}</p>
+                          <p className="text-[13px] text-sky-800 font-medium mt-0.5">{rel.note}</p>
                         </div>
                       </div>
-                      <div className="text-gray-400 group-hover:text-emerald-600 transition-colors flex items-center text-sm space-x-1 shrink-0 ml-2">
+                      <div className="text-slate-400 group-hover:text-slate-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
                         <span>查看零件</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -217,19 +217,19 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400 italic p-2">
-                  暫無比對到明確的組成單零件，可於編輯中新增物料關聯。
+                <p className="text-[13px] text-slate-400 italic p-2">
+                  暫無比對到明確的組成單零件。
                 </p>
               )}
             </div>
           ) : (
-            <div className="p-4 bg-gray-50/80 rounded-2xl border border-sky-200 space-y-3">
-              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-                <h3 className="font-bold text-sky-700 flex items-center space-x-2 text-sm">
-                  <Component className="w-4 h-4 text-sky-500" />
+            <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+                  <Component className="w-4 h-4 text-sky-700" />
                   <span>本零件可組成的組件 (Assemblies using this Part)</span>
                 </h3>
-                <span className="text-sm text-gray-500">共 {assembliesList.length} 項可組裝目標</span>
+                <span className="text-[13px] text-slate-500 font-mono">共 {assembliesList.length} 項可組裝目標</span>
               </div>
 
               {assembliesList.length > 0 ? (
@@ -238,24 +238,24 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                     <button
                       key={`${rel.relatedItem.id}-${idx}`}
                       onClick={() => onSelectRelated(rel.relatedItem)}
-                      className="group flex items-center justify-between p-3 bg-white hover:bg-gray-50 rounded-xl border border-gray-200 hover:border-sky-400 transition-all text-left cursor-pointer"
+                      className="btn-tactile group flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100/80 rounded-lg border border-slate-200 hover:border-slate-300 transition-all text-left cursor-pointer"
                     >
                       <div className="flex items-center space-x-3">
-                        <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-600 border border-emerald-200">
+                        <span className="p-1.5 rounded bg-white text-slate-700 border border-slate-200">
                           <Boxes className="w-3.5 h-3.5" />
                         </span>
                         <div>
                           <div className="flex items-center space-x-2">
-                            <span className="font-mono font-bold text-teal-700">{rel.relatedItem.partNo}</span>
-                            <span className="text-sm text-gray-500 px-1.5 py-0.2 rounded bg-gray-100">
+                            <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.relatedItem.partNo}</span>
+                            <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-200 font-mono">
                               {rel.relatedItem.customer}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-700 mt-0.5">{rel.relatedItem.name}</p>
-                          <p className="text-sm text-sky-600 mt-0.5">{rel.note}</p>
+                          <p className="text-[13px] text-slate-700 mt-0.5">{rel.relatedItem.name}</p>
+                          <p className="text-[13px] text-sky-800 font-medium mt-0.5">{rel.note}</p>
                         </div>
                       </div>
-                      <div className="text-gray-400 group-hover:text-sky-600 transition-colors flex items-center text-sm space-x-1 shrink-0 ml-2">
+                      <div className="text-slate-400 group-hover:text-slate-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
                         <span>查看組件</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
@@ -263,7 +263,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400 italic p-2">
+                <p className="text-[13px] text-slate-400 italic p-2">
                   目前系統中尚未比對到以此零件構成的組合配件。
                 </p>
               )}
@@ -273,19 +273,19 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
           {/* Same Customer items */}
           {relatedSameCustomer.length > 0 && (
             <div className="space-y-2">
-              <h3 className="font-bold text-gray-700 flex items-center space-x-1.5 text-sm">
-                <User className="w-3.5 h-3.5 text-indigo-500" />
+              <h3 className="font-bold text-slate-800 flex items-center space-x-1.5 text-[13px]">
+                <User className="w-3.5 h-3.5 text-slate-400" />
                 <span>相同客戶 ({item.customer}) 的其他品號</span>
               </h3>
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 {relatedSameCustomer.map((rel) => (
                   <button
                     key={rel.id}
                     onClick={() => onSelectRelated(rel)}
-                    className="flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors text-left cursor-pointer"
+                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors text-left cursor-pointer"
                   >
-                    <span className="font-mono font-bold text-teal-700">{rel.partNo}</span>
-                    <span className="text-gray-600 truncate max-w-[250px]">{rel.name}</span>
+                    <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.partNo}</span>
+                    <span className="text-slate-600 truncate max-w-[250px] text-[13px]">{rel.name}</span>
                   </button>
                 ))}
               </div>
@@ -295,24 +295,24 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
           {/* Same Prefix items */}
           {relatedSamePrefix.length > 0 && (
             <div className="space-y-2">
-              <h3 className="font-bold text-gray-700 flex items-center space-x-1.5 text-sm">
-                <Layers className="w-3.5 h-3.5 text-emerald-500" />
+              <h3 className="font-bold text-slate-800 flex items-center space-x-1.5 text-[13px]">
+                <Layers className="w-3.5 h-3.5 text-slate-400" />
                 <span>相同字頭系列 ({prefix}) 的品號</span>
               </h3>
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 {relatedSamePrefix.map((rel) => (
                   <button
                     key={rel.id}
                     onClick={() => onSelectRelated(rel)}
-                    className="flex items-center justify-between p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 transition-colors text-left cursor-pointer"
+                    className="btn-tactile flex items-center justify-between p-2 bg-white hover:bg-slate-50 rounded-lg border border-slate-200 transition-colors text-left cursor-pointer"
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="px-1.5 py-0.5 rounded bg-gray-100 text-indigo-700 text-sm border border-gray-200">
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[13px] font-mono border border-slate-200">
                         {rel.customer}
                       </span>
-                      <span className="font-mono font-bold text-teal-700">{rel.partNo}</span>
+                      <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.partNo}</span>
                     </div>
-                    <span className="text-gray-600 truncate max-w-[220px]">{rel.name}</span>
+                    <span className="text-slate-600 truncate max-w-[220px] text-[13px]">{rel.name}</span>
                   </button>
                 ))}
               </div>
@@ -322,10 +322,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
+        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-end rounded-b-2xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="btn-tactile px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-[13px] font-semibold rounded-lg border border-slate-300 transition-colors cursor-pointer shadow-2xs"
           >
             關閉
           </button>

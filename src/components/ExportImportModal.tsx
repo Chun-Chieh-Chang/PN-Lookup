@@ -331,48 +331,48 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white border border-gray-200 rounded-2xl max-w-xl w-full flex flex-col shadow-xl text-gray-900 my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full flex flex-col shadow-2xl text-slate-900 my-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 bg-white">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-200 bg-slate-50/50 rounded-t-2xl">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600 border border-emerald-200">
-              <FileSpreadsheet className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-slate-100 text-sky-700 border border-slate-300 flex items-center justify-center">
+              <FileSpreadsheet className="w-4 h-4 text-sky-700" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-gray-900">資料匯出與匯入</h2>
-              <p className="text-sm text-gray-500">管理品號資料庫的備份、匯出與批量上傳</p>
+              <h2 className="text-base font-bold text-slate-900">資料匯出與匯入</h2>
+              <p className="text-[13px] text-slate-500">管理品號資料庫的備份、匯出與批量上傳</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+            className="btn-tactile p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-200"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 text-sm">
+        <div className="p-4 sm:p-6 space-y-4 text-sm">
 
-          {/* Import Section (placed above Export per user request) */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Download className="w-4 h-4 text-blue-500" />
+          {/* Import Section */}
+          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+              <Download className="w-4 h-4 text-sky-700" />
               <span>匯入自訂資料</span>
             </h3>
 
-            <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-4 text-[13px]">
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
                   type="radio"
                   name="importMode"
                   checked={importMode === 'append'}
                   onChange={() => setImportMode('append')}
-                  className="text-blue-600 focus:ring-blue-500"
+                  className="text-sky-700 focus:ring-sky-500"
                 />
-                <span className="text-gray-700">累加附加至現有資料庫</span>
+                <span className="text-slate-700 font-medium">累加附加至現有資料庫</span>
               </label>
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
@@ -380,35 +380,35 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="importMode"
                   checked={importMode === 'replace'}
                   onChange={() => setImportMode('replace')}
-                  className="text-blue-600 focus:ring-blue-500"
+                  className="text-sky-700 focus:ring-sky-500"
                 />
-                <span className="text-gray-700">完全覆蓋現有資料庫</span>
+                <span className="text-slate-700 font-medium">完全覆蓋現有資料庫</span>
               </label>
             </div>
 
-            <p className="text-gray-500 text-sm">
+            <p className="text-slate-500 text-[13px] leading-relaxed">
               支援 CSV、JSON 或 Excel (.xlsx) 格式。Excel 匯入會優先讀取「完整資料」工作表以保留所有欄位，否則從「客戶產品對照表」讀取後自動補齊 BOM 關係。
             </p>
 
-            <div className="pt-2">
+            <div className="pt-1">
               <input
                 type="file"
                 accept=".csv,.txt,.json,.xlsx,.xlsm"
                 onChange={handleFileUpload}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-[13px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
               />
             </div>
           </div>
 
           {/* 客戶料號工作表匯入 */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-indigo-200 space-y-3">
-            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Tags className="w-4 h-4 text-indigo-500" />
+          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+              <Tags className="w-4 h-4 text-slate-600" />
               <span>客戶料號工作表匯入（三碼互換）</span>
             </h3>
-            <p className="text-gray-500 text-sm">
+            <p className="text-slate-500 text-[13px] leading-relaxed">
               從「產品一覽表.xlsm」的「客戶料號」工作表匯入：圖面編號、產品編號、零件編號(客) 三欄互為可替代品號。
-              主品號以 <strong className="text-gray-700">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
+              主品號以 <strong className="text-slate-800">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
               既有資料任一碼命中即自動合併（不重複建檔），全資料庫代碼唯一性檢查。
             </p>
             <div className="pt-1">
@@ -416,28 +416,28 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 type="file"
                 accept=".xlsx,.xlsm"
                 onChange={handleCustomerSheetUpload}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:text-[13px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"
               />
             </div>
           </div>
 
           {/* Export Section */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
-            <h3 className="font-bold text-gray-700 flex items-center space-x-2">
-              <Upload className="w-4 h-4 text-emerald-500" />
+          <div className="p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-slate-800 flex items-center space-x-2 text-[13px]">
+              <Upload className="w-4 h-4 text-emerald-700" />
               <span>匯出目前資料庫 ({parts.length} 筆)</span>
             </h3>
-            <div className="flex items-center space-x-4 text-sm">
+            <div className="flex flex-wrap items-center gap-3 text-[13px]">
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
                   type="radio"
                   name="exportFormat"
                   checked={exportFormat === 'xlsx'}
                   onChange={() => setExportFormat('xlsx')}
-                  className="text-emerald-600 focus:ring-emerald-500"
+                  className="text-slate-700 focus:ring-slate-500"
                 />
-                <Table2 className="w-3.5 h-3.5 text-green-600" />
-                <span className="text-gray-700">Excel (.xlsx)</span>
+                <Table2 className="w-3.5 h-3.5 text-emerald-700" />
+                <span className="text-slate-700 font-medium">Excel (.xlsx)</span>
               </label>
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
@@ -445,10 +445,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'csv'}
                   onChange={() => setExportFormat('csv')}
-                  className="text-emerald-600 focus:ring-emerald-500"
+                  className="text-slate-700 focus:ring-slate-500"
                 />
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" />
-                <span className="text-gray-700">CSV</span>
+                <FileSpreadsheet className="w-3.5 h-3.5 text-slate-600" />
+                <span className="text-slate-700 font-medium">CSV</span>
               </label>
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
@@ -456,10 +456,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'json'}
                   onChange={() => setExportFormat('json')}
-                  className="text-emerald-600 focus:ring-emerald-500"
+                  className="text-slate-700 focus:ring-slate-500"
                 />
-                <FileJson className="w-3.5 h-3.5 text-amber-500" />
-                <span className="text-gray-700">JSON</span>
+                <FileJson className="w-3.5 h-3.5 text-slate-600" />
+                <span className="text-slate-700 font-medium">JSON</span>
               </label>
               <label className="flex items-center space-x-1.5 cursor-pointer">
                 <input
@@ -467,13 +467,13 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                   name="exportFormat"
                   checked={exportFormat === 'jsonld'}
                   onChange={() => setExportFormat('jsonld')}
-                  className="text-emerald-600 focus:ring-emerald-500"
+                  className="text-slate-700 focus:ring-slate-500"
                 />
-                <FileJson className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="text-gray-700 font-semibold text-indigo-700">JSON-LD 知識本體 (@Schema.org)</span>
+                <FileJson className="w-3.5 h-3.5 text-sky-700" />
+                <span className="text-slate-800 font-semibold">JSON-LD 知識本體 (@Schema.org)</span>
               </label>
             </div>
-            <p className="text-gray-500 text-sm">
+            <p className="text-slate-500 text-[13px] leading-relaxed">
               {exportFormat === 'xlsx'
                 ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
                 : exportFormat === 'csv'
@@ -482,38 +482,38 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 ? '匯出為 Schema.org JSON-LD 語義化格式，適合搜尋引擎與知識圖譜整合。'
                 : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
             </p>
-            <div className="flex items-center space-x-3 pt-1">
+            <div className="flex items-center space-x-2.5 pt-1">
               <button
                 onClick={handleDownload}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+                className="btn-tactile px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[13px] font-semibold rounded-lg flex items-center space-x-1.5 border border-slate-700 cursor-pointer shadow-2xs"
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="w-3.5 h-3.5 text-sky-400" />
                 <span>下載 {exportFormat.toUpperCase()} 檔</span>
               </button>
               <button
                 onClick={handleCopyData}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer border border-gray-200"
+                className="btn-tactile px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 text-[13px] font-medium rounded-lg flex items-center space-x-1.5 border border-slate-300 cursor-pointer shadow-2xs"
               >
-                {copiedData ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : getIcon()}
+                {copiedData ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : getIcon()}
                 <span>{copiedData ? '已複製內容！' : `複製 ${exportFormat.toUpperCase()} 內文`}</span>
               </button>
             </div>
           </div>
 
           {/* Reset section */}
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
+          <div className="p-3.5 sm:p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
             <div>
-              <h4 className="font-bold text-gray-600 text-sm">恢復系統初始預設資料</h4>
-              <p className="text-sm text-gray-400">將資料庫重置為最初的 230+ 筆醫療配件品號</p>
+              <h4 className="font-semibold text-slate-700 text-[13px]">恢復系統初始資料</h4>
+              <p className="text-[13px] text-slate-400">重置為種子資料庫設定</p>
             </div>
             <button
               onClick={() => {
-                if (confirm('確定要恢復為最初預設的資料庫嗎？所有自訂修改將被還原。')) {
+                if (confirm('確定要恢復為預設資料庫嗎？所有自訂修改將被還原。')) {
                   onResetData();
                   onClose();
                 }
               }}
-              className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg text-sm transition-colors cursor-pointer flex items-center space-x-1"
+              className="btn-tactile px-3 py-1.5 bg-white text-slate-700 hover:text-red-700 hover:bg-red-50 border border-slate-300 hover:border-red-200 rounded-lg text-[13px] font-medium transition-colors cursor-pointer flex items-center space-x-1"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>重置為預設值</span>
@@ -523,10 +523,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white flex justify-end">
+        <div className="p-3.5 sm:p-4 border-t border-slate-200 bg-slate-50 flex justify-end rounded-b-2xl">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+            className="btn-tactile px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-[13px] font-semibold rounded-lg border border-slate-300 transition-colors cursor-pointer shadow-2xs"
           >
             關閉
           </button>

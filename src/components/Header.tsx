@@ -48,16 +48,16 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Logo & Title */}
           <div className="flex items-center space-x-3.5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/25 text-white font-bold text-xl ring-1 ring-white/20">
-              <Search className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-center text-sky-400 font-bold shadow-xs">
+              <Search className="w-5 h-5 text-sky-400" />
             </div>
             <div>
               <div className="flex items-center space-x-2.5">
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 font-sans">凱益品號檢索系統</h1>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 font-sans">凱益品號檢索系統</h1>
                 <span
                   onClick={handleVersionClick}
                   title="五擊解鎖前端「修訂」與後台「增刪」管理權限"
-                  className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-[13px] px-2.5 py-0.5 rounded-full border border-indigo-200/80 font-mono font-semibold select-none cursor-pointer transition-colors shadow-xs"
+                  className="bg-slate-100 text-slate-700 hover:bg-slate-200 text-[13px] px-2.5 py-0.5 rounded-full border border-slate-300 font-mono font-semibold select-none cursor-pointer transition-colors shadow-2xs"
                 >
                   {APP_VERSION}
                 </span>
@@ -65,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
               <p className="text-[13px] text-slate-500 font-medium flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span>醫療器材與 BOM 階層規格料號即時對照平台</span>
                 <span className="hidden sm:inline text-slate-300">•</span>
-                <span className="font-mono text-indigo-700/80 font-semibold text-[13px]">Developed by Wesley Chang, July-2026 @Mouldex.</span>
+                <span className="font-mono text-slate-600 font-medium text-[13px]">Developed by Wesley Chang, July-2026 @Mouldex.</span>
               </p>
             </div>
           </div>
@@ -76,33 +76,31 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenMindMap && (
               <button
                 onClick={onOpenMindMap}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-md shadow-indigo-600/20 hover:shadow-indigo-600/35 cursor-pointer active:scale-95 border border-indigo-400/30"
+                className="btn-tactile inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-xs cursor-pointer"
                 title="開啟 3D 空間花瓣產品思維導圖"
               >
-                <FolderTree className="w-4 h-4 text-indigo-200" />
+                <FolderTree className="w-4 h-4 text-sky-400" />
                 <span>3D 思維導圖</span>
               </button>
             )}
 
             <button
               onClick={onOpenBatchSearch}
-              className="inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-teal-600 hover:bg-teal-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
+              className="btn-tactile inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 shadow-2xs gap-1.5 cursor-pointer"
               title="貼上多筆品號一次比對檢索"
             >
-              <ListChecks className="w-4 h-4" />
+              <ListChecks className="w-4 h-4 text-slate-600" />
               <span>批次檢索</span>
             </button>
-
-
 
             {onPickImageFolder && (
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={onPickImageFolder}
-                  className={`inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1.5 cursor-pointer border active:scale-95 ${
+                  className={`btn-tactile inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1.5 cursor-pointer border shadow-2xs ${
                     imageFolderName
-                      ? 'bg-teal-50/80 hover:bg-teal-100 text-teal-700 border-teal-200'
-                      : 'bg-slate-100/80 hover:bg-slate-200/80 text-slate-700 border-slate-200'
+                      ? 'bg-slate-100/90 hover:bg-slate-200/80 text-slate-800 border-slate-300'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
                   }`}
                   title={
                     imageFolderName
@@ -110,17 +108,17 @@ export const Header: React.FC<HeaderProps> = ({
                       : '指定圖檔資料夾（品號可直接點選開啟圖檔）'
                   }
                 >
-                  <ImageIcon className={`w-4 h-4 ${imageFolderName ? 'text-teal-600' : 'text-slate-500'}`} />
+                  <ImageIcon className={`w-4 h-4 ${imageFolderName ? 'text-sky-600' : 'text-slate-500'}`} />
                   <span>{imageFolderName ? imageFolderName : '圖檔資料夾'}</span>
                 </button>
 
                 {imageFolderName && onOpenOrphansModal && (
                   <button
                     onClick={onOpenOrphansModal}
-                    className={`inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1 cursor-pointer border active:scale-95 ${
+                    className={`btn-tactile inline-flex items-center px-3 py-1.5 text-sm font-semibold rounded-lg transition-all gap-1 cursor-pointer border shadow-2xs ${
                       orphanCount > 0
-                        ? 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 shadow-xs'
-                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        ? 'bg-amber-50 hover:bg-amber-100/80 text-amber-900 border-amber-300'
+                        : 'bg-slate-50 text-emerald-800 border-slate-200'
                     }`}
                     title={
                       orphanCount > 0
@@ -136,9 +134,9 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onOpenExportImport}
-              className="inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all shadow-xs hover:shadow-sm gap-1.5 cursor-pointer active:scale-95"
+              className="btn-tactile inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-sky-700 hover:bg-sky-600 text-white border border-sky-800/50 shadow-2xs gap-1.5 cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4" />
+              <FileSpreadsheet className="w-4 h-4 text-sky-200" />
               <span>匯出與匯入</span>
             </button>
 

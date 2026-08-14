@@ -524,7 +524,7 @@ export default function App() {
       </Suspense>
 
       {/* Footer */}
-      <footer className="mt-auto py-3 text-xs text-slate-500 border-t border-slate-200/80 bg-white/70 backdrop-blur-md">
+      <footer className="mt-auto py-3 text-[13px] text-slate-500 border-t border-slate-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="font-semibold text-slate-700">凱益品號檢索系統 {APP_VERSION}</span>
           <span className="font-mono text-slate-500 font-medium">Developed by Wesley Chang, July-2026 @Mouldex.</span>

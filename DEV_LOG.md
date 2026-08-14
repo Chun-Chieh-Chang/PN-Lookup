@@ -1,5 +1,36 @@
 # PN-Lookup 開發日誌
 
+## v7.8.0 — 全站視覺去 AI 味與現代醫療工業儀表風重構 (Clean Medical Industrial UI Refinement)
+
+### 需求內容
+- 使用者指示：「調用 Tool-Calling 工具庫去除介面設計的AI味」➔ 「按你建議的方案實施，自行評估是否應先擬定計畫」。
+
+### 根因分析（RCA）
+1. **AI 模板化視覺特徵 (AI-Generated Generic UI Slop)**：
+   - 過度氾濫的鮮豔紫藍漸層 (`from-indigo-600 to-violet-600`)、大半徑毛玻璃光暈 (`shadow-indigo-500/25`) 與無意義的純色發光膠囊。
+   - 資訊層級模糊：關鍵數據（品號、版本、BOM 數量）缺乏嚴格等寬字體與對齊架構，訊噪比低。
+2. **缺乏實體觸覺反饋 (Lack of Tactile Feedback)**：
+   - 按鈕過於扁平或過度懸浮，缺少醫療/工業控制儀器般精準清晰的 1px 微邊框與低飽和莫蘭迪色階。
+
+### 矯正與預防措施（CAPA）
+1. **建立現代醫療工業 Design Tokens (`src/index.css`)**：
+   - 導入莫蘭迪冷碳灰階變數（`--bg-base: #0B0F17`、`--bg-surface: #111827`、`--text-primary: #F9FAFB`）。
+   - 實作 `.btn-tactile` 精密微反饋、`.table-row-selected` 選中指示與精密捲軸。
+2. **Header 導航欄去漸層重構 (`src/components/Header.tsx`)**：
+   - 移除浮誇漸層，改用深冷碳灰 1px 實體微邊框 (`bg-slate-900 border-slate-700/80`) 與精密按鈕群。
+3. **數據統計與搜尋欄位重塑 (`StatsBar.tsx`, `SearchControls.tsx`)**：
+   - 指標卡片採用 1px 實體微邊框，品號數值採用 `font-mono`，搜尋框採用高對比低擴散焦點環 (`focus:ring-sky-500/15`)。
+4. **主資料庫表格與彈窗全面去 AI 味 (`PartsTable.tsx`, `PartDetailModal.tsx`, `ExportImportModal.tsx`, `ImageFolderModal.tsx`)**：
+   - 表頭採用冷灰高訊噪比排版，品號一律使用等寬字型，狀態徽章採用莫蘭迪低飽和色系。
+   - 全站介面文字嚴格遵守 `>= 13px` 門禁（無未注釋之 `text-xs`）。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功。
+
+---
+
 ## v7.7.6 — 靜默啟動零干擾與彈窗行為收斂 (Silent Startup & Zero-Intrusion Modal Fix)
 
 ### 需求內容
