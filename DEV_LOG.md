@@ -1,5 +1,35 @@
 # PN-Lookup 開發日誌
 
+## v7.8.3 — 3D 思維導圖視覺優化與專案整體程式碼文件全量同步重構 (3D Mind Map Visual Refinement & Full Project Refactor Sync)
+
+### 需求內容
+1. 3D 思維導圖節點間連線細化與半透明輕量視覺調整。
+2. 執行專案整體程式碼與檔案優化作業（MECE 盤點、死碼清理、版本真源統一至 `v7.8.3`、全量開發文件與規格同步）。
+
+### 根因分析（RCA）
+1. **連線視覺過重 (Link Visual Overload)**：
+   - 原 `linkWidth` 設定為 `1.2`（選中時 `2.2`），且 `linkOpacity` 設為 `0.75`，連線色彩為高飽和度 `rgba(100,116,139,0.65)`。在 3D 空間中多層級展開時，過粗與過暗的線條會遮擋後方空間節點，缺乏輕盈與科技通透感。
+2. **文件版本與新特性未完全同步 (Version & Documentation Drift)**：
+   - 前版開發後，`version.ts`、`README.md`、`docs/data-mapping.html` 中的版本號與功能描述存在微幅落差，需依 MECE 原則全量同步。
+
+### 矯正與預防措施（CAPA）
+1. **連線線寬微調與半透明化 (`src/components/ProductMindMap3DModal.tsx`)**：
+   - 線寬降至極細精密規格：常態線寬由 `1.2` 縮小至 `0.45`，選中流動線寬由 `2.2` 調降至 `1.3`。
+   - 透明度與色彩優化：`linkOpacity` 由 `0.75` 降至 `0.40`，基礎顏色改為低對比柔和霧灰 `rgba(148,163,184,0.35)`，非焦點暗化連線降為 `rgba(51,65,85,0.12)`。
+   - 動態流向粒子尺寸同步修整為 `1.2`（速度 `0.007`），使整體 3D 圖譜如神經脈絡般纖細通透。
+2. **全域版本真源與文件同步 (Global Version Alignment)**：
+   - `src/version.ts` 升級至 `v7.8.3`。
+   - `README.md` 全量同步 `v7.8.3` 版本徽章、3D 思維導圖功能亮點（三大體系收合過濾、神經脈絡連線、根節點名稱）與目錄結構。
+   - `docs/data-mapping.html` 同步版本 `v7.8.3` 與最後更新日期（2026-08-15）。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功 (5.50s)。
+- 界面規範：全站介面文字均 `>= 13px`，完全符合數據不變量守則。
+
+---
+
 ## v7.8.2 — 3D 思維導圖三大體系圖例收合狀態過濾與根節點名稱精簡 (Mind Map Legend Collapse Filter & Root Label Refinement)
 
 ### 需求內容

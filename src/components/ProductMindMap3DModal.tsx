@@ -40,10 +40,10 @@ import { APP_VERSION } from '../version';
 const NODE_REL_SIZE = 3.4;
 const PART_R = 2.4;
 const DIM_NODE_COLOR = 'rgba(15,23,42,0.22)';
-const DIM_LINK_COLOR = 'rgba(51,65,85,0.20)';
+const DIM_LINK_COLOR = 'rgba(51,65,85,0.12)';
 const MATCH_COLOR = '#FBBF24';
 const SELECTED_COLOR = '#38BDF8';
-const LINK_COLOR = 'rgba(100,116,139,0.65)';
+const LINK_COLOR = 'rgba(148,163,184,0.35)';
 const LINK_ACTIVE_COLOR = '#38BDF8';
 
 function getLinkId(nodeOrId: string | MM3DNode | { id?: string | number } | undefined): string {
@@ -1042,12 +1042,12 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
             return lines.join('\n');
           }}
           linkColor={(l) => (l as MM3DLink)._color ?? LINK_COLOR}
-          linkOpacity={0.75}
-          linkWidth={(l) => ((l as MM3DLink)._color === LINK_ACTIVE_COLOR ? 2.2 : 1.2)}
+          linkOpacity={0.4}
+          linkWidth={(l) => ((l as MM3DLink)._color === LINK_ACTIVE_COLOR ? 1.3 : 0.45)}
           linkDirectionalParticles={(l) => ((l as MM3DLink)._color === LINK_ACTIVE_COLOR ? 3 : 0)}
-          linkDirectionalParticleWidth={1.6}
+          linkDirectionalParticleWidth={1.2}
           linkDirectionalParticleColor={() => SELECTED_COLOR}
-          linkDirectionalParticleSpeed={0.008}
+          linkDirectionalParticleSpeed={0.007}
           onNodeHover={handleNodeHover}
           onNodeClick={handleNodeClick}
           onBackgroundClick={handleBackgroundClick}
