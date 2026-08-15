@@ -1,5 +1,32 @@
 # PN-Lookup 開發日誌
 
+## v7.8.2 — 3D 思維導圖三大體系圖例收合狀態過濾與根節點名稱精簡 (Mind Map Legend Collapse Filter & Root Label Refinement)
+
+### 需求內容
+1. 當「三大體系圖例」為「收」的狀態時，不顯示節點與節點訊息文字，僅在「開」的狀態時顯示。
+2. 「凱益股份有限公司 產品識別教育訓練」的節點名稱改為「產品識別教育訓練」。
+
+### 根因分析（RCA）
+1. **三大體系第一層節點過濾未與圖例狀態對齊 (Level-1 Nodes Always Rendered)**：
+   - 原 `isVisible` 邏輯中，第一層子節點（`factory` 廠內品號、`customer` 客戶品號、`unclassified` 待人工分類）的父節點皆為 `root`，因 `root` 始終在 `expandedIds` 中，導致即使左側圖例標記為「收」時，三大體系的第一層節點球體與其文字訊息依然常駐於 3D 空間中，造成視覺干擾與圖例狀態不同步。
+2. **根節點名稱過長冗餘 (Redundant Company Prefix on Root Node)**：
+   - 樹狀結構頂層定義為「凱益股份有限公司 產品識別教育訓練」，在 3D 空間中標籤文字過長，依需求精簡為「產品識別教育訓練」。
+
+### 矯正與預防措施（CAPA）
+1. **動態過濾邏輯更新 (`src/components/ProductMindMap3DModal.tsx`)**：
+   - 重構 `graphData` 的 `isVisible(id)` 判定：當節點的父節點為 `root` 時，強制檢查 `expandedIds.has(id)`。只有當該體系在 `expandedIds`（即圖例顯示為「開」）時，才渲染該體系之節點、連線與懸浮訊息文字；若為「收」則完全不渲染。
+   - 搜尋與導航聯動：在 `handleSearchChange` 與 `navigateToNode` 中同步將目標節點與祖先鏈加入 `expandedIds`，確保搜尋匹配時能自動展開並顯示相應體系。
+2. **根節點命名精簡 (`src/utils/mindMapTree.ts`)**：
+   - 將 `buildMindMapTree` 中的根節點名稱由 `'凱益股份有限公司 產品識別教育訓練'` 更新為 `'產品識別教育訓練'`。
+
+### 確效驗證
+- `node scripts/verifyCoreLogic.js` 11 項測試 **100% PASS**。
+- `npx tsc --noEmit` **0 錯誤**。
+- `npm run build` 打包成功 (5.49s)。
+- 界面規範：完全符合 UI/UX 字級 `>= 13px` 與數據不變量守則。
+
+---
+
 ## v7.8.1 — 同一頁面多屬性卡片清淡色彩區分優化 (Subtle Pastel Card Color Distinction)
 
 ### 需求內容

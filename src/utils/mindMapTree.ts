@@ -135,7 +135,7 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
 
   const unclassParts = buckets.get('unclassified')!;
 
-  return n('root', '凱益股份有限公司 產品識別教育訓練', '點擊節點展開/收合 · 點擊品號卡片查看縮圖', PALETTE.root, 0, [
+  return n('root', '產品識別教育訓練', '點擊節點展開/收合 · 點擊品號卡片查看縮圖', PALETTE.root, 0, [
     n('factory', '廠內品號編碼介紹', 'Mouldex 自有品號體系', PALETTE.level1, 1, [
       n('factory-part', '零件 (Component)', '九類基礎零件',        PALETTE.factoryPart, 2, factoryParts, []),
       n('factory-asm',  '組件 (Sub-assembly)', 'SA/SB/SC/SD 系列', PALETTE.factoryAsm, 2, factoryAsm, []),

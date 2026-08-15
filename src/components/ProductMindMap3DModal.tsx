@@ -504,12 +504,16 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     }
   }, [fullNodes, fullLinks]);
 
-  // 動態過濾可見節點與連線（依據 expandedIds）
+  // 動態過濾可見節點與連線（依據 expandedIds，三大體系僅在「開」的狀態時顯示節點與訊息文字）
   const graphData = useMemo(() => {
     const isVisible = (id: string): boolean => {
       if (id === 'root') return true;
       const pid = parentOf.get(id);
       if (!pid) return false;
+      if (pid === 'root') {
+        // 第一層三大體系節點：唯有在 expandedIds (即「開」的狀態) 時才顯示節點與文字
+        return expandedIds.has(id);
+      }
       return expandedIds.has(pid) && isVisible(pid);
     };
 
@@ -767,10 +771,11 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
       }
       setMatchIds(m);
       if (m.size > 0) {
-        // 自動展開所有包含匹配節點的祖先路徑
+        // 自動展開所有包含匹配節點與其祖先路徑
         setExpandedIds((prev) => {
           const next = new Set(prev);
           for (const matchId of m) {
+            next.add(matchId);
             let curr: string | undefined = matchId;
             while (curr) {
               const pid: string | undefined = parentOf.get(curr);
@@ -856,9 +861,10 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
     (id: string) => {
       const node = byId.get(id);
       if (!node) return;
-      // 確保其祖先鏈皆已展開
+      // 確保其自身與祖先鏈皆已展開
       setExpandedIds((prev) => {
         const next = new Set(prev);
+        next.add(id);
         let curr: string | undefined = id;
         while (curr) {
           const pid = parentOf.get(curr);
