@@ -1,5 +1,83 @@
 # PN-Lookup 開發日誌
 
+## v7.8.6 — 水平審計收錄 24 組件品號、映射邏輯文件同步與全專案清理（版本基準）
+
+### 需求內容
+1. 對**所有品項**（非僅 R1-15853）水平展開審計：父/子/圖檔/登錄狀態全面盤點，排除偽自連與文件編號雜訊。
+2. 依人工領域知識補強命名規則（BD- 前綴非品號、括號內品號優先、SPC/RAW/CIV/PFM-DWG 文件編號排除、`(1)` 重複檔編號過濾）。
+3. 將組件圖識別出的 24 個組件品號補登 master table（含 BOM），使介面顯示數據具正確邏輯且以 `data/pn-lookup-master.json` 為唯一事實來源。
+4. 同步更新全部開發文件（DEV_LOG / README / mapping-logic.md / data-mapping.html）。
+5. 全專案清理（死碼、暫存產物）+ Git 提交推送建立還原基準。
+
+### 執行內容（CAPA）
+1. **水平審計（全 693 品項）**：噪音過濾 9 行全為自身品號偽自連（0 真實損失）；5 無父品號確認成品（Top-Level）層級；92 無圖檔（SA組立 44 / 單品 33 / SB組立 14 / SC組立 1）、310 無 BOM 參與為資料事實。
+2. **掃描規則補強**（`scripts/scanAssemblyImages.js`）：
+   - `resolveAssemblyId`：BD- 前綴剝除（`BD-X3299AAM` → `X3299AAM`，剝除未命中則排除）；圖號註冊自身圖（`SPC0014799_10_R1-2361` 等 4 偽自連消除，token 分割改 `/[_ ]+/` 防 hyphen 誤切）。
+   - `assemblyIdFromFileName`：括號內非 Rev/非純數字內容即品號（`PFM-DWG-30125-01(126-006)` → `126-006`）；`(1)` Windows 重複檔編號過濾。
+   - 非品號排除：`/^(SPC\d+_\d+_(RAW|CIV)\d+|PFM-DWG-|BD[-_][A-Z0-9]+)$/i`。
+3. **scannedAssemblies 補登**：種子 `rawdata/master_table_unified.json` 新增 `scannedAssemblies` 區塊（24 筆：MDXE-* 8、R1-* 15、SC0044），`buildMaster.js` 合併為正式品項（category `組件圖候補`）→ **未解析父鍵 24 → 0、僅未登錄 28 → 0**。
+4. **驗證基線固化**：`verifyCoreLogic.js` 種子轉譯基線 693 → 717。
+5. **全專案清理**：移除死碼 `KnowledgeGraphModal.tsx` / `knowledgeGraph.ts`（互引、無使用）、打包暫存 `.tmp-kgmin/`（4.7MB）、掃描輸出暫存 `build-out.txt` / `scan-out.txt`。
+
+### 驗證結果
+- master：**717 parts**（種子 693 + 補登 24）、BOM 組件 **243** / 連結 **610**、**未解析父鍵 0**、僅未登錄 0。
+- R1-15853：9 個可組成組件全部已登錄（R1-10134 / R1-10149 / R1-10260 / R1-10278 / R1-10356 / R1-15933 / R1-15935 / R1-15936 / R1-15951）。
+- `verifyCoreLogic` 11 項 PASS；`npm run lint`（tsc --noEmit）0 錯誤。
+- 唯一事實來源鏈：seed（Excel + scannedAssemblies）→ buildMaster → `data/pn-lookup-master.json` → Express 每次請求重讀 → `/api/parts` `/api/bom` → 前端（localStorage 僅初始快取，server 覆蓋）。
+
+---
+
+## v7.8.5 — 組件圖 BOM 父組件品號解析修復（「本零件可組成的組件」欄位空白）
+
+### 需求內容
+品號（如 R1-15853）已於組件圖中被識別，但 PartDetailModal「本零件可組成的組件」欄位空白；且多數零件皆有類似問題。
+
+### 根因分析（RCA）
+1. **BOM 父鍵為原始檔名衍生 ID**：`scanAssemblyImages.js` 以組件圖檔名（如 `R1-10134-MC_08_mdx.pdf` → `R1-10134-MC_08_mdx`）直接作為 BOM parent 鍵；master 標準品號為 `R1-10134`。前端 `findPartByNo` 僅做精確比對 → 51.3%（509/993）父連結無法解析，欄位空白。
+2. **檔名版本連結方式多變**：實際盤點 1514 檔 — 933 個 `(Rev.X)`（括號）、204 個 `_mdx`、169 個 `_NN`、101 個 `_XX`、67 個 `-MC_xx`、23 個 Rev；原解析僅處理 `-C` 單一情況。
+3. **自身版本圖偽父子連結**：如 `R1-15853_03.pdf`（R1-15853 的版本 3 圖面）內文含自身品號 → 產生「組件＝自身」的錯誤連結。
+
+### 矯正與預防措施（CAPA）
+1. **`resolveAssemblyId()` 層級解析**（`scripts/scanAssemblyImages.js`）：精確命中 → 逐層剝除後綴（`_mdx`/`-MC_xx`/`-C`/`_NN`/`Rev`，每層剝除後即查 master，支援多層組合如 `R1-15853_03_mdx`）→ 未命中回傳最乾淨剝除形式（合併同家族版本）→ 圖面內文自身品號前綴比對（邊界防誤判）。括號版本 `(Rev.X)` 由 `assemblyIdFromFileName` 既有規則剝除。
+2. **自身版本圖跳過**：解析後 `p.partNo === assemblyId` 即為自身版本圖，不寫入 BOM。
+3. **噪音檔名過濾**：含中文/空格等非品號字元（如 `PN-0002_… 包裝說明書`）不作為 BOM 父鍵。
+4. **前端未登錄組件顯示**（`src/utils/bomEngine.ts` + `src/components/PartDetailModal.tsx`）：`BOMRelation` 新增 `unregistered` 旗標；無法解析的父組件仍以「未登錄」灰階不可點擊列顯示，欄位不再無聲空白。
+
+### 驗證結果
+- `node scripts/scanAssemblyImages.js --all --apply`：1514 圖檔，BOM 993 對 → 620 對，無法解析比例 51.3% → 14.7%（33 個唯一未登錄組件，皆為真正未收錄於 master 的客戶組件，如 BD-X3299 / SC0044 / MDXE-*）。
+- R1-15853：組件從 20 個原始檔名 ID（前端全部無法顯示）→ 9 個標準品號（R1-10134 / R1-10149 / R1-10260 / R1-10278 / R1-10356 / R1-15933 / R1-15935 / R1-15936 / R1-15951）。
+- `npm run lint`（tsc --noEmit）0 錯誤；`npm run build`（verifyCoreLogic 11 項 + vite build）PASS。
+
+## v7.8.4 — OCR 快取鍵一致性修復 + 圖檔反向識別 (Image-Content Reverse BOM Identification)
+
+### 需求內容
+1. **品號已辨識但未與圖檔建立關聯**：OCR 辨識成功並存入快取，但重新整理頁面後關聯失效。
+2. **品號已建立圖檔關聯，但未自所有圖檔中識別出「該品號可組成哪些產品」**：零件圖面內文列出的零件清單，反向閱讀即為該零件的採用產品，系統原先僅靠 master BOM 呈現上層組件。
+
+### 根因分析（RCA）
+1. OCR 快取鍵不一致：`ocrKeyForFile()` 以複合鍵 `檔名|size|lastModified` 存入 IndexedDB，但所有查詢端（`resolveAllImages` / 孤兒圖檔檢索 / 掃描佇列）皆以純檔名查找 → 重新整理後 OCR 關聯全數失效。
+2. 反向識別功能闕如：前端僅做「圖檔 → 品號」正向解析，無「品號 → 產品」反向推導；`scanAssemblyImages.js` 僅掃描 3 個組件圖資料夾（274 張），未涵蓋全部圖檔（實際 1514 張）。
+
+### 修正方案（CAPA）
+1. **OCR 快取鍵修復**（`src/utils/ocr.ts`）：`ocrKeyForFile` 改為純檔名；`loadOcrCache` 新增 `normalizeCacheKey` 向後相容還原舊版複合鍵（末兩段為數字時剝除；Windows 檔名禁 `|` 故安全）。
+2. **前端反向識別引擎**（`src/utils/imageResolver.ts` 新增 `findParentProducts`）：自 OCR 快取內文找出包含指定品號的圖檔 → 依檔名反查所屬品號（與 `imageLibrary` 前向比對規則互逆）→ 彙整候選產品（含來源圖檔）。
+3. **PartDetailModal 新增「由圖檔內容反向識別」區塊**：候選產品一鍵「加入 BOM 關聯」→ `updateBOMData` + `saveBOM`（伺服器未連線時僅本機生效）+ 重新 `enrichParts`。
+4. **`scanAssemblyImages.js` 擴充**：`--all` 全量掃描 `rawdata/圖檔`（274 → 1514 張）；`--parent-of <PN>` 反向識別該品號可組成哪些產品，搭配 `--apply` 直接寫入 master BOM。
+5. **同步流程修正**：先 `git pull`（fast-forward 至 v7.8.3）再套用映射邏輯，避免與雲端版本分叉。
+
+### 確效驗證
+- `node scripts/scanAssemblyImages.js --parent-of "H00-111-111-1"`：正確輸出 3M41459 / SA0003 / SA0145 / SC0010
+- `node scripts/scanAssemblyImages.js --all --apply`：1514 張全量掃描，BOM 組件群 181 → 519
+- `npm run lint`（tsc --noEmit）與 `npm run build`（verifyCoreLogic 門禁）：PASS
+- 合併後 `git status` 無未解析衝突
+
+### 回歸規則
+- `ui_minimum_font_size`：新增 UI 元件全 13px 以上
+- 檔案刪除保護：`ProductMindMapModal.tsx` 由雲端（upstream）刪除，本機採雲端為準接受刪除；未主動刪除其他檔案
+- 安全防禦：反向識別僅為「候選建議 + 人工確認」，不自動寫入 master BOM
+
+---
+
 ## v7.8.3 — 3D 思維導圖視覺優化與專案整體程式碼文件全量同步重構 (3D Mind Map Visual Refinement & Full Project Refactor Sync)
 
 ### 需求內容

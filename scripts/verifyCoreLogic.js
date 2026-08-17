@@ -48,8 +48,8 @@ if (existsSync(MASTER_PATH)) {
     `主資料庫獨一無二性: 總數 (${parts.length}) 必須等於不重複數量 (${uniqueNos.size})`
   );
   assert(
-    parts.length >= 693,
-    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 種子轉譯 693 筆（組件圖掃描可增量）`
+    parts.length >= 717,
+    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 種子轉譯 717 筆（組件圖掃描可增量）`
   );
 } else {
   console.log(`ℹ️ [CI 沙盒模式] 未檢測到本機私有資料庫 ${MASTER_PATH} (遵循 Zero-Private-Data .gitignore 規範)，略過本機檔案測試。`);
@@ -69,8 +69,8 @@ if (existsSync(RAW_SEED_PATH)) {
     `種子檔轉譯去重性: 轉譯總數 (${convParts.length}) 等於不重複數 (${convUnique.size})`
   );
   assert(
-    convParts.length === 693,
-    `種子檔轉譯筆數固化: 預期 693 筆實體品號`
+    convParts.length === 717,
+    `種子檔轉譯筆數固化: 預期 717 筆實體品號（693 種子 + 24 組件圖識別補登 scannedAssemblies）`
   );
   assert(
     Object.keys(converted.bom.children).length === 181,

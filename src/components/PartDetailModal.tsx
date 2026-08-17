@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo, useCallback } from 'react';
+import { X, Copy, Check, Tag, Layers, FileText, User, Boxes, Component, ArrowRight, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { PartItem } from '../types';
-import { getItemType, getComponentsForAssembly, getAssembliesForPart } from '../utils/bomEngine';
+import { getItemType, getComponentsForAssembly, getAssembliesForPart, getBOMChildren, getBOMParents, updateBOMData } from '../utils/bomEngine';
+import { saveBOM } from '../utils/bomService';
 import { getPartPrefix } from '../utils/partNo';
+import { ImageLibrary } from '../utils/imageLibrary';
+import { findParentProducts } from '../utils/imageResolver';
 
 interface PartDetailModalProps {
   isOpen: boolean;
@@ -10,6 +13,10 @@ interface PartDetailModalProps {
   item: PartItem | null;
   allParts: PartItem[];
   onSelectRelated: (item: PartItem) => void;
+  imageLib?: ImageLibrary | null;
+  bindings?: Record<string, string>;
+  ocrIndex?: Map<string, string>;
+  onBOMUpdated?: () => void;
 }
 
 export const PartDetailModal: React.FC<PartDetailModalProps> = ({
@@ -18,8 +25,51 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   item,
   allParts,
   onSelectRelated,
+  imageLib = null,
+  bindings = {},
+  ocrIndex = new Map(),
+  onBOMUpdated,
 }) => {
   const [copiedPart, setCopiedPart] = useState(false);
+  const [addingBom, setAddingBom] = useState<Set<string>>(new Set());
+
+  // 由圖檔內容反向識別：此品號出現在哪些產品的圖面中
+  const reverseCandidates = useMemo(() => {
+    if (!item || !imageLib || ocrIndex.size === 0) return [];
+    return findParentProducts(item.partNo, item.alternates, imageLib, allParts, bindings, ocrIndex);
+  }, [item, imageLib, allParts, bindings, ocrIndex]);
+
+  // 已存在於 BOM 上層關係的品號
+  const existingParents = useMemo(() => {
+    if (!item) return new Set<string>();
+    const parents = getBOMParents();
+    return new Set([
+      ...(parents[item.partNo] ?? []),
+      ...(parents[item.partNo.toUpperCase()] ?? []),
+    ]);
+  }, [item, addingBom]);
+
+  const handleAddBomLink = useCallback(async (parentNo: string) => {
+    if (!item) return;
+    const children = getBOMChildren();
+    const parents = getBOMParents();
+    const nextChildren = {
+      ...children,
+      [parentNo]: Array.from(new Set([...(children[parentNo] ?? []), item.partNo])),
+    };
+    const nextParents = {
+      ...parents,
+      [item.partNo]: Array.from(new Set([...(parents[item.partNo] ?? []), parentNo])),
+    };
+    updateBOMData(nextChildren, nextParents);
+    setAddingBom((prev) => new Set(prev).add(parentNo));
+    try {
+      await saveBOM(nextChildren, nextParents);
+    } catch {
+      // 伺服器未連線（靜態/純前端模式）時，僅本機生效
+    }
+    onBOMUpdated?.();
+  }, [item, onBOMUpdated]);
 
   if (!isOpen || !item) return null;
 
@@ -235,10 +285,12 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               {assembliesList.length > 0 ? (
                 <div className="grid gap-2">
                   {assembliesList.map((rel, idx) => (
-                    <button
+                    <div
                       key={`${rel.relatedItem.id}-${idx}`}
-                      onClick={() => onSelectRelated(rel.relatedItem)}
-                      className="btn-tactile group flex items-center justify-between p-2.5 bg-white hover:bg-sky-50/50 rounded-lg border border-sky-200/80 hover:border-sky-300 transition-all text-left cursor-pointer shadow-2xs"
+                      className={`${rel.unregistered
+                        ? 'pointer-events-none opacity-80'
+                        : 'cursor-pointer hover:bg-sky-50/50 hover:border-sky-300'} btn-tactile group flex items-center justify-between p-2.5 bg-white rounded-lg border border-sky-200/80 transition-all text-left shadow-2xs`}
+                      onClick={rel.unregistered ? undefined : () => onSelectRelated(rel.relatedItem)}
                     >
                       <div className="flex items-center space-x-3">
                         <span className="p-1.5 rounded bg-sky-100/80 text-sky-800 border border-sky-200">
@@ -248,7 +300,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                           <div className="flex items-center space-x-2">
                             <span className="font-mono font-bold text-slate-900 text-[13px]">{rel.relatedItem.partNo}</span>
                             <span className="text-[13px] text-slate-600 px-1.5 py-0.2 rounded bg-slate-100 font-mono border border-slate-200">
-                              {rel.relatedItem.customer}
+                              {rel.relatedItem.customer || (rel.unregistered ? '未登錄' : '')}
                             </span>
                           </div>
                           <p className="text-[13px] text-slate-700 mt-0.5">{rel.relatedItem.name}</p>
@@ -256,10 +308,10 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                         </div>
                       </div>
                       <div className="text-sky-700/60 group-hover:text-sky-800 transition-colors flex items-center text-[13px] space-x-1 shrink-0 ml-2 font-medium">
-                        <span>查看組件</span>
+                        <span>{rel.unregistered ? '待登錄' : '查看組件'}</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -267,6 +319,81 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                   目前系統中尚未比對到以此零件構成的組合配件。
                 </p>
               )}
+            </div>
+          )}
+
+          {/* 由圖檔內容反向識別：此品號可組成哪些產品 */}
+          {imageLib && reverseCandidates.length === 0 && ocrIndex.size === 0 && (
+            <div className="p-4 bg-gray-50/80 rounded-2xl border border-violet-200 space-y-2">
+              <h3 className="font-bold text-violet-700 flex items-center space-x-2 text-sm">
+                <ImageIcon className="w-4 h-4 text-violet-500" />
+                <span>由圖檔內容反向識別 — 此品號可組成哪些產品</span>
+              </h3>
+              <p className="text-[13px] text-gray-500">
+                已指定圖檔資料夾，但尚未執行 OCR 內文辨識。可至「未對應孤兒圖檔管理中心」執行批次辨識後，
+                系統即可自動比對出包含此品號的產品圖面。
+              </p>
+            </div>
+          )}
+          {reverseCandidates.length > 0 && (
+            <div className="p-4 bg-gray-50/80 rounded-2xl border border-violet-200 space-y-3">
+              <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                <h3 className="font-bold text-violet-700 flex items-center space-x-2 text-sm">
+                  <ImageIcon className="w-4 h-4 text-violet-500" />
+                  <span>由圖檔內容反向識別 — 此品號出現於下列產品圖面</span>
+                </h3>
+                <span className="text-sm text-gray-500">共 {reverseCandidates.length} 項候選產品</span>
+              </div>
+              <p className="text-[13px] text-gray-500">
+                由所有已辨識圖檔的內文中，偵測到包含此品號的圖面；點「加入 BOM 關聯」即可將該產品設為此品號的上層組件。
+              </p>
+              <div className="grid gap-2">
+                {reverseCandidates.map((c) => {
+                  const alreadyLinked = existingParents.has(c.partNo);
+                  const isAdding = addingBom.has(c.partNo);
+                  return (
+                    <div
+                      key={c.partNo}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-white rounded-xl border border-gray-200 hover:border-violet-300 transition-all"
+                    >
+                      <div className="flex items-center space-x-3 min-w-0">
+                        <span className="p-1.5 rounded-lg bg-violet-100 text-violet-600 border border-violet-200 shrink-0">
+                          <Boxes className="w-3.5 h-3.5" />
+                        </span>
+                        <div className="min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-mono font-bold text-teal-700">{c.partNo}</span>
+                            <span className="text-sm text-gray-500 px-1.5 py-0.2 rounded bg-gray-100">
+                              {c.customer}
+                            </span>
+                            {alreadyLinked && (
+                              <span className="text-[13px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 font-semibold">
+                                已加入 BOM
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 mt-0.5 truncate max-w-xs">{c.name}</p>
+                          <p className="text-[13px] text-violet-600 mt-0.5 font-mono truncate max-w-sm" title={c.sourceFiles.join('\n')}>
+                            來源圖檔: {c.sourceFiles.join('、')}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddBomLink(c.partNo)}
+                        disabled={alreadyLinked || isAdding}
+                        className={`shrink-0 px-3 py-1.5 rounded-lg text-[13px] font-bold transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-default ${
+                          alreadyLinked || isAdding
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-violet-600 hover:bg-violet-500 text-white'
+                        }`}
+                        title={alreadyLinked ? '此上層關係已存在於 BOM' : '將此產品加入為此品號的上層組件'}
+                      >
+                        {alreadyLinked || isAdding ? '已加入 ✓' : '加入 BOM 關聯'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

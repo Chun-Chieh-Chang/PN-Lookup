@@ -69,8 +69,20 @@ async function ocrPdf(file: File): Promise<string> {
   return text;
 }
 
+// 以純檔名作為快取鍵，與 ocrIndex 的查詢鍵（檔名）一致；
+// Windows 檔名不得含 `|`，故舊版複合鍵（name|size|lastModified）可安全還原。
+function normalizeCacheKey(key: string): string {
+  const parts = key.split('|');
+  const last = parts[parts.length - 1];
+  const prev = parts[parts.length - 2];
+  if (/^\d+$/.test(last) && /^\d+$/.test(prev) && parts.length > 2) {
+    return parts.slice(0, -2).join('|');
+  }
+  return key;
+}
+
 export function ocrKeyForFile(file: File): string {
-  return `${file.name}|${file.size}|${file.lastModified}`;
+  return file.name;
 }
 
 export async function recognizeFile(file: File): Promise<string> {
@@ -81,7 +93,7 @@ export async function recognizeFile(file: File): Promise<string> {
 export async function loadOcrCache(): Promise<Map<string, string>> {
   const entries = await idbGetAll('ocr');
   const map = new Map<string, string>();
-  for (const e of entries) map.set(e.key, String(e.value));
+  for (const e of entries) map.set(normalizeCacheKey(e.key), String(e.value));
   return map;
 }
 

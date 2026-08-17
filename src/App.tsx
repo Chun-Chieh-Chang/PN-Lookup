@@ -11,7 +11,7 @@ import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
 import { getItemType, enrichParts, initBOM, stripDerivedFields } from './utils/bomEngine';
-import { loadParts, saveParts } from './utils/partsService';
+import { loadParts, saveParts, dedupeParts } from './utils/partsService';
 import { IS_STATIC_MODE } from './utils/serverStatus';
 import { dedupeAlternates } from './utils/alternates';
 import { getPartPrefix } from './utils/partNo';
@@ -51,7 +51,7 @@ export default function App() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return enrichParts(parsed);
+        if (Array.isArray(parsed) && parsed.length > 0) return enrichParts(dedupeParts(parsed));
       } catch { /* ignore */ }
     }
     return [];
@@ -63,7 +63,7 @@ export default function App() {
     initBOM().then(() => {
       loadParts().then((loadedParts) => {
         if (loadedParts && loadedParts.length > 0) {
-          setParts(enrichParts(loadedParts));
+          setParts(enrichParts(dedupeParts(loadedParts)));
         }
       }).catch(() => {});
     });
@@ -291,13 +291,13 @@ export default function App() {
     setIsExportImportOpen(true);
   };
 
-  // Import Data
+  // Import Data（合併/取代皆經品號去重，防止重複顯示）
   const handleImportData = (importedItems: PartItem[], replace: boolean) => {
-    const enriched = enrichParts(importedItems);
+    const enriched = enrichParts(dedupeParts(importedItems));
     if (replace) {
       setParts(enriched);
     } else {
-      setParts((prev) => [...enriched, ...prev]);
+      setParts((prev) => enrichParts(dedupeParts([...enriched, ...prev])));
     }
   };
 
@@ -460,6 +460,10 @@ export default function App() {
         onClose={() => setSelectedDetailItem(null)}
         item={selectedDetailItem}
         allParts={parts}
+        imageLib={imageLib}
+        bindings={bindings}
+        ocrIndex={ocrIndex}
+        onBOMUpdated={handleBOMUpdated}
         onSelectRelated={(item) => setSelectedDetailItem(item)}
       />
 

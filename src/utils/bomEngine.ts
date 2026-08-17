@@ -91,6 +91,8 @@ export interface BOMRelation {
   relatedItem: PartItem;
   relationType: 'child_component' | 'parent_assembly';
   note: string;
+  /** 組件來源為組件圖檔名，尚未登錄於 master（僅顯示、不可開啟明細） */
+  unregistered?: boolean;
 }
 
 export function getItemType(item: PartItem): ItemType {
@@ -206,6 +208,19 @@ function resolveParentsRecursive(
         relatedItem: parent,
         relationType: 'parent_assembly',
         note: `可組成 ${parent.name}`,
+      });
+    } else if (parentNo !== partNo) {
+      // 組件圖來源的未登錄組件：仍顯示供查核（不列入遞迴）
+      results.push({
+        relatedItem: {
+          id: parentNo,
+          customer: '',
+          partNo: parentNo,
+          name: parentNo,
+        },
+        relationType: 'parent_assembly',
+        note: '組件圖來源組件（未登錄於資料庫）',
+        unregistered: true,
       });
     }
     if (isAssemblyPartNo(parentNo)) {

@@ -106,7 +106,23 @@ export function convertUnifiedSeedToMaster(seedData) {
     }
   }
 
-  // 4. bomHierarchy
+  // 5. scannedAssemblies（組件圖識別補登，2026-08-17 起：rawdata/圖檔 中組件圖檔名對應的組件品號）
+  //    這些品號存在於組件圖（含子件），但未收錄於 Excel 種子工作表；由掃描回饋補登，作為組件鍵使用。
+  if (Array.isArray(seedData.scannedAssemblies)) {
+    for (const sa of seedData.scannedAssemblies) {
+      const partNo = sa['產品編號'] || sa.partNo;
+      if (!partNo) continue;
+      addPart({
+        partNo,
+        name: sa['零件名稱(中)'] || sa['零件名稱(英)'] || partNo,
+        customer: sa['客戶'] || '',
+        category: '組件圖候補',
+        notes: sa['備註'] || '由組件圖識別補登',
+      });
+    }
+  }
+
+  // 6. bomHierarchy
   const childrenMap = {};
   const parentsMap = {};
 
