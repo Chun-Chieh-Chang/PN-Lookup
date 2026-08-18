@@ -251,10 +251,6 @@ export async function restoreImageFolder(): Promise<ImageLibrary | null> {
   }
 }
 
-export function isImageFolderDismissed(): boolean {
-  return localStorage.getItem(FLAG_DISMISSED) === '1';
-}
-
 export function clearImageFolderDismissed() {
   localStorage.removeItem(FLAG_DISMISSED);
 }

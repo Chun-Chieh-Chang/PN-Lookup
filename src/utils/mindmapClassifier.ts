@@ -61,38 +61,6 @@ export interface ClassificationResult {
   confidence: 'exact' | 'pattern' | 'customer_field' | 'inferred';
 }
 
-export const CATEGORY_META: Record<MindMapCategory, { label: string; sublabel: string }> = {
-  factory_part_t_connector:    { label: 'T接頭',                 sublabel: 'A01 / A02 / A03' },
-  factory_part_y_connector:    { label: 'Y管',                   sublabel: 'B05 / B06' },
-  factory_part_mll:            { label: '針基/轉式 (MLL)',       sublabel: 'C09 / C11' },
-  factory_part_fll:            { label: '針基/滑式 (FLL)',       sublabel: 'D09 / D10' },
-  factory_part_cap:            { label: '針基蓋',                sublabel: 'E09 / E10 / E11' },
-  factory_part_clamp:          { label: '夾具',                  sublabel: 'F17 切斷器 / F18 夾緊器' },
-  factory_part_other:          { label: '其他零件',              sublabel: 'G05 / G13 / H00' },
-  factory_part_k_connector:    { label: '連接管 (K系列)',        sublabel: 'K07 / K08 / K27' },
-  factory_part_q_barbed:       { label: '倒鉤式連接器 (Q系列)',  sublabel: 'Q09 / Q10' },
-  factory_asm_sa:              { label: 'SA 組件',               sublabel: '2 pcs 組合' },
-  factory_asm_sb:              { label: 'SB 組件',               sublabel: '3 pcs 組合' },
-  factory_asm_sc:              { label: 'SC 組件',               sublabel: '4 pcs 組合' },
-  factory_asm_sd:              { label: 'SD 組件',               sublabel: '5 pcs 組合' },
-  factory_asm_special:         { label: '特殊組件',              sublabel: '如 3M41459' },
-  factory_set_mdxe:            { label: 'MDXE Set',              sublabel: 'Extension set（不含插入針）' },
-  factory_set_mdxi:            { label: 'MDXI Set',              sublabel: 'I.V. set（含插入針）' },
-  customer_icu_bag_vented_port:  { label: '插袋針·透氣口',       sublabel: 'R1-8026 / R1-8027 / R1-15460' },
-  customer_icu_bag_vented_clave: { label: '插袋針·Clave',        sublabel: 'R1-8028 / R1-15456' },
-  customer_icu_bag_nonvented:    { label: '插袋針·不透氣',       sublabel: 'R1-8029 / R1-8030 / R1-8577' },
-  customer_icu_bag_cap:          { label: '插袋針蓋',            sublabel: 'R1-8112' },
-  customer_icu_vial_nipple:      { label: '採藥針·奶嘴',         sublabel: 'R1-8391 / R1-15951' },
-  customer_icu_vial_9035:        { label: '採藥針·9035',         sublabel: 'R1-9035' },
-  customer_icu_vial_flower:      { label: '採藥針·花系列',       sublabel: '小花 20 / 中花 28 / 大花 32mm' },
-  customer_icu_vial_cap:         { label: '採藥針蓋',            sublabel: 'R1-15853' },
-  customer_bd:                 { label: 'BD',                    sublabel: '購買 Set 及零件' },
-  customer_mps:                { label: 'MPS',                   sublabel: 'Set 以 MPS 品號下單' },
-  customer_biometrix:          { label: 'Biometrix',             sublabel: '購買 Set MDXE-093-01' },
-  customer_vivus:              { label: 'Vivus',                 sublabel: '動物使用 (Animalcare)' },
-  unclassified:                { label: '待人工分類',            sublabel: '等待對應' },
-};
-
 // ────────────────────────────────────────────────────────────────────────────
 // 已知品號精確對照表 (來自 PDF 第26~33頁)
 // ────────────────────────────────────────────────────────────────────────────

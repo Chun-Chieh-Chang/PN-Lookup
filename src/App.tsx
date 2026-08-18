@@ -20,7 +20,6 @@ import {
   ImageLibrary,
   pickImageFolder,
   restoreImageFolder,
-  isImageFolderDismissed,
   clearImageFolderDismissed,
 } from './utils/imageLibrary';
 import { loadOcrCache, ocrKeyForFile, recognizeFile, saveOcrText } from './utils/ocr';

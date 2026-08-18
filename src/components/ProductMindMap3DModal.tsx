@@ -28,7 +28,6 @@ import {
 } from 'lucide-react';
 import { PartItem } from '../types';
 import { MindMapNode, buildMindMapTree } from '../utils/mindMapTree';
-import { CATEGORY_META } from '../utils/mindmapClassifier';
 import { ImageLibrary } from '../utils/imageLibrary';
 import { resolveImage } from '../utils/imageResolver';
 import { APP_VERSION } from '../version';
