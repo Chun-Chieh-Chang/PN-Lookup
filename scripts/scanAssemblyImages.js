@@ -56,7 +56,7 @@ const parentOfArg = argv.includes('--parent-of') ? argv[argv.indexOf('--parent-o
 // 圖檔角色（v7.8.11）：物料資料夾 → 物料；其餘以圖內文證據判定
 // 組件 = 內文零件清單（BOM 表/組立字樣）可建立 BOM；零件 = 檔名即自身品號，不建立 BOM
 // v7.8.10 瑕疵：僅依目錄判定，客戶圖面/綜合圖面下的零件圖被誤歸「組件」（組件圖候補 125 個無 BOM）
-function roleOf(rel, text = '', known = []) {
+function roleOf(rel, text = '', known = [], parents = null, assemblyId = '') {
   const p = rel.replace(/\\/g, '/');
   if (/物料資料\//.test(p)) return '物料';
   if (/廠內零件圖面/.test(p) || /ICU原料圖面/.test(p)) return '零件';
@@ -66,6 +66,11 @@ function roleOf(rel, text = '', known = []) {
     if (/PART\s*NO/i.test(text) && (/\bQTY\b|QUANTITY|\bITEM\b/i.test(text))) return '組件';
     // 組立字樣需與多個子件候選共存（R1-16143 等規格圖「ASSY」僅為註記 → 零件）
     if (/\bASSY\b|組立/i.test(text) && known.length >= 3) return '組件';
+    // v7.8.18 無表頭版式自證：零件清單無 KEY UNIT/PART NO 表頭時，
+    // 內文列出自身 children 子件品號（known 已對 master 驗證）即組件證據
+    // （SA0145(Rev.B)-C、R1-2392_6、R1-3529_05 等；避免「適用於 XXX」註記誤傷：僅比對自身父組立）
+    if (known.length && parents && assemblyId &&
+        known.some((k) => (parents[k.partNo] || []).includes(assemblyId))) return '組件';
     return '零件';
   }
   return '組件';
@@ -521,7 +526,7 @@ async function main() {
 
     unknown.sort();
     const assemblyId = resolveAssemblyId(rawAssemblyId, known, index);
-    const role = extractMode ? roleOf(rel, text, known) : null;
+    const role = extractMode ? roleOf(rel, text, known, master.bom.parents, assemblyId) : null;
 
     // 檔名品號：組件圖 = 解析後的組件 ID；零件/物料圖 = 剝除版本後綴的自身品號
     const filePartNo = sanitizeFilePartNo(assemblyId);
