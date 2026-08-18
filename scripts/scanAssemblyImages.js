@@ -160,6 +160,7 @@ function titleBlockToken(line, { relatedTo = null } = {}) {
     if (DATE_TOKEN_RE.test(t)) continue;
     if (/mm$/i.test(t)) continue;
     if (/^\d{3,5}-\d{1,2}$/.test(t)) continue;
+    if (/^\d{5}$/.test(t)) continue; // 郵遞區號（如 CA 92673）；master 無 5 位純數字真品號
     if (relatedTo) {
       const tn = norm(t);
       if (!(tn === relatedTo || (tn.length > relatedTo.length && tn.startsWith(relatedTo)) || (relatedTo.length > tn.length && relatedTo.startsWith(tn)))) continue;
@@ -526,7 +527,11 @@ async function main() {
         // 剝除 -MC/-C 後綴標記後比較（75-0485-MC ≡ 75-0485）；仍不同才標記
         const stripSuffix = (s) => s.replace(/[-_]?MC$/i, '').replace(/[-_]?C$/i, '');
         if (norm(stripSuffix(titleBlock.partNo)) !== norm(stripSuffix(filePartNo))) {
-          review = `內文欄位品號 ${titleBlock.partNo} 與檔名品號 ${filePartNo} 不一致`;
+          // 加工複本自洽：標題欄為廠內/加工編號（R1-15076 等）但 master 已以客戶品號登錄 → 非不一致
+          const tbKey = index.get(norm(titleBlock.partNo));
+          if (tbKey !== filePartNo) {
+            review = `內文欄位品號 ${titleBlock.partNo} 與檔名品號 ${filePartNo} 不一致`;
+          }
         }
       }
       extractItems.push({
