@@ -1,5 +1,23 @@
 # PN-Lookup 開發日誌
 
+## v7.8.8 — Excel 整合：BOM 交叉驗證與客戶欄位補齊
+
+### 需求內容
+1. 圖檔解析（v7.8.7）完成後，以 Excel 產品一覽表.xlsm 進行交叉驗證與補齊：Excel 組件 BOM（bomHierarchy 181 組）vs 圖檔內文 BOM（drawings-extract bomLinks）比對。
+2. 補齊 master 客戶資訊：模具號碼 / 穴數欄位（internalParts 248 + customerPartNumbers 171 全數具備）、customerPartNumbers 來源的顏色/原料欄位。
+
+### 執行內容（CAPA）
+1. **Excel BOM vs 圖檔 BOM 交叉驗證**（181 組中 117 組有組件圖可比對）：一致 45 / 不一致 72；Excel 有但無圖 64（SA0001、8003875 等，僅存在於種子）；圖檔 BOM 有但 Excel 無 127（非 SA/SB/SC/SD 系列組件圖，圖檔優先新增）。
+   - 差異根因（開圖實證）：① SB/SC/SD 系列圖檔 BOM **展開至最終零件**（SB0001 圖列 B06-410-111-1 + B-077），Excel 列子組件粒度（SB0001 = SA0001 + 收縮膜 0.08*14mm）→ 兩者粒度不同，非錯誤；② 圖檔提取**漏件**（SB0001/SC0006 漏 B-077 — 提取器待修）；③ 版次差異（SA0002 圖 KEY 欄註明 H00-111-111-2 → H00-111-111-4，圖面為最新，Excel 為舊版 -1）。
+2. **master 欄位補齊**：part 結構新增 `moldNo`（模具號碼，419 筆）/ `cavity`（穴數，414 筆）；`customerPartNumbers` 來源補傳 color/material；去重合併規則同步補 moldNo/cavity（後筆不覆蓋既有值）。
+3. 客戶掛載覆核：品號掛客戶 **564 / 1004**，Excel 三表（客戶與品號對照表 428 / 廠內紙本零件編號 248 / 客戶料號 172）有客戶者零漏掛；剩餘 440 無客戶為圖檔優先收錄品號，Excel 無對應（含別稱 norm 比對 0 可補，資料事實非缺陷）。
+
+### 驗證結果
+- master 1004 parts / 308 組件 / 674 連結不變；`verifyCoreLogic` 全數 PASS；`npm run lint` 0 錯誤；`npm run build` 成功。
+- 待辦：圖檔 BOM 提取漏件修復（SB0001/SC0006 漏 B-077 等）列為下一工作項。
+
+---
+
 ## v7.8.7 — 圖檔優先管線：全圖檔品號提取、內文欄位驗證與孤兒品號收錄
 
 ### 需求內容

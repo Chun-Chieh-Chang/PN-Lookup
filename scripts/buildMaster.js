@@ -27,6 +27,7 @@ export function mergeDrawingsIntoMaster(master, extract) {
     const p = {
       id: pn, partNo: pn, name: pn, customer: '',
       category: catByRole[role] || '組件圖候補', color: '', material: '',
+      moldNo: '', cavity: '',
       notes: '由組件圖檔名識別（v7.8.7 圖檔優先管線）',
       alternates: [],
     };
@@ -84,6 +85,8 @@ export function convertUnifiedSeedToMaster(seedData) {
         category: p.category || '單品零件',
         color: p.color || '',
         material: p.material || '',
+        moldNo: p.moldNo || '',
+        cavity: p.cavity || '',
         notes: p.notes || '',
         alternates,
       });
@@ -95,6 +98,8 @@ export function convertUnifiedSeedToMaster(seedData) {
       if ((!existing.name || existing.name === existing.partNo) && p.name) existing.name = p.name;
       if (!existing.color && p.color) existing.color = p.color;
       if (!existing.material && p.material) existing.material = p.material;
+      if (!existing.moldNo && p.moldNo) existing.moldNo = p.moldNo;
+      if (!existing.cavity && p.cavity) existing.cavity = p.cavity;
       if (alternates.length > 0) {
         existing.alternates = sanitizeAlternates([...existing.alternates, ...alternates], existing.partNo);
       }
@@ -116,6 +121,8 @@ export function convertUnifiedSeedToMaster(seedData) {
         customer: ip['客戶'] || '',
         color: ip['顏色'] || '',
         material: ip['原料'] || '',
+        moldNo: ip['模具號碼'] || '',
+        cavity: ip['穴數'] || '',
         alternates,
       });
     }
@@ -149,6 +156,10 @@ export function convertUnifiedSeedToMaster(seedData) {
           partNo: internalNo,
           name,
           customer: cpn['客戶'] || '',
+          color: cpn['顏色'] || '',
+          material: cpn['原料'] || '',
+          moldNo: cpn['模具號碼'] || '',
+          cavity: cpn['穴數'] || '',
           alternates: [custNo, drawingNo.replace(/-MC$/i, '')].filter(Boolean),
         });
       }
@@ -158,6 +169,8 @@ export function convertUnifiedSeedToMaster(seedData) {
           partNo: custNo,
           name: cpn['零件名稱(英)'] || cpn['零件名稱(中)'] || custNo,
           customer: cpn['客戶'] || '',
+          moldNo: cpn['模具號碼'] || '',
+          cavity: cpn['穴數'] || '',
           alternates: [internalNo || drawingNo.replace(/-MC$/i, '')].filter(Boolean),
         });
       }

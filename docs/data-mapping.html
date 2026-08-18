@@ -429,7 +429,9 @@
       <tr><td>有組件（parents）的品號</td><td>308（<strong>全部可解析為已登錄組件</strong>）</td></tr>
       <tr><td>無法解析為 master 品號的父鍵</td><td><strong>0</strong>（v7.8.5 修復前為 51.3%）</td></tr>
       <tr><td>孤兒圖（檔名品號未登錄）</td><td><strong>0</strong>（314 唯一品號 / 378 張全部收錄；僅 7 張無品號圖：對照表 + XXXX 占位符，正確排除）</td></tr>
-      <tr><td>內文欄位 vs 檔名品號不一致</td><td>26 張（保留 review 標記，待最後人工確認）</td></tr>
+      <tr><td>內文欄位 vs 檔名品號不一致</td><td>26 張已於 2026-08-17 逐張人工核對：<strong>全部以檔名品號為準</strong>；欄位提取自動化後僅剩 0 未解案例</td></tr>
+      <tr><td>Excel BOM vs 圖檔 BOM 交叉驗證（v7.8.8）</td><td>可比較 117 組：一致 45 / 不一致 72（SB/SC/SD 粒度差異 + 圖檔提取漏件 B-077 等）；Excel 有但無圖 64；圖檔 BOM 有但 Excel 無 127</td></tr>
+      <tr><td>客戶資訊補齊（v7.8.8）</td><td>品號掛客戶 564/1004（零漏掛）；模具號碼 419 / 穴數 414</td></tr>
       <tr><td>無 BOM 參與的品號</td><td>310（無父無子；其中 25 亦無圖檔）</td></tr>
       <tr><td>未登錄組件來源</td><td>已全數收錄為 master 品號（圖檔提取 294 + scannedAssemblies 24）</td></tr>
       <tr><td>圖檔提取數</td><td>1514（組件 1085 / 零件 290 / 物料 139；唯一檔名品號 903）</td></tr>
