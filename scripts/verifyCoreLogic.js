@@ -48,8 +48,8 @@ if (existsSync(MASTER_PATH)) {
     `主資料庫獨一無二性: 總數 (${parts.length}) 必須等於不重複數量 (${uniqueNos.size})`
   );
   assert(
-    parts.length >= 962,
-    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 圖檔優先管線 962 筆（種子 667 + 圖檔提取 292 + E09 合併；667 = 693 + 24 scannedAssemblies − 8 MDXE − 2 收縮膜尺寸雜訊 − 40 互為別名雙實體合併）`
+    parts.length >= 961,
+    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 圖檔優先管線 961 筆（種子 667 + 圖檔提取 292 + E09 合併；667 = 693 + 24 scannedAssemblies − 8 MDXE − 2 收縮膜尺寸雜訊 − 40 互為別名雙實體合併；v7.8.14 SPC 圖號註冊格式修正 −1：SPC0005450 圖號實體改為 RAW0000336）`
   );
 } else {
   console.log(`ℹ️ [CI 沙盒模式] 未檢測到本機私有資料庫 ${MASTER_PATH} (遵循 Zero-Private-Data .gitignore 規範)，略過本機檔案測試。`);

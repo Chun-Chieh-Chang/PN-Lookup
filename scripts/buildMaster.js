@@ -92,6 +92,10 @@ export function mergeDrawingsIntoMaster(master, extract) {
         p.category = '零件圖';
         p.notes = '由組件圖檔名識別，圖內文無零件清單（v7.8.11 降級為零件圖）';
       }
+      // v7.8.14 SPC 圖號修正後：既有單品零件若有組件圖（內文零件清單）→ 升級為組件圖候補
+      if (p && p.category === '單品零件' && it.role === '組件' && (it.bomLinks || []).length) {
+        p.category = '組件圖候補';
+      }
     }
     for (const l of (it.bomLinks || [])) {
       addPart(l.assembly, '組件');

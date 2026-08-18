@@ -287,6 +287,12 @@ function assemblyIdFromFileName(fileName) {
   if (/\(/.test(base)) {
     baseClean = baseClean.replace(/[-_]?C$/i, '');
   }
+  // SPC 圖號註冊格式：<圖號>_<版次>_<品號>（SPC0005450_04_RAW0000336、SPC0014799_10_R1-2361）
+  // → 品號為尾段（圖號與版次不屬品號）；需整串判定（firstToken 切段會誤取圖號當品號）
+  const spcReg = baseClean.match(/^SPC\d+_\d{1,3}_([A-Z0-9][A-Z0-9_.\-]*)$/i);
+  if (spcReg && !/^X{2,}/i.test(spcReg[1]) && !/^BD[-_]/i.test(spcReg[1])) {
+    return spcReg[1];
+  }
   // 本體第一 token 為有效品號格式（排除 PFM-DWG 文件編號、SPC 圖號註冊）→ 本體優先
   // （品號位於檔名首段為命名慣例；尾綴如 _A021-signed 210714 不影響判定）
   const firstToken = baseClean.split(/[_ ]+/)[0];
@@ -476,6 +482,8 @@ async function main() {
     for (const t of String(text || '').split(/[\s,;:()[\].]+/)) {
       const up = t.toUpperCase();
       if (up.length < 4 || candidates.includes(up)) continue;
+      // SPC 圖號註冊格式（SPC\d+ 或 SPC\d+_\d+_…）非品號：組件圖內文會出現自身圖號（SPC0005450 圖內含 SPC0005450）
+      if (/^SPC\d+(_|$)/i.test(up)) continue;
       if (index.has(norm(up))) candidates.push(up);
     }
     if (candidates.length === 0) {
