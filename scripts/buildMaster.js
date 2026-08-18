@@ -164,6 +164,7 @@ export function convertUnifiedSeedToMaster(seedData) {
       if (alternates.length > 0) {
         existing.alternates = sanitizeAlternates([...existing.alternates, ...alternates], existing.partNo);
       }
+      return existing;
     }
   }
 
@@ -286,11 +287,16 @@ export function convertUnifiedSeedToMaster(seedData) {
         for (const item of list) {
           const assemblyId = item.assemblyId || item.id;
           if (!assemblyId) continue;
-          addPart({
+          const asm = addPart({
             partNo: assemblyId,
             name: item.name || assemblyId,
             category: levelKey + '組立',
           });
+          // v7.8.17 組立表優先：seed 零件表先行建檔的組立（如 SA0145）category 為「單品零件」時，
+          // 以 bomHierarchy 組立表為事實來源升級為組立類別（組件鍵與類別一致）
+          if (asm && (asm.category === '單品零件' || !asm.category)) {
+            asm.category = levelKey + '組立';
+          }
           if (Array.isArray(item.children)) {
             for (const child of item.children) {
               const childNo = typeof child === 'string' ? child : (child.partNo || child.id);

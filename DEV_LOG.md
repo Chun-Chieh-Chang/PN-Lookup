@@ -1,5 +1,26 @@
 # PN-Lookup 開發日誌
 
+## v7.8.17 — 組立類別一致性修復（SA0145）與零件/組件區分全面盤點
+
+### 需求內容
+使用者反映「少數零件與組件區分不清」— 部分「零件」按鈕顯示深色（組件色）。
+
+### 執行內容（CAPA）
+1. **RCA**：`SA0145`（SA 組立，children [D09-279-111, H00-111-111-1]）在 seed 零件表先行建檔為「單品零件」，bomHierarchy.SA 的 `addPart` 因「後到者不覆蓋」規則保留錯誤類別 → 類別「零件」但有 children → `isAssembly` 使 badge 顯示深色（深淺混亂唯一來源）。
+2. **修復**：`buildMaster.js` ①convert 的 `addPart` 補 `return existing`（原本成功時無回傳值，v7.8.14 升級判斷依賴回傳值實際從未生效的隱性 bug）；②bomHierarchy 迴圈：既有實體類別為「單品零件」/空 → 以組立表為事實來源升級為 `levelKey+組立`。
+3. **全面盤點（零殘留驗證）**：
+   - 組件鍵（bom.children 192）中類別非組件類：**0**（修復前 1）
+   - 類別為組件類但非組件鍵（無 children）：**0**
+   - 圖檔 role=組件 但 master 非組件類：**0**
+   - 圖檔 role=零件 但 master 為組立類：**22**（SA0145/SB0011/SA0138 等 — 組立圖無標準 KEY UNIT 表頭或表格空白，圖檔側無 BOM 證據，Excel children 兜底；SB0064/SB0065 同型已知備查，**類別無誤，非缺陷**）；R1-2392/R1-3529 另有組件圖版本（(Rev.A)-C.pdf 含 BOM）→ 類別正確
+   - 前端 `getItemType` 完全由 BOM children 決定 → 與類別 100% 一致 → badge 深色 = 組件類別 = 組件鍵
+
+### 驗證結果
+- SA0145：零件 → **SA組立**；master **961/192/451** 不變；組件鍵與類別一致性 **0 異常**。
+- `verifyCoreLogic`（11 項全 PASS）/ `lint` / `build` 全 PASS。
+
+---
+
 ## 全域優化作業（2026-08-18，無版本號）— 死碼清理 / Skills 條款 / MECE / 文件同步
 
 ### 執行內容（CAPA）
