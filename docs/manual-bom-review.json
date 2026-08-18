@@ -1,0 +1,51 @@
+{
+  "generatedAt": "2026-08-18",
+  "source": "Gemini 人工識別（使用者提供，v7.8.18 圖檔內容識別補充）",
+  "note": "4 張組立圖（v7.8.18 盤點遺留無 BOM 交叉驗證品號）的圖面零件清單人工核對記錄。圖面為第一事實來源。",
+  "reviews": [
+    {
+      "assembly": "SB0065",
+      "drawing": "SB0065(Rev.B)-C.pdf",
+      "bom": [
+        { "key": 1, "unit": 1, "partNo": "C11-111-331", "description": "Male to Female Luer Lock", "material": "Bayer Makrolon Rx 1805" },
+        { "key": 2, "unit": 1, "partNo": "B-077", "description": "Sleeve Stopper", "material": "Latex Free Polyisoprene Sleeve Stopper" },
+        { "key": 3, "unit": 1, "partNo": "0.08X14mm", "description": "Shrink Band", "material": "PVC" }
+      ],
+      "conclusion": "confirmed",
+      "note": "與現行 children 展開一致（SB0065→SA0105→[C11-111-331, B-077]）；0.08X14mm 收縮膜依既有規則非品號不納入"
+    },
+    {
+      "assembly": "SB0064",
+      "drawing": "SB0064(Rev.B)-C.pdf",
+      "bom": [
+        { "key": 1, "unit": 1, "partNo": "C11-111-251", "description": "Male to Female Luer Lock", "material": "PolyOne Geon M4910 PVC" },
+        { "key": 2, "unit": 1, "partNo": "B-077", "description": "Sleeve Stopper", "material": "Latex Free Polyisoprene Sleeve Stopper" },
+        { "key": 3, "unit": 1, "partNo": "0.08X14mm", "description": "Shrink Band", "material": "PVC" }
+      ],
+      "conclusion": "confirmed",
+      "note": "與現行 children 展開一致（SB0064→SA0104→[C11-111-251, B-077]）；0.08X14mm 收縮膜依既有規則非品號不納入"
+    },
+    {
+      "assembly": "SB0035",
+      "drawing": "SB0035(Rev.A).pdf",
+      "bom": [
+        { "key": 1, "unit": 1, "partNo": "A02-200-131", "description": "Small T-connector(without Nut)I.D.2.0mm" },
+        { "key": 2, "unit": 1, "partNo": "B-077", "description": "STOPPER" },
+        { "key": 3, "unit": 1, "partNo": "0.08*14mm", "description": "SHRINK BAND" }
+      ],
+      "conclusion": "confirmed",
+      "note": "與現行 children 展開一致（SB0035→SA0058→[A02-200-131, B-077]）；0.08*14mm 收縮膜依既有規則非品號不納入"
+    },
+    {
+      "assembly": "SB0011",
+      "drawing": "SB0011(Rev.A)-C.pdf",
+      "bom": [
+        { "key": 1, "unit": 1, "partNo": "CP96020", "description": "Double T-connector I.D.2.4mm" },
+        { "key": 2, "unit": 1, "partNo": "B-077", "description": "STOPPER" },
+        { "key": 3, "unit": 1, "partNo": "0.08*14mm", "description": "SHRINK BAND" }
+      ],
+      "conclusion": "pending",
+      "note": "CP96020 未登錄 master；與 A03-240-111（alternate CP96019，同名 雙T I.D.2.4mm）關係待查證（疑似新舊品號）；children 維持 A03-240-111（Excel 兜底）"
+    }
+  ]
+}
