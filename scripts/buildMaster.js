@@ -352,6 +352,19 @@ function buildMaster() {
     console.log(`ℹ️ 未找到 ${EXTRACT_PATH}（先執行 node scripts/scanAssemblyImages.js --extract）`);
   }
 
+  // v7.8.15 物料類別三層體系：物料 / 零件 / 組件（SA~SD 組立 + 其他組件）
+  // 內部邏輯判斷維持細粒度值（單品零件/零件圖/組件圖候補/物料圖），僅輸出前統一映射
+  const CATEGORY_ALIAS = {
+    單品零件: '零件',
+    零件圖: '零件',
+    物料圖: '物料',
+    組件圖候補: '其他組件',
+  };
+  for (const p of master.parts) {
+    const alias = CATEGORY_ALIAS[p.category];
+    if (alias) p.category = alias;
+  }
+
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');
   console.log(`Successfully built master table to ${OUTPUT_PATH}!`);

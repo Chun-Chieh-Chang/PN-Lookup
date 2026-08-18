@@ -154,9 +154,24 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
               className={`${inputCls} py-2 px-3 min-w-[130px] cursor-pointer`}
             >
               <option value="">全部類別</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
+              {[
+                { label: '物料', match: (c: string) => c === '物料' },
+                { label: '零件', match: (c: string) => c === '零件' },
+                { label: '組件', match: (c: string) => c.endsWith('組立') || c === '其他組件' },
+              ].map((g) => {
+                const groupCats = categories.filter(g.match);
+                return groupCats.length > 0 && (
+                  <optgroup key={g.label} label={g.label}>
+                    {groupCats.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+              {categories.filter((c) => !['物料', '零件'].includes(c) && !c.endsWith('組立') && c !== '其他組件')
+                .map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
             </select>
           </label>
 

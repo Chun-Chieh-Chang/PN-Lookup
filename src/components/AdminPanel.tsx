@@ -29,7 +29,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
     customer: '',
     partNo: '',
     name: '',
-    category: '單品射出件',
+    category: '零件',
     color: '',
     material: '',
     notes: '',
@@ -37,13 +37,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   });
 
   const CATEGORY_OPTIONS = [
-    '單品射出件',
-    'SA組件',
-    'SB組件',
-    'SC組件',
-    'SD組件',
-    '客戶特規對照件',
-    '輔料/膠材/包材',
+    '物料',
+    '零件',
+    'SA組立',
+    'SB組立',
+    'SC組立',
+    'SD組立',
+    '其他組件',
   ];
 
   const [addPartMsg, setAddPartMsg] = useState('');
@@ -121,7 +121,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       customer,
       partNo,
       name,
-      category: newPart.category || '單品射出件',
+      category: newPart.category || '零件',
       color: newPart.color.trim() || undefined,
       material: newPart.material.trim() || undefined,
       notes: newPart.notes.trim() || undefined,
@@ -132,7 +132,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       customer: '',
       partNo: '',
       name: '',
-      category: '單品射出件',
+      category: '零件',
       color: '',
       material: '',
       notes: '',

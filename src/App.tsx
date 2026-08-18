@@ -272,7 +272,7 @@ export default function App() {
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
   }, [parts]);
 
-  // Unique category list for options（物料類別：單品零件 / 零件圖 / 組件圖候補 / SA~SD 組立 / 物料圖）
+  // Unique category list for options（物料類別：物料 / 零件 / 組件下 SA~SD 組立 + 其他組件）
   const allCategories = useMemo(() => {
     const set = new Set<string>();
     parts.forEach((p) => {
