@@ -210,6 +210,9 @@ export default function App() {
     prefixFilter: '',
     matchMode: 'fuzzy',
     itemTypeFilter: 'all',
+    partNoFilter: '',
+    nameFilter: '',
+    categoryFilter: '',
   });
 
   // Modals state
@@ -265,6 +268,15 @@ export default function App() {
     const set = new Set<string>();
     parts.forEach((p) => {
       if (p.customer) set.add(p.customer);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
+  }, [parts]);
+
+  // Unique category list for options（物料類別：單品零件 / 零件圖 / 組件圖候補 / SA~SD 組立 / 物料圖）
+  const allCategories = useMemo(() => {
+    const set = new Set<string>();
+    parts.forEach((p) => {
+      if (p.category) set.add(p.category);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'zh-Hant'));
   }, [parts]);
@@ -326,6 +338,26 @@ export default function App() {
         if (!itemPrefix.startsWith(filterState.prefixFilter.toUpperCase())) {
           return false;
         }
+      }
+
+      // 欄位篩選（v7.8.13）：品號（含別稱）
+      if (filterState.partNoFilter.trim()) {
+        const q = filterState.partNoFilter.trim().toLowerCase();
+        const ok =
+          item.partNo.toLowerCase().includes(q) ||
+          (item.alternates ?? []).some((a) => a.toLowerCase().includes(q));
+        if (!ok) return false;
+      }
+
+      // 欄位篩選（v7.8.13）：品名規格
+      if (filterState.nameFilter.trim()) {
+        const q = filterState.nameFilter.trim().toLowerCase();
+        if (!item.name.toLowerCase().includes(q)) return false;
+      }
+
+      // 欄位篩選（v7.8.13）：物料類別
+      if (filterState.categoryFilter) {
+        if (item.category !== filterState.categoryFilter) return false;
       }
 
       // Keyword filter
@@ -427,6 +459,22 @@ export default function App() {
         onSearchFieldChange={(field) => setFilterState({...filterState, searchField: field})}
         filterCustomer={filterState.selectedCustomers[0] ?? null}
         onClearCustomerFilter={() => setFilterState({...filterState, selectedCustomers: []})}
+        customers={allCustomers}
+        categories={allCategories}
+        partNoFilter={filterState.partNoFilter}
+        onPartNoFilterChange={(v) => setFilterState({...filterState, partNoFilter: v})}
+        nameFilter={filterState.nameFilter}
+        onNameFilterChange={(v) => setFilterState({...filterState, nameFilter: v})}
+        categoryFilter={filterState.categoryFilter}
+        onCategoryFilterChange={(v) => setFilterState({...filterState, categoryFilter: v})}
+        onSelectCustomer={(c) => setFilterState({...filterState, selectedCustomers: [c]})}
+        onClearFilters={() => setFilterState({
+          ...filterState,
+          partNoFilter: '',
+          nameFilter: '',
+          categoryFilter: '',
+          selectedCustomers: [],
+        })}
       />
 
       {/* Main Data Content */}

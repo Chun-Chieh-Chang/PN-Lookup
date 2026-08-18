@@ -1,5 +1,24 @@
 # PN-Lookup 開發日誌
 
+## v7.8.13 — 欄位篩選：客戶名稱 / 品號 / 物料類別 / 品名規格
+
+### 需求內容
+主介面加入欄位篩選功能：客戶名稱、品號 (Part No)、物料類別、品名規格 (Part Name)。
+
+### 執行內容
+- SearchControls 新增「欄位篩選列」（主搜尋列下方第二列，可與 keyword 全域搜尋組合 AND）：
+  - **客戶名稱**下拉（全部客戶 / 各客戶，與原客戶鎖定連動）
+  - **品號 (Part No)** 文字輸入（含 alternates 別稱模糊比對）
+  - **物料類別**下拉（單品零件 / 零件圖 / 組件圖候補 / SA~SD 組立 / 物料圖，動態取自 parts）
+  - **品名規格 (Part Name)** 文字輸入
+  - 任一篩選生效時顯示「清除篩選」按鈕
+- `FilterState` 新增 `partNoFilter` / `nameFilter` / `categoryFilter`；`filteredParts` 依序套用（itemType → 客戶 → 前綴 → 品號 → 品名 → 類別 → keyword）。
+
+### 驗證結果
+`npm run lint` 0 錯誤；`npm run build` 成功（v7.8.13）。
+
+---
+
 ## v7.8.12 — review 降噪與待確認事項收斂
 
 ### 需求內容
