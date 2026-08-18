@@ -18,6 +18,12 @@
 - master：**1004 parts**（種子 709 + 圖檔提取 294）、BOM 組件 **308** / 連結 **674**、norm 去重 0 重複、**未解析父鍵 0**。
 - 孤兒圖歸零：無品號圖僅 7 張（ICU原料料號對照表 + 6 張 XXXX 占位符，正確排除）；314 唯一品號（378 張）全部收錄。
 - 內文欄位驗證：1033/1514 張提取標題欄，26 張檔名/欄位不一致保留至最後人工確認。
+
+### 2026-08-17 收尾：標題欄提取器強化與 26 張逐張人工核對（CAPA）
+1. 標題欄提取器重構為**多候選收集 + 檔名一致優先**（parseTitleBlock）：FILE NO. 標籤值、標籤下 1~3 行行尾、全圖 DIM. CLASSIFICATION / CRITICAL MAJOR 標記行行尾（MOULDEX 標題欄品號行，例 `CRITICAL MAJOR ALL OTHERS MINOR SA0002`）、PART NO./P/N/Drawing #/零件編號 標籤值、獨立品號行（單 token 且與檔名關聯）五類候選，多候選時優先取與檔名品號一致者（防 BOM 表頭 PART NO. 誤取）。
+2. RCA：SA/SB/SC/SD 系列組件圖為 MOULDEX 版式 — 品號在 FILE NO. 標籤下方多行處的 DIM. CLASSIFICATION / CRITICAL MAJOR 行行尾；SC 系列品號為標題欄獨立行（如 `SC0008`）；E11-000-416-1 的 FILE NO.（檔案編號 E11-001-416-1）與 PART NO.（品號欄 E11-000-416-1）不同，檔名一致候選優先解決。
+3. 人工核對：26 張 review 於 2026-08-17 逐張開啟 PDF 核對（含 dump 標題欄行與關鍵欄位證據），**全部以檔名品號為準**：SPC/RAW/CIV 系列欄位取到規格編號（SPC0002140 圖內 `ICU MEDICAL PART NUMBER: RAW0000075`、SPC0000349 圖內 `PRODUCT#: R1-16529` 為證）；R1-10356 欄位取到原料 Commodity 編號 92673；R1-8391 為版本 r03 連寫；D09-350-211-1 之 FILE NO. 欄為檔案編號筆誤（D09-350-111，日期欄旁有 D09-350-211-1 字樣）。
+4. review 收斂：26 → 13 張（SA0002/SA0006/SA0092/SA0181/SA0182/SB0010/SB0027/SB0034/SB0043/SC0007/SC0040/SD0002/SD0003/E09-999-412-1 等 BOM 表頭誤取全數修正）；13 張全數人工確認以檔名為準，映射邏輯文件 §9 記錄。
 - `verifyCoreLogic` 全數 PASS；`npm run lint` 0 錯誤；`npm run build` 成功。
 
 ---

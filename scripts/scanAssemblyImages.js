@@ -166,24 +166,65 @@ const REV_TOKEN_RE = /^[A-Z]$|^[A-Z][0-9]$|^\d{1,2}$/;
 function parseTitleBlock(lines, { spc = false, fileName = '' } = {}) {
   const out = {};
   const fpNorm = fileName ? norm(assemblyIdFromFileName(fileName)) : '';
+  const cands = [];
+  const related = (tok) => titleBlockToken(tok, { relatedTo: fpNorm });
+  const tryLineEnd = (line) => {
+    if (!line) return null;
+    let found = null;
+    for (const t of line.split(/\s+/).reverse()) {
+      const r = titleBlockToken(t, { relatedTo: fpNorm });
+      if (r) { found = r; break; }
+    }
+    return found;
+  };
+  // 候選 A：FILE NO. 標籤（標題欄檔案編號；MOULDEX 佈局：標籤行下方 1~3 行行尾、
+  // 或全圖 DIM. CLASSIFICATION / CRITICAL MAJOR 標記行的行尾即品號，如 CRITICAL MAJOR ALL OTHERS MINOR SA0002）
   for (let i = 0; i < lines.length; i++) {
     const line = (lines[i] || '').trim();
     if (!line) continue;
-    if (!out.partNo) {
-      const m = line.match(PN_LABEL_RE);
-      if (m) {
-        const rest = line.slice(m.index + m[0].length).trim();
-        let tok = titleBlockToken(rest);
-        if (!tok && /FILE\s*NO/i.test(m[0])) {
-          tok = titleBlockToken(
-            rest.replace(/\([^)]*\)/g, '').replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '').replace(/[-_]?MC$/i, '').replace(/[-_]?C$/i, '').trim(),
-            { relatedTo: fpNorm }
-          );
-        }
-        if (!tok) tok = titleBlockToken(lines[i + 1], { relatedTo: fpNorm });
-        out.partNo = tok || null;
-      }
+    const m = line.match(/FILE\s*NO\.?/i);
+    if (!m) continue;
+    const rest = line.slice(m.index + m[0].length).trim();
+    const t1 = titleBlockToken(
+      rest.replace(/\([^)]*\)/g, '').replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '').replace(/[-_]?MC$/i, '').replace(/[-_]?C$/i, '').trim()
+    );
+    if (t1) cands.push(t1);
+    for (let j = i + 1; j <= Math.min(i + 3, lines.length - 1); j++) {
+      const t = tryLineEnd(lines[j]);
+      if (t) { cands.push(t); break; }
     }
+    for (const line2 of lines) {
+      if (!/DIM\. CLASSIFICATION|CRITICAL MAJOR/i.test(line2)) continue;
+      const t = tryLineEnd(line2);
+      if (t) { cands.push(t); break; }
+    }
+    break;
+  }
+  // 候選 B：其他品號標籤（PART NO. / P/N / Drawing # / 零件編號；值在同行或下一行）
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] || '').trim();
+    if (!line) continue;
+    const m = line.match(PN_LABEL_RE);
+    if (!m) continue;
+    const rest = line.slice(m.index + m[0].length).trim();
+    const t = titleBlockToken(rest) || related(lines[i + 1]);
+    if (t) cands.push(t);
+  }
+  // 候選 C：獨立品號行（整行恰一個 token 且與檔名品號關聯，如 SC0008 的標題欄單獨品號行）
+  if (fpNorm) {
+    for (const line of lines) {
+      const trimmed = (line || '').trim();
+      if (!trimmed || trimmed.split(/\s+/).length !== 1) continue;
+      const t = titleBlockToken(trimmed, { relatedTo: fpNorm });
+      if (t) { cands.push(t); break; }
+    }
+  }
+  // 檔名與品號基本一致為命名慣例：多候選時優先取與檔名品號一致的（防 BOM 表頭誤取）
+  const chosen = cands.find((c) => fpNorm && norm(c) === fpNorm) || cands[0] || null;
+  if (chosen) out.partNo = chosen;
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] || '').trim();
+    if (!line) continue;
     if (!out.rev) {
       const r = line.match(REV_LABEL_RE);
       if (r) {
