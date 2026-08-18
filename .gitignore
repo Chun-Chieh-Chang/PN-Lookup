@@ -1,19 +1,7 @@
-# Dependencies and Build Output
+# PN-Lookup gitignore
 node_modules/
-build/
 dist/
-coverage/
+data/
+rawdata/
 .DS_Store
 *.log
-.env*
-!.env.example
-
-# Sensitive Data & Privacy Files — NEVER push to GitHub
-/data/
-/rawdata/
-/ref/
-*.xlsm
-*.xlsx
-*.csv
-*.ffs_db
-.vscode/

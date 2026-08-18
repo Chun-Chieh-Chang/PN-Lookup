@@ -154,17 +154,4 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   ], []);
 }
 
-export function collectMatchingIds(node: MindMapNode, query: string, ancestors: string[], result: Set<string>) {
-  const q = query.toLowerCase();
-  const selfMatch =
-    node.label.toLowerCase().includes(q) ||
-    node.sublabel?.toLowerCase().includes(q) ||
-    node.parts.some(p => p.partNo.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || (p.customer||'').toLowerCase().includes(q));
-  if (selfMatch) { result.add(node.id); ancestors.forEach(id => result.add(id)); }
-  node.children.forEach(c => collectMatchingIds(c, query, [...ancestors, node.id], result));
-}
 
-export function countParts(node: MindMapNode): number {
-  if (node.isPartNode) return 1;
-  return node.children.reduce((s, c) => s + countParts(c), 0);
-}
