@@ -99,13 +99,15 @@
 <section id="s1">
   <h2><span class="num">1</span> 整體資料流總覽 (Pipeline Overview)</h2>
   <div class="pipeline">
-    <div class="pipeline-step step-raw"><div class="icon">📗</div><div class="label">種子檔</div><div class="sublabel">rawdata/master_table_unified.json</div></div>
+    <div class="pipeline-step step-raw"><div class="icon">📗</div><div class="label">圖檔（第一事實）</div><div class="sublabel">rawdata/圖檔 1514 張</div></div>
     <div class="pipeline-arrow">→</div>
-    <div class="pipeline-step step-build"><div class="icon">⚙️</div><div class="label">建置</div><div class="sublabel">scripts/buildMaster.js</div></div>
+    <div class="pipeline-step step-build"><div class="icon">🔍</div><div class="label">角色化提取</div><div class="sublabel">scanAssemblyImages.js --extract</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-raw"><div class="icon">🧾</div><div class="label">提取結果</div><div class="sublabel">data/drawings-extract.json</div></div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-step step-build"><div class="icon">⚙️</div><div class="label">合併建置</div><div class="sublabel">buildMaster.js (mergeDrawings)</div></div>
     <div class="pipeline-arrow">→</div>
     <div class="pipeline-step step-master"><div class="icon">🗄️</div><div class="label">唯一真源</div><div class="sublabel">data/pn-lookup-master.json</div></div>
-    <div class="pipeline-arrow">→</div>
-    <div class="pipeline-step step-build"><div class="icon">🔍</div><div class="label">組件圖掃描補強</div><div class="sublabel">scanAssemblyImages.js --all --apply</div></div>
     <div class="pipeline-arrow">→</div>
     <div class="pipeline-step step-api"><div class="icon">🌐</div><div class="label">API / 匯入</div><div class="sublabel">server.js :3001</div></div>
     <div class="pipeline-arrow">→</div>
@@ -114,8 +116,10 @@
     <div class="pipeline-step step-ui"><div class="icon">🖥️</div><div class="label">操作介面</div><div class="sublabel">PartDetailModal 等</div></div>
   </div>
   <div class="alert alert-info">
-    <strong>資料流重點：</strong>① 種子檔與圖檔皆屬私密原始數據，<code>rawdata/</code>、<code>data/</code> 被 <code>.gitignore</code> 排除，零私密數據上雲；
-    ② <code>data/pn-lookup-master.json</code> 為唯一真源；③ 前端衍生欄位一律即時推導，不信任任何儲存值。
+    <strong>資料流重點（v7.8.7）：</strong>① 圖檔為品號第一事實來源（角色化提取 → drawings-extract.json → mergeDrawings 合併）；
+    ② 種子檔（產品一覽表.xlsm 轉譯）負責補欄位與 BOM 階層基底；
+    ③ 內文標題欄（PART NO. / REV / FILE NO. / TITLE 等）為品號與版本最終確認依據（26 張不一致保留人工確認）；
+    ④ <code>data/pn-lookup-master.json</code> 為唯一真源；⑤ 前端衍生欄位一律即時推導，不信任任何儲存值。
   </div>
 </section>
 
@@ -419,15 +423,16 @@
   <table class="mapping-table">
     <thead><tr><th>指標</th><th>數值</th></tr></thead>
     <tbody>
-      <tr><td>master 品號總數</td><td>717（種子 693 + scannedAssemblies 組件圖補登 24）</td></tr>
-      <tr><td>BOM 組件數（bom.children 鍵數）</td><td>243（種子 181 + 掃描補強）</td></tr>
-      <tr><td>BOM 父子連結總數</td><td>610</td></tr>
-      <tr><td>有組件（parents）的品號</td><td>249（<strong>全部可解析為已登錄組件</strong>）</td></tr>
+      <tr><td>master 品號總數</td><td>1004（種子 709 + 圖檔提取 294）</td></tr>
+      <tr><td>BOM 組件數（bom.children 鍵數）</td><td>308（種子 181 + 圖檔組件圖補強）</td></tr>
+      <tr><td>BOM 父子連結總數</td><td>674</td></tr>
+      <tr><td>有組件（parents）的品號</td><td>308（<strong>全部可解析為已登錄組件</strong>）</td></tr>
       <tr><td>無法解析為 master 品號的父鍵</td><td><strong>0</strong>（v7.8.5 修復前為 51.3%）</td></tr>
-      <tr><td>無圖檔可對應的品號</td><td>92（SA組立 44 / 單品零件 33 / SB組立 14 / SC組立 1）</td></tr>
+      <tr><td>孤兒圖（檔名品號未登錄）</td><td><strong>0</strong>（314 唯一品號 / 378 張全部收錄；僅 7 張無品號圖：對照表 + XXXX 占位符，正確排除）</td></tr>
+      <tr><td>內文欄位 vs 檔名品號不一致</td><td>26 張（保留 review 標記，待最後人工確認）</td></tr>
       <tr><td>無 BOM 參與的品號</td><td>310（無父無子；其中 25 亦無圖檔）</td></tr>
-      <tr><td>未登錄組件來源</td><td>已全數補登為 master 品號（MDXE-* 8、R1-* 15、SC0044）</td></tr>
-      <tr><td>組件圖掃描數</td><td>1514（967 張含已知零件、454 張含未收錄候補）</td></tr>
+      <tr><td>未登錄組件來源</td><td>已全數收錄為 master 品號（圖檔提取 294 + scannedAssemblies 24）</td></tr>
+      <tr><td>圖檔提取數</td><td>1514（組件 1085 / 零件 290 / 物料 139；唯一檔名品號 903）</td></tr>
     </tbody>
   </table>
   <div class="alert alert-info">

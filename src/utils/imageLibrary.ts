@@ -85,6 +85,11 @@ function findForCandidate(files: File[], candidate: string): File | null {
     for (const s of segs) {
       const sNorm = normalize(s);
       if (isMatchedSegment(sNorm, pnNorm)) return f;
+      // BD 客戶代稱前綴剝除：BD-8003875 → 8003875（BD 不屬品號）
+      if (sNorm.length > 2 && sNorm.startsWith('BD')) {
+        const stripped = sNorm.slice(2);
+        if (stripped.length >= 4 && isMatchedSegment(stripped, pnNorm)) return f;
+      }
     }
   }
   return null;
@@ -112,6 +117,14 @@ function findAllForCandidate(files: File[], candidate: string): File[] {
       if (isMatchedSegment(sNorm, pnNorm)) {
         result.push(f);
         break;
+      }
+      // BD 客戶代稱前綴剝除：BD-8003875 → 8003875（BD 不屬品號）
+      if (sNorm.length > 2 && sNorm.startsWith('BD')) {
+        const stripped = sNorm.slice(2);
+        if (stripped.length >= 4 && isMatchedSegment(stripped, pnNorm)) {
+          result.push(f);
+          break;
+        }
       }
     }
   }

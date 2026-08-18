@@ -12,6 +12,8 @@
  * 用法：
  *   node scripts/scanAssemblyImages.js            # 產生報告 data/assembly-scan-report.json
  *   node scripts/scanAssemblyImages.js --all      # 掃描 rawdata/圖檔 全部子資料夾（預設僅掃組件圖資料夾）
+ *   node scripts/scanAssemblyImages.js --extract  # 全圖檔角色化提取（組件/零件/物料）→ data/drawings-extract.json
+ *                                                  （v7.8.7 圖檔優先管線：buildMaster 以此為第一事實來源）
  *   node scripts/scanAssemblyImages.js --parent-of <PN>   # 反向識別：找出哪些產品圖面包含該品號
  *   node scripts/scanAssemblyImages.js --apply    # 將組件圖已知零件寫入 master BOM
  *   node scripts/scanAssemblyImages.js --auto     # 自動納入未收錄品號為新零件並建 BOM
@@ -26,6 +28,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..');
 const MASTER_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
 const REPORT_PATH = join(ROOT_DIR, 'data', 'assembly-scan-report.json');
+const EXTRACT_PATH = join(ROOT_DIR, 'data', 'drawings-extract.json');
 const RAW_SEED_PATH = join(ROOT_DIR, 'rawdata', 'master_table_unified.json');
 
 // Node 環境 polyfill（pdfjs legacy build 需要 DOM 型別）
@@ -47,7 +50,17 @@ const ALL_IMAGE_DIR = join('rawdata', '圖檔');
 // 命令列參數
 const argv = process.argv.slice(2);
 const scanAll = argv.includes('--all');
+const extractMode = argv.includes('--extract');
 const parentOfArg = argv.includes('--parent-of') ? argv[argv.indexOf('--parent-of') + 1] : null;
+
+// 圖檔角色（v7.8.7 圖檔優先管線）：依目錄判定
+// 組件 = 內文零件清單可建立 BOM；零件/物料 = 檔名即自身品號，不建立 BOM
+function roleOf(rel) {
+  const p = rel.replace(/\\/g, '/');
+  if (/物料資料\//.test(p)) return '物料';
+  if (/廠內零件圖面/.test(p) || /ICU原料圖面/.test(p)) return '零件';
+  return '組件';
+}
 
 function walkDir(dir, out) {
   if (!existsSync(dir)) return;
@@ -84,42 +97,161 @@ function extractPartNoCandidates(text) {
   return [...out];
 }
 
-async function extractPdfText(filePath) {
+async function extractPdfText(filePath, { withLines = false } = {}) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const data = new Uint8Array(readFileSync(filePath).buffer);
   const loadingTask = pdfjs.getDocument({ data });
   const doc = await loadingTask.promise;
   let text = '';
+  const lines = [];
   try {
     for (let i = 1; i <= Math.min(doc.numPages, 6); i++) {
       const page = await doc.getPage(i);
       const tc = await page.getTextContent();
       text += tc.items.map((x) => x.str || '').join(' ') + '\n';
+      if (withLines) {
+        const items = tc.items.map((x) => ({ str: x.str || '', x: x.transform[4], y: x.transform[5] }));
+        const rows = new Map();
+        for (const it of items) {
+          const key = Math.round(it.y / 4);
+          if (!rows.has(key)) rows.set(key, []);
+          rows.get(key).push(it);
+        }
+        for (const r of rows.values()) {
+          const line = r
+            .sort((a, b) => a.x - b.x)
+            .map((it) => it.str.trim())
+            .filter(Boolean)
+            .join(' ');
+          if (line) lines.push(line);
+        }
+      }
       page.cleanup();
     }
   } finally {
     await loadingTask.destroy();
   }
-  return text;
+  return withLines ? { text, lines } : text;
+}
+
+// v7.8.7 圖檔內文標題欄提取（領域規則：內文「零件編號 / PART NO.」欄位為品號最終確認依據、
+// 「REV / Revision」為版本依據；SPC 圖另以「PART / Description / Revision」對應品號/品名/版本）
+const PN_LABEL_RE = /(PART\s*NO\.?|^P\/N\s*$|^PART\s*$|DRAWING\s*#|FILE\s*NO\.?|零件編號)/i;
+const REV_LABEL_RE = /(^REV\b|REVISION)/i;
+const TITLE_LABEL_RE = /^TITLE\s*$/i;
+const NON_REV_TOKEN = /^(DATE|CKD|NO|BY|DRA|DESCRIPTION|CHECK|APPROVED)$/i;
+const DATE_TOKEN_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function titleBlockToken(line, { relatedTo = null } = {}) {
+  if (!line) return null;
+  for (const t of line.split(/\s+/)) {
+    if (!/^[A-Z0-9][A-Z0-9._\-]*$/i.test(t) || t.length < 4) continue;
+    if (/^X{2,}$/i.test(t)) continue;
+    if (!/\d/.test(t)) continue;
+    if (DATE_TOKEN_RE.test(t)) continue;
+    if (/mm$/i.test(t)) continue;
+    if (/^\d{3,5}-\d{1,2}$/.test(t)) continue;
+    if (relatedTo) {
+      const tn = norm(t);
+      if (!(tn === relatedTo || (tn.length > relatedTo.length && tn.startsWith(relatedTo)) || (relatedTo.length > tn.length && relatedTo.startsWith(tn)))) continue;
+    }
+    return t;
+  }
+  return null;
+}
+
+// REV 欄位值限制：單字母版次（A-Z）、字母+數字（E1）、或純數字（1、04）；排除雜訊（SO、VISION 等）
+const REV_TOKEN_RE = /^[A-Z]$|^[A-Z][0-9]$|^\d{1,2}$/;
+
+function parseTitleBlock(lines, { spc = false, fileName = '' } = {}) {
+  const out = {};
+  const fpNorm = fileName ? norm(assemblyIdFromFileName(fileName)) : '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = (lines[i] || '').trim();
+    if (!line) continue;
+    if (!out.partNo) {
+      const m = line.match(PN_LABEL_RE);
+      if (m) {
+        const rest = line.slice(m.index + m[0].length).trim();
+        let tok = titleBlockToken(rest);
+        if (!tok && /FILE\s*NO/i.test(m[0])) {
+          tok = titleBlockToken(
+            rest.replace(/\([^)]*\)/g, '').replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '').replace(/[-_]?MC$/i, '').replace(/[-_]?C$/i, '').trim(),
+            { relatedTo: fpNorm }
+          );
+        }
+        if (!tok) tok = titleBlockToken(lines[i + 1], { relatedTo: fpNorm });
+        out.partNo = tok || null;
+      }
+    }
+    if (!out.rev) {
+      const r = line.match(REV_LABEL_RE);
+      if (r) {
+        const rest = line.slice(r.index + r[0].length).trim();
+        const tok = rest.split(/\s+/)[0];
+        if (tok && REV_TOKEN_RE.test(tok) && !NON_REV_TOKEN.test(tok)) out.rev = tok;
+      }
+    }
+    if (!out.name) {
+      if (TITLE_LABEL_RE.test(line) || (spc && /^Description$/i.test(line))) {
+        const tok = titleBlockToken(lines[i + 1]);
+        if (tok) out.name = tok;
+      }
+    }
+  }
+  // 客戶圖格式 fallback：無 PART 標籤時，前 6 行內品號格式 token，
+  // 且須與檔名品號關聯（檔名與內文品號基本一致為命名慣例；避免誤取圖框名/尺寸）
+  if (!out.partNo && fpNorm) {
+    for (let i = 0; i < Math.min(6, lines.length); i++) {
+      const tok = titleBlockToken(lines[i], { relatedTo: fpNorm });
+      if (tok) {
+        out.partNo = tok;
+        break;
+      }
+    }
+  }
+  return Object.keys(out).length ? out : null;
 }
 
 // 檔名 → 組件品號（如 BD-8003875_Rev.04.pdf → BD-8003875）
-// 括號內品號優先：<文件編號>(<品號>)_Rev.X（如 PFM-DWG-30125-01(126-006)_Rev.AB.pdf → 126-006）
+// 規則：本體（剝除括號/版本/-C/中文描述後）為有效品號格式且非文件編號 → 本體優先；
+//       否則取括號內品號（排除 Rev/Rec 版次、純數字 1~3 位、含底線/空格尺寸、XXXX 占位符）
+//       例：PFM-DWG-30125-01(126-006)_Rev.AB.pdf → 本體為文件編號 → 126-006
+//           PL-9001(Rev.B)_空白包裝袋(140_120).pdf → 本體 PL-9001（尺寸 140_120 排除）
+//           9X.20860.005(6X.20860.405)(PL-9001包裝袋...).pdf → 本體 9X.20860.005
 function assemblyIdFromFileName(fileName) {
   const base = fileName.replace(/\.[^.]+$/, '');
   const parens = [...base.matchAll(/\(([^)]*)\)/g)].map((m) => m[1].trim());
-  const parenPn = parens.find((p) => !/^Rev/i.test(p) && !/^\d{1,3}$/.test(p));
+  // 本體剝除：移除括號、版本尾綴、-C、mdx 標記（領域規則：mdx 不屬品號）、
+  //           中文描述後綴、BD 客戶代稱前綴（領域規則：BD 不屬品號）
+  //           例：BD_404028_Rev.1 → 404028；BD(BARD)-RM5003037含規格書 → RM5003037
+  let baseClean = base
+    .replace(/\([^)]*\)/g, '')
+    .replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '')
+    .replace(/[-_ ]?mdx$/i, '')
+    .trim();
+  baseClean = baseClean.replace(/[^\x00-\x7F].*$/, '');
+  baseClean = baseClean.replace(/^BD[-_]/i, '').replace(/[_\-]+$/, '').trim();
+  // 僅「含括號」的檔名才剝除尾綴 -C（如 (Rev.A)-C.pdf）；避免誤傷 -MC 品號（75-0485-MC_29 → 75-0485-MC）
+  if (/\(/.test(base)) {
+    baseClean = baseClean.replace(/[-_]?C$/i, '');
+  }
+  // 本體第一 token 為有效品號格式（排除 PFM-DWG 文件編號、SPC 圖號註冊）→ 本體優先
+  // （品號位於檔名首段為命名慣例；尾綴如 _A021-signed 210714 不影響判定）
+  const firstToken = baseClean.split(/[_ ]+/)[0];
+  if (/^[A-Z0-9][A-Z0-9_.\-]*$/i.test(firstToken) && !/^(PFM-DWG-|SPC\d+_\d+_)/i.test(firstToken)) {
+    return firstToken;
+  }
+  const parenPn = parens.find((p) =>
+    !/^(Rev|Rec)/i.test(p) && !/^\d{1,3}$/.test(p) && !/X{2,}/i.test(p) && !/[_ ]/.test(p)
+  );
   if (parenPn) {
     return parenPn
       .replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '')
       .replace(/[-_]?C$/i, '')
       .trim();
   }
-  return base
-    .replace(/\([^)]*\)/g, '')
-    .replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '')
-    .replace(/[-_]?C$/i, '')
-    .trim();
+  return baseClean;
 }
 
 // 將檔名衍生組件 ID 解析為 master 標準品號（版本/來源後綴剝除 → 內文自身品號前綴比對）
@@ -127,22 +259,40 @@ function resolveAssemblyId(assemblyId, knownList, index) {
   const normA = norm(assemblyId);
   if (index.has(normA)) return index.get(normA);
 
-  // BD- 圖型前綴（非品號一部分）：BD-X3299AAM → X3299AAM（未命中 master 則保留原樣，由非品號過濾排除）
+  // 家族前綴合併：core 為某 master 品號的前綴且後續首字元非數字（X3299 → X3299AAM，
+  // BD-X3299 圖與 BD-X3299AAM 圖同 Rev.7 同內容；R1-1585 不會誤合併 R1-15853 因後續為數字）
+  if (normA.length >= 3) {
+    for (const [nk, pn] of index) {
+      if (nk.length > normA.length && nk.startsWith(normA) && !/\d/.test(nk[normA.length])) {
+        return pn;
+      }
+    }
+  }
+
+  // BD- 圖型前綴（非品號一部分）：BD-X3299AAM → X3299AAM（未命中 master 則回傳剝除後的核心，
+  // 使 BD-8013945 → 8013945 可作為待登錄品號；若 core 為既有品號的家族前綴如 X3299 → X3299AAM 則合併）
   const bd = assemblyId.match(/^BD[-_](.+)$/i);
   if (bd) {
-    const core = bd[1];
-    const hit = index.get(norm(core));
-    if (hit) return hit;
-    return assemblyId;
+    const core = bd[1].trim();
+    const direct = index.get(norm(core));
+    if (direct) return direct;
+    // 家族前綴合併：core 為某 master 品號的前綴且後續首字元非數字（BD-X3299 → X3299AAM）
+    for (const [nk, pn] of index) {
+      if (nk.length > norm(core).length && nk.startsWith(norm(core)) && !/\d/.test(nk[norm(core).length])) {
+        return pn;
+      }
+    }
+    return core;
   }
 
   // 逐層剝除常見後綴（_mdx / -MC_xx / -C / _xx / Rev），每剝一層即查 master
   let cur = assemblyId;
   let stripped = assemblyId;
   const steps = [
-    (s) => s.replace(/_mdx$/i, ''),
+    (s) => s.replace(/[-_ ]?mdx$/i, ''),
+    // -MC = Mouldex Component（客戶供應商/來源標記，不屬品號）：75-0485-MC → 75-0485
     (s) => s.replace(/[-_]?MC[_ ]?\d{1,3}$/i, ''),
-    (s) => s.replace(/[-_]?C$/i, ''),
+    (s) => s.replace(/[-_]?MC$/i, ''),
     (s) => s.replace(/_\d{1,3}$/i, ''),
     (s) => s.replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, ''),
   ];
@@ -171,6 +321,13 @@ function resolveAssemblyId(assemblyId, knownList, index) {
   // 未命中 master 也回傳最乾淨的剝除形式（合併同家族版本，供後續登錄/比對）
   if (stripped !== assemblyId) return stripped;
 
+  // 中文描述後綴剝除（「PL-9001_包裝袋」→ PL-9001）：品號格式不含中文（PART_NO_TOKEN_RE 亦排除），
+  // 中文段為描述性文字；僅當剝除後為純 ASCII 品號格式才採用
+  const asciiHead = stripped.replace(/[^A-Za-z0-9_.\-].*$/, '').trim();
+  if (asciiHead && asciiHead !== stripped && /^[A-Z0-9][A-Z0-9_.\-]*$/i.test(asciiHead)) {
+    return asciiHead;
+  }
+
   // 圖面內文標註的自身品號：候選品號為組件 ID 正規化前綴且後一碼非數字（邊界防誤判）
   for (const k of knownList) {
     const nk = norm(k.partNo);
@@ -180,6 +337,29 @@ function resolveAssemblyId(assemblyId, knownList, index) {
     }
   }
   return assemblyId;
+}
+
+// 檔名品號有效判定：排除 SPC/PFM/BD 文件編號、占位符 XXXX、過短（130/140/220）、
+// 純字母無數字（BARD/SK — 無法確認是品號，改記 pendingCandidates 待人工確認）
+function sanitizeFilePartNo(id) {
+  if (!id || typeof id !== 'string') return null;
+  if (!/^[A-Z0-9][A-Z0-9_.\-]*$/i.test(id)) return null;
+  if (id.length < 4 || !/\d/.test(id)) return null;
+  if (/X{2,}/i.test(id)) return null;
+  if (/^(SPC\d+_\d+_(RAW|CIV)\d+|PFM-DWG-|BD[-_][A-Z0-9]+)$/i.test(id)) return null;
+  return id;
+}
+
+// 疑義候選：檔名第一 token 為品號格式但無法確認（純字母、過短）→ 待人工確認清單
+function pendingCandidateFromFileName(fileName) {
+  const base = fileName.replace(/\.[^.]+$/, '').replace(/\([^)]*\)/g, '').replace(/[_ ]?Rev\.? ?[A-Z0-9]*$/i, '');
+  const token = (base.split(/[_()\s]+/)[0] || '').trim();
+  if (!token) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._\-]*$/.test(token)) return null;
+  if (/X{2,}/i.test(token)) return null;
+  if (/^(SPC|PFM-DWG)/i.test(token)) return null;
+  if (token.length >= 4 && /\d/.test(token)) return null; // 有數字且夠長 = 有效候選（已有 filePartNo 路徑）
+  return token;
 }
 
 async function main() {
@@ -196,33 +376,64 @@ async function main() {
   }
 
   const allFiles = [];
-  if (scanAll) {
+  if (scanAll || extractMode) {
     walkDir(ALL_IMAGE_DIR, allFiles);
   } else {
     for (const d of ASSEMBLY_DIRS) walkDir(d, allFiles);
   }
-  console.log(`掃描圖檔 ${allFiles.length} 張...${scanAll ? '（全資料夾模式）' : ''}${parentOfArg ? `（反向識別 ${parentOfArg}）` : ''}`);
+  console.log(`掃描圖檔 ${allFiles.length} 張...${scanAll || extractMode ? '（全資料夾模式）' : ''}${extractMode ? '（角色化提取）' : ''}${parentOfArg ? `（反向識別 ${parentOfArg}）` : ''}`);
 
   const report = [];
   const bomLinks = []; // { assembly, child }
+  const extractItems = []; // v7.8.7 圖檔優先管線：全部圖檔角色化提取
+  const titleBlocks = new Map(); // f → { partNo, rev, name }（內文標題欄）
 
   for (const f of allFiles) {
-    const fileName = f.split(/[\\/]/).pop();
+    const rel = f.replace(/\\/g, '/');
+    const fileName = rel.split('/').pop();
     const rawAssemblyId = assemblyIdFromFileName(fileName);
     let text = '';
 
     if (/\.pdf$/i.test(fileName)) {
       try {
-        text = await extractPdfText(f);
+        const pdfResult = await extractPdfText(f, { withLines: extractMode });
+        text = typeof pdfResult === 'string' ? pdfResult : pdfResult.text;
+        if (extractMode) {
+          const spc = /^SPC\d/i.test(fileName);
+          const titleBlock = parseTitleBlock(pdfResult.lines, { spc, fileName });
+          titleBlocks.set(f, titleBlock);
+        }
       } catch (e) {
+        const role = extractMode ? roleOf(rel) : null;
         report.push({ file: fileName, assemblyId: rawAssemblyId, ok: false, reason: `PDF 無法讀取: ${e.message}` });
+        if (extractMode) {
+          const filePartNo = sanitizeFilePartNo(resolveAssemblyId(rawAssemblyId, [], index));
+          extractItems.push({
+            rel, file: fileName, role, ok: false,
+            reason: `PDF 無法讀取: ${e.message}`,
+            filePartNo, pendingCandidate: filePartNo ? null : pendingCandidateFromFileName(fileName),
+            assemblyId: filePartNo, known: [], unknown: [], bomLinks: [],
+            titleBlock: null,
+          });
+        }
         continue;
       }
     }
 
     const candidates = extractPartNoCandidates(text);
     if (candidates.length === 0) {
+      const role = extractMode ? roleOf(rel) : null;
       report.push({ file: fileName, assemblyId: rawAssemblyId, ok: false, reason: '未提取到品號' });
+      if (extractMode) {
+        const filePartNo = sanitizeFilePartNo(resolveAssemblyId(rawAssemblyId, [], index));
+        extractItems.push({
+          rel, file: fileName, role, ok: false,
+          reason: '未提取到品號',
+          filePartNo, pendingCandidate: filePartNo ? null : pendingCandidateFromFileName(fileName),
+          assemblyId: filePartNo, known: [], unknown: [], bomLinks: [],
+          titleBlock: null, review: null,
+        });
+      }
       continue;
     }
 
@@ -245,14 +456,45 @@ async function main() {
 
     unknown.sort();
     const assemblyId = resolveAssemblyId(rawAssemblyId, known, index);
-    report.push({ file: fileName, assemblyId, ok: known.length > 0, known, unknown });
+    const role = extractMode ? roleOf(rel) : null;
 
-    for (const p of known) {
-      // 排除含中文/空格等非品號字元的檔名衍生組件（如「PN-0002_… 包裝說明書」）
-      // 排除文件編號格式（SPC 圖號註冊 SPCxxxx_NN_RAW/CIVxxxx、PFM-DWG）與未剝除的 BD- 前綴
-      const nonPn = /^(SPC\d+_\d+_(RAW|CIV)\d+|PFM-DWG-|BD[-_][A-Z0-9]+)$/i.test(assemblyId);
-      if (p.partNo !== assemblyId && !nonPn && /^[A-Z0-9][A-Z0-9_.\-]*$/i.test(assemblyId)) {
-        bomLinks.push({ assembly: assemblyId, child: p.partNo });
+    // 檔名品號：組件圖 = 解析後的組件 ID；零件/物料圖 = 剝除版本後綴的自身品號
+    const filePartNo = sanitizeFilePartNo(assemblyId);
+    const pendingCandidate = filePartNo ? null : pendingCandidateFromFileName(fileName);
+
+    report.push({ file: fileName, assemblyId, ok: known.length > 0, known, unknown });
+    if (extractMode) {
+      const titleBlock = titleBlocks.get(f) || null;
+      let review = null;
+      if (titleBlock && titleBlock.partNo && filePartNo) {
+        // 剝除 -MC/-C 後綴標記後比較（75-0485-MC ≡ 75-0485）；仍不同才標記
+        const stripSuffix = (s) => s.replace(/[-_]?MC$/i, '').replace(/[-_]?C$/i, '');
+        if (norm(stripSuffix(titleBlock.partNo)) !== norm(stripSuffix(filePartNo))) {
+          review = `內文欄位品號 ${titleBlock.partNo} 與檔名品號 ${filePartNo} 不一致`;
+        }
+      }
+      extractItems.push({
+        rel, file: fileName, role, ok: known.length > 0,
+        filePartNo, pendingCandidate,
+        assemblyId,
+        titleBlock,
+        review,
+        known, unknown,
+        bomLinks: [],
+      });
+    }
+
+    // BOM 連結：僅組件圖的內文零件清單（零件/物料圖內文不建立父子關係）
+    if (role !== '零件' && role !== '物料') {
+      for (const p of known) {
+        // 排除含中文/空格等非品號字元的檔名衍生組件（如「PN-0002_… 包裝說明書」）
+        // 排除文件編號格式（SPC 圖號註冊 SPCxxxx_NN_RAW/CIVxxxx、PFM-DWG）與未剝除的 BD- 前綴
+        const nonPn = /^(SPC\d+_\d+_(RAW|CIV)\d+|PFM-DWG-|BD[-_][A-Z0-9]+)$/i.test(assemblyId);
+        if (p.partNo !== assemblyId && !nonPn && /^[A-Z0-9][A-Z0-9_.\-]*$/i.test(assemblyId)) {
+          bomLinks.push({ assembly: assemblyId, child: p.partNo });
+          const last = extractItems[extractItems.length - 1];
+          if (last) last.bomLinks.push({ assembly: assemblyId, child: p.partNo });
+        }
       }
     }
   }
@@ -261,6 +503,38 @@ async function main() {
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2), 'utf-8');
   console.log(`報告已寫入 ${REPORT_PATH}`);
+
+  if (extractMode) {
+    const roleCount = {};
+    let withFilePartNo = 0;
+    for (const it of extractItems) {
+      roleCount[it.role] = (roleCount[it.role] || 0) + 1;
+      if (it.filePartNo) withFilePartNo++;
+    }
+    const filePns = new Set(extractItems.map((it) => it.filePartNo).filter(Boolean));
+    const pendingMap = new Map();
+    for (const it of extractItems) {
+      if (it.pendingCandidate) pendingMap.set(it.pendingCandidate, (pendingMap.get(it.pendingCandidate) || 0) + 1);
+    }
+    writeFileSync(EXTRACT_PATH, JSON.stringify({
+      generatedAt: new Date().toISOString(),
+      totalFiles: extractItems.length,
+      roles: roleCount,
+      uniqueFilePartNos: filePns.size,
+      pendingCandidates: Object.fromEntries([...pendingMap.entries()].sort((a, b) => b[1] - a[1])),
+      items: extractItems,
+    }, null, 2), 'utf-8');
+    console.log(`角色化提取已寫入 ${EXTRACT_PATH}`);
+    console.log(`  角色分佈: ${JSON.stringify(roleCount)}`);
+    console.log(`  檔名品號提取: ${withFilePartNo}/${extractItems.length} 張, 唯一 ${filePns.size} 個`);
+    if (pendingMap.size > 0) {
+      console.log(`  待人工確認候選（純字母/過短）: ${[...pendingMap.entries()].map(([t, n]) => `${t}(${n})`).join(', ')}`);
+    }
+    // 孤兒圖（檔名品號未登錄 master）統計
+    const unregPns = new Set([...filePns].filter((pn) => !index.has(norm(pn))));
+    const orphanFiles = extractItems.filter((it) => !it.filePartNo || !index.has(norm(it.filePartNo)));
+    console.log(`  未登錄 master 的檔名品號: ${unregPns.size} 個 → 對應圖檔 ${orphanFiles.length} 張（待收錄）`);
+  }
 
   const okRows = report.filter((r) => r.ok);
   const withUnknown = report.filter((r) => r.unknown && r.unknown.length > 0);

@@ -189,11 +189,17 @@ export function findParentProducts(
     const segs = [base, ...base.split(/[_\s()\[\],/]+/i)];
     for (const seg of segs) {
       const sNorm = normalize(seg);
-      for (let i = 3; i <= sNorm.length; i++) {
-        const owner = normIndex.get(sNorm.slice(0, i));
-        if (!owner) continue;
-        const nextChar = sNorm[i];
-        if (i === sNorm.length || !nextChar || nextChar < '0' || nextChar > '9') return owner;
+      // BD 客戶代稱前綴剝除：BD-8003875 → 8003875（BD 不屬品號）
+      const variants = sNorm.startsWith('BD') && sNorm.length > 2 && sNorm.slice(2).length >= 4
+        ? [sNorm, sNorm.slice(2)]
+        : [sNorm];
+      for (const v of variants) {
+        for (let i = 3; i <= v.length; i++) {
+          const owner = normIndex.get(v.slice(0, i));
+          if (!owner) continue;
+          const nextChar = v[i];
+          if (i === v.length || !nextChar || nextChar < '0' || nextChar > '9') return owner;
+        }
       }
     }
     return null;

@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.8.6)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.8.7)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算、3D 空間花瓣產品思維導圖與知識本體論 (Ontology) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.8.6-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.8.7-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -13,7 +13,7 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 ## 🌟 核心功能亮點
 
 - 🔍 **極速全域與欄位比對**：支援品號 (Part No)、客戶名稱、中文品名規格、替代料號 (Alternates) 即時模糊與前綴檢索，提供鍵盤快捷鍵與全域排序。
-- 🪐 **3D 空間花瓣產品思維導圖 (ProductMindMap3DModal v7.8.6)**：
+- 🪐 **3D 空間花瓣產品思維導圖 (ProductMindMap3DModal v7.8.7)**：
   - 基於 Three.js 空間球殼向度演算法，消除 2D 導圖「看得到全局卻看不清局部」的視角拉伸問題。
   - **三大體系智慧開關**：左側圖例為「收」狀態時不渲染對應體系節點與文字訊息，保持畫面極致清爽；切換「開」時動態展開並平滑相機對焦。
   - **神經脈絡纖細連線**：0.45px 極細半透明（40% 莫蘭迪霧灰）空間連線與 1.2px 柔和流向粒子，打造輕盈通透的高階科技視覺。
@@ -30,7 +30,7 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
   - 全自動遞迴掃描工程圖面檔，支援檔名高級正規化匹配、PDF 文字層提取、視覺 OCR 與本體語意推導多軌解析。
 - 🔄 **圖檔反向識別**：
   - 自所有已辨識圖檔內文中，自動找出「該品號可組成哪些產品」（上層組件候選），一鍵加入 BOM 關聯；支援 `scanAssemblyImages.js --all --parent-of <PN>` 伺服端全量反向掃描。
-  - 組件圖識別補登品號以種子 `scannedAssemblies` 區塊（v7.8.6）正式收錄 master table（MDXE-* / R1-* / SC0044 共 24 筆），未解析父鍵歸零。
+  - 組件圖識別補登品號以種子 `scannedAssemblies` 區塊（v7.8.7）正式收錄 master table（MDXE-* / R1-* / SC0044 共 24 筆），未解析父鍵歸零。
 - ⚡ **效能防禦按需 OCR 引擎 (On-Demand OCR)**：
   - 載入資料夾時僅讀取本地快取，零背景資源消耗。
 - 🔒 **ISO 13485 / GMP 權限與數據維護分工**：

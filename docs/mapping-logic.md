@@ -1,6 +1,6 @@
 ﻿# PN-Lookup 品號 ↔ 圖檔 ↔ BOM 完整映射邏輯
 
-> 版本：v7.8.5 ｜ 最後整理：2026-08-17
+> 版本：v7.8.7 ｜ 最後整理：2026-08-17
 > 本文從資料源頭開始，完整說明「品號資料庫（master）」、「圖檔」、「BOM 階層」三者之間的所有映射規則與資料流，作為日後維護與除錯的單一參考文件。
 
 ---
@@ -8,20 +8,23 @@
 ## 0. 總覽（資料流一覽）
 
 ```
-rawdata/master_table_unified.json（種子：4 張來源表 + BOM 階層）
-        │  buildMaster.js（scripts/）
+rawdata/圖檔（1514 張，品號第一事實來源）
+        │  scanAssemblyImages.js --extract（角色化提取：組件/零件/物料）
         ▼
-data/pn-lookup-master.json（唯一真源：parts + bom.children/parents）
-        │  scanAssemblyImages.js --all --apply（組件圖內文補強 BOM）
-        ▼
-master（693 品號 / 249 組 BOM）
-        │  server.js API 或 瀏覽器匯入
-        ▼
-前端：localStorage(parts) + bomEngine(children/parents 地圖) + imageLibrary(圖檔)
-        │  resolveAllImages（四級解析）
-        ▼
-PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
+data/drawings-extract.json（filePartNo + titleBlock 欄位 + bomLinks）
+        │                rawdata/master_table_unified.json（種子：4 張來源表 + BOM 階層 + scannedAssemblies + pnAliases）
+        │                │  buildMaster.js（mergeDrawingsIntoMaster：圖檔優先、seed 補欄位）
+        │                ▼
+        └───────────► data/pn-lookup-master.json（唯一真源：parts + bom.children/parents）
+                        │  server.js API 或 瀏覽器匯入
+                        ▼
+                前端：localStorage(parts) + bomEngine(children/parents 地圖) + imageLibrary(圖檔)
+                        │  resolveAllImages（四級解析）
+                        ▼
+                PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
 ```
+
+> v7.8.7 管線反轉：圖檔品號提取為第一事實來源（孤兒圖歸零），種子檔（產品一覽表.xlsm 轉譯）負責補欄位（品名/客戶/材料）與 BOM 階層基底，兩者經 `mergeDrawingsIntoMaster` 合併為唯一真源。目前 master：**1004 品號 / 308 組 BOM / 674 連結**。
 
 ---
 
@@ -105,9 +108,27 @@ PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
 
 ---
 
-## 3. 組件圖掃描與 BOM 補強（`scripts/scanAssemblyImages.js`）
+## 3. 圖檔優先管線（`scripts/scanAssemblyImages.js`）
 
-目標：組件圖（PDF）**頁面內文**常列出該組件所需全部零件（PART NO./DESCRIPTION/MATERIAL），將這部分納入 BOM，補足 Excel 未涵蓋的關聯。
+v7.8.7 起圖檔為品號第一事實來源：全部 1514 張圖檔（組件圖 + 零件圖 + 物料圖）角色化提取 → `data/drawings-extract.json`，由 `buildMaster.js` 的 `mergeDrawingsIntoMaster` 合併進 master（圖檔優先、seed 補欄位）。內文標題欄（PART NO./REV 等）為品號與版本的最終確認依據。
+
+### 3.0 角色化提取（`--extract`，v7.8.7 新增）
+
+- 目錄 → 角色：`物料資料/*` → 物料、`廠內零件圖面/*` 或 `ICU原料圖面/*` → 零件、其餘（客戶圖面、MDX/MPS、廠內組件、綜合）→ 組件。
+- **僅組件圖**的內文已知品號建立 `bomLinks`（零件/物料圖內文不建立父子關係）。
+- 輸出欄位：`filePartNo`（檔名品號）、`titleBlock`（內文欄位）、`review`（檔名與內文欄位品號不一致標記，26 張保留人工確認）、`pendingCandidate`（疑義留待人工確認，不猜測）、`known/unknown`、`bomLinks`。
+
+### 3.0.1 內文標題欄提取（`parseTitleBlock`，v7.8.7）
+
+以圖檔內文欄位確認品號/品名/版本（使用者領域規則）：
+
+| 標籤 | 對應 |
+|---|---|
+| `PART NO.` / `P/N` / `PART` / `Drawing #` / `FILE NO.` / `零件編號` | 品號 |
+| `REV` / `REVISION` | 版本（限單字母 / 字母+數字 / 純數字，排除日期等雜訊） |
+| `TITLE` / `Description`（SPC 圖） | 品名 |
+
+防誤取：排除日期、尺寸（`mm` 尾）、ISO 標準尾號、材料碼、圖框名（MOULDEX M05003-R01）；**跨行取值須與檔名品號關聯**（圖檔名稱與品號基本一致為命名慣例）；無標籤的客戶圖（如 `Extension Set / MDXE-029-01`）以前 6 行內關聯 token 為品號。
 
 ### 3.1 檔名 → 組件品號（`assemblyIdFromFileName`）
 
@@ -115,33 +136,38 @@ PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
 1. 副檔名
 2. **括號內品號優先**：`(...)` 內**非 `Rev` 開頭、非 1~3 位純數字**的內容即品號（如 `PFM-DWG-30125-01(126-006)_Rev.AB.pdf` → `126-006`；`(1)` 為 Windows 重複檔編號 → 忽略）
 3. 否則：移除括號內容（`(Rev.A)` 等版本資訊）
-4. 尾綴 `Rev.XX` / `RevXX`
-5. 尾綴 `-C`（客戶版本）
+4. 尾綴 `Rev.XX` / `RevXX`、`mdx`（領域規則：mdx 不屬品號）
+5. **`-C` 僅在含括號檔名剝除**（如 `(Rev.A)-C.pdf`；防誤傷 `-MC` 品號）
+6. `BD-` 客戶代稱前綴剝除（`BD_404028` → `404028`）
+7. 中文描述後綴剝除；第一 token 為有效品號格式（排除 `PFM-DWG-*`、`SPC\d+_\d+_*` 圖號）→ 本體優先
 
-### 3.2 組件 ID 標準化（`resolveAssemblyId`，v7.8.5 新增）
+### 3.2 組件 ID 標準化（`resolveAssemblyId`，v7.8.5 新增、v7.8.7 補強）
 
 檔名衍生 ID → master 標準品號的層級解析：
 
 ```
 1. 精確命中        norm(id) 在 master 索引中 → 直接回傳標準品號
-2. BD- 前綴剝除    BD-X3299AAM → X3299AAM（BD- 為圖型前綴非品號；剝除後未命中
+2. 家族前綴合併    X3299 → X3299AAM（core 為 master 品號前綴且後續首字元非數字，
+                   防誤併 R1-1585 → R1-15853；pnAliases 亦寫入 alternates）
+3. BD- 前綴剝除    BD-X3299AAM → X3299AAM（BD- 為圖型前綴非品號；剝除後未命中
                    master 則保留原樣，由非品號過濾排除，如 BD-X3299）
-3. 逐層剝除後綴    每剝一層即查 master（支援多層組合，如 R1-15853_03_mdx）：
-                   ① _mdx   ② -MC_xx   ③ -C   ④ _NN   ⑤ Rev
-4. 圖號註冊自身圖   ID = <圖號>_<版次>_<品號>（如 SPC0014799_10_R1-2361、
+4. 逐層剝除後綴    每剝一層即查 master（支援多層組合，如 R1-15853_03_mdx）：
+                   ① _mdx   ② -MC_xx  ③ -MC（Mouldex Component 來源標記，
+                   75-0485-MC → 75-0485）  ④ _NN   ⑤ Rev
+5. 圖號註冊自身圖   ID = <圖號>_<版次>_<品號>（如 SPC0014799_10_R1-2361、
                    C74-49554-MC_05_C74-49554）：內文已知候選 = 尾段 token、
                    前一 token 為純數字版次、前方尚有圖號 token → 自身圖
-5. 最乾淨形式      全部剝除後仍未命中 → 回傳最剝除的形式（合併同家族版本，
+6. 最乾淨形式      全部剝除後仍未命中 → 回傳最剝除的形式（合併同家族版本，
                    例：R1-10278-MC_04_mdx 與 R1-10278-MC_04 合併為 R1-10278）
-6. 內文自身品號    圖面內文已知候選為組件 ID 正規化前綴、且後續首字元非數字
-                  （邊界防誤判，如 R1-15853 是 R1-15853_03_mdx 的前綴 → 解析為自身）
+7. 內文自身品號    圖面內文已知候選為組件 ID 正規化前綴、且後續首字元非數字
+                   （邊界防誤判，如 R1-15853 是 R1-15853_03_mdx 的前綴 → 解析為自身）
 ```
 
 **自身版本圖跳過**：解析後 `p.partNo === assemblyId`（如 `R1-15853_03` → `R1-15853`）即為該品號自己的版本圖面，**不寫入 BOM**（避免偽自連）。
 
 **噪音過濾**：組件 ID 含中文/空白等非 `/^[A-Z0-9][A-Z0-9_.\-]*$/i` 字元者（如 `PN-0002_D10-210-251-1 包裝說明書`）不作為 BOM 父鍵。
 
-**非品號排除**（2026-08-17 人工領域知識）：文件編號格式不作為 BOM 父鍵 —
+**非品號排除**（人工領域知識）：文件編號格式不作為 BOM 父鍵 —
 - `SPC\d+_\d+_(RAW|CIV)\d+`（SPC 規格編號 + RAW 原料圖號，如 `SPC0005450_04_RAW0000336`）
 - `PFM-DWG-*`（文件編號；括號內品號已優先解析，此規則為保險）
 - 未剝除的 `BD-*` 殘留（剝除後非 master 品號者）
@@ -267,7 +293,7 @@ PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
 11 項檢查：主庫總數 = 去重總數、種子轉譯去重、種子實體數、BOM 層組件數、前綴邊界防禦（B-003 / A01-200-111 等）、children/parents 100% 對稱、無循環、無自代料。
 > 本機有私有資料檔時 100% 執行；CI 沙盒（資料檔被 gitignore 排除）自動跳過檔案依賴測試，保留純單元邏輯驗證。
 
-### 8.2 水平審計方法（全 693 品項，非單一案例）
+### 8.2 水平審計方法（v7.8.6 全 693 品項；v7.8.7 擴及全 1004 品項）
 
 對每一品號執行三層稽核：① BOM 完整性（parents 是否存在、能否解析為已登錄品號）；② 圖檔覆蓋率（依 §5 前向規則比對 rawdata/圖檔 全部 1514 檔）；③ 掃描一致性（組件圖內文已識別 vs BOM 連結）。
 
@@ -290,19 +316,19 @@ PartDetailModal：圖檔顯示 + 「本零件可組成的組件」
 
 ---
 
-## 9. 現況品質數據（2026-08-17 重建，全品項視角）
+## 9. 現況品質數據（2026-08-17 重建，v7.8.7 圖檔優先管線全品項視角）
 
 | 指標 | 數值 |
 |---|---|
-| master 品號總數 | 717（種子 693 + scannedAssemblies 組件圖補登 24） |
-| BOM 組件數（bom.children 鍵數） | 243（種子 181 + 掃描補強） |
-| BOM 父子連結總數 | 610 |
-| 有組件（parents）的品號 | 249（**全部可解析為已登錄組件**） |
+| master 品號總數 | **1004**（種子 709 + 圖檔提取 294；種子 709 = 693 + scannedAssemblies 24 − 8 筆 MDXE 尾綴版次合併） |
+| BOM 組件數（bom.children 鍵數） | **308**（種子 181 + 圖檔組件圖補強） |
+| BOM 父子連結總數 | **674** |
+| 有組件（parents）的品號 | 308（**全部可解析為已登錄組件**） |
 | 無法解析為 master 品號的父鍵 | **0**（v7.8.5 修復前為 51.3%） |
-| 無圖檔可對應的品號 | 92（SA組立 44 / 單品零件 33 / SB組立 14 / SC組立 1） |
+| 孤兒圖（檔名品號未登錄） | **0**（314 唯一品號 / 378 張全部收錄；僅 7 張無品號圖：ICU原料料號對照表 + 6 張 XXXX 占位符，正確排除） |
+| 內文欄位 vs 檔名品號不一致 | 26 張（保留 `review` 標記，待最後人工確認；多為 BOM 表頭 PART NO. 誤取與真衝突候選） |
 | 無 BOM 參與的品號 | 310（無父無子；其中 25 亦無圖檔） |
-| 未登錄組件來源 | 已全數補登為 master 品號（MDXE-* 8、R1-* 15、SC0044） |
-| 組件圖掃描數 | 1514（967 張含已知零件、454 張含未收錄候補） |
+| 圖檔提取數 | 1514（組件 1085 / 零件 290 / 物料 139；唯一檔名品號 903） |
 
 > 範例：R1-15853（BREATHER CAP，ICU）可組成 9 個組件 — R1-10134 / R1-10149 / R1-10260 / R1-10278 / R1-10356 / R1-15933 / R1-15935 / R1-15936 / R1-15951，**全部已登錄**。
 

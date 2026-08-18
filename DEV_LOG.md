@@ -1,5 +1,27 @@
 # PN-Lookup 開發日誌
 
+## v7.8.7 — 圖檔優先管線：全圖檔品號提取、內文欄位驗證與孤兒品號收錄
+
+### 需求內容
+1. 依使用者指示反轉資料管線：先從圖檔提取品號 → 找關聯性 → 建 BOM → 去重；再處理產品一覽表.xlsm（種子）；最後建立 master table，圖檔為第一事實來源（消除 321 孤兒圖問題）。
+2. 內文標題欄驗證：以圖檔內文「零件編號 / PART NO. / P/N / Drawing # / FILE NO.」欄位確認品號、「REV / Revision」確認版本；SPC 圖以「PART / Description / Revision」對應品號/品名/版本；TITLE 對應品名。
+3. 領域規則確認：mdx 後綴不屬品號；BD 客戶代稱前綴剝除（BD-8003875 → 8003875）；-MC 為 Mouldex Component 客戶來源標記不屬品號（75-0485-MC → 75-0485）；X3299 = X3299AAM 同一產品（pnAliases）；MDXE/MDXI 尾綴字母為圖面版次（8 筆 _E 品號去尾綴合併）；PL-9001 為零件編號。
+
+### 執行內容（CAPA）
+1. `scanAssemblyImages.js` 新增 `--extract` 角色化提取模式：全部 1514 圖檔 → `data/drawings-extract.json`（組件 1085 / 零件 290 / 物料 139），含 filePartNo、pendingCandidate、known/unknown、bomLinks（僅組件圖）、titleBlock、review 標記（內文欄位與檔名品號不一致者保留待人工確認 26 張）。
+2. `buildMaster.js` 新增 `mergeDrawingsIntoMaster`：圖檔提取合併進 master（圖檔優先、seed 補欄位不覆蓋），`pnAliases`（X3299 → X3299AAM）寫入別稱；addPart 改 norm key 去重（E09-000412-1 / E09-000-412-1 合併，後到者為別稱）。
+3. 提取規則修正（RCA）：括號品號優先；第一 token 本體優先（排除 PFM-DWG/SPC 圖號）；中文描述後綴剝除；`-C` 僅含括號檔名剝除（防誤傷 -MC）；resolveAssemblyId 加純 `-MC$` 步；圖面編號別稱剝 `-MC`；標題欄提取防誤取（日期/尺寸/材料碼/圖框名過濾、跨行取值須與檔名品號關聯、slice 起點 bug 修正）。
+4. 前端 BD 比對缺口修復（`imageLibrary.ts` / `imageResolver.ts`）：檔名片段 `BD` 前綴剝除後比對（BD-8003875 → 8003875），fileOwner 反向識別同步支援。
+5. 驗證基線固化：`verifyCoreLogic.js` 種子轉譯基線 717 → 709（8 筆 MDXE 尾綴合併）、master 總數下限 → 1004；addPart 自身別稱防禦（custNo = internalNo 時排除）。
+
+### 驗證結果
+- master：**1004 parts**（種子 709 + 圖檔提取 294）、BOM 組件 **308** / 連結 **674**、norm 去重 0 重複、**未解析父鍵 0**。
+- 孤兒圖歸零：無品號圖僅 7 張（ICU原料料號對照表 + 6 張 XXXX 占位符，正確排除）；314 唯一品號（378 張）全部收錄。
+- 內文欄位驗證：1033/1514 張提取標題欄，26 張檔名/欄位不一致保留至最後人工確認。
+- `verifyCoreLogic` 全數 PASS；`npm run lint` 0 錯誤；`npm run build` 成功。
+
+---
+
 ## v7.8.6 — 水平審計收錄 24 組件品號、映射邏輯文件同步與全專案清理（版本基準）
 
 ### 需求內容
