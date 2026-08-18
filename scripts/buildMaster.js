@@ -75,12 +75,21 @@ export function mergeDrawingsIntoMaster(master, extract) {
   }
   for (const owner of drawingOwners) {
     const kids = master.bom.children[owner] || [];
+    // v7.8.19 取代時保留物料類 children（收縮膜 0.08*14mm / 0.08*14.5mm）：
+    // 圖檔提取器不將尺寸規格視為品號 token → 圖檔 BOM 不含收縮膜，但圖面 KEY UNIT 表實有
+    // （Gemini 核對 SB0064/SB0065/SB0035/SB0011 證實）→ 圖檔 BOM 與物料 children 合併
+    const materialKids = kids.filter((k) => {
+      const pk = master.parts.find((p) => norm(p.partNo) === norm(k));
+      return pk && pk.category === '物料圖';
+    });
     delete master.bom.children[owner];
     for (const k of kids) {
+      if (materialKids.includes(k)) continue;
       const arr = master.bom.parents[k];
       if (arr) master.bom.parents[k] = arr.filter((p) => p !== owner);
       if (master.bom.parents[k] && master.bom.parents[k].length === 0) delete master.bom.parents[k];
     }
+    if (materialKids.length) master.bom.children[owner] = materialKids;
   }
   for (const it of (extract.items || [])) {
     if (it.filePartNo) {
@@ -300,12 +309,17 @@ export function convertUnifiedSeedToMaster(seedData) {
           if (Array.isArray(item.children)) {
             for (const child of item.children) {
               const childNo = typeof child === 'string' ? child : (child.partNo || child.id);
-              // v7.8.8 過濾 Excel 組件表雜訊（非品號 token：收縮膜尺寸 0.08*14mm、日期連寫等）
-              if (!childNo || !/^[A-Z0-9][A-Z0-9_.\-]*$/i.test(childNo) || /\*/.test(childNo)) continue;
+              // v7.8.8 過濾 Excel 組件表雜訊（非品號 token：日期連寫等）
+              // v7.8.19 收縮膜收錄為物料：seed 組立表以尺寸當 partNo（0.08*14mm / 0.08*14.5mm，name=收縮膜），
+              // 圖面 BOM（KEY UNIT 表）亦以尺寸呈現（0.08X14mm 同物）→ 白名單放行，其餘含 * 仍為雜訊過濾
+              const SHRINK_BAND_RE = /^0\.08\*14(?:\.5)?mm$/i;
+              if (!childNo) continue;
+              if (!SHRINK_BAND_RE.test(childNo) && (!/^[A-Z0-9][A-Z0-9_.\-]*$/i.test(childNo) || /\*/.test(childNo))) continue;
               addBomLink(assemblyId, childNo);
               addPart({
                 partNo: childNo,
                 name: typeof child === 'object' ? child.name : childNo,
+                ...(SHRINK_BAND_RE.test(childNo) ? { category: '物料圖' } : {}),
               });
             }
           }

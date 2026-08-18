@@ -1,5 +1,22 @@
 # PN-Lookup 開發日誌
 
+## v7.8.19 — 收縮膜收錄為物料實體（0.08*14mm / 0.08*14.5mm）
+
+### 需求內容
+使用者決定：收縮膜（Shrink Band）收錄呈現，品號以圖面/Excel 原樣 `0.08*14mm`、`0.08*14.5mm` 表示。
+
+### 執行內容（CAPA）
+1. **現況**：收縮膜在圖面 KEY UNIT 表 PART NO. 欄以尺寸規格呈現（0.08X14mm / 0.08*14mm，DESCRIPTION=Shrink Band，MATERIAL=PVC）；seed 組立表以 `0.08*14mm`/`0.08*14.5mm`（name=收縮膜）存在於 43 個 SB/SC 組立 children；原被 buildMaster 星號雜訊過濾剔除。
+2. **buildMaster.js**：①白名單收錄 — `SHRINK_BAND_RE`（`^0\.08\*14(?:\.5)?mm$`）放行，其餘含 `*` 仍過濾；category 設 `物料圖` → 輸出映射 `物料`（135 → **137**）；②**圖檔 BOM 取代時保留物料 children** — mergeDrawingsIntoMaster 取代 Excel children 時，物料類（收縮膜）不刪除、與圖檔 BOM 合併（根因：圖檔提取器不將尺寸視為品號 token，圖檔 BOM 不含收縮膜，原取代邏輯將其一併剔除，只剩 8/0 個父）。
+3. **verifyCoreLogic 基線**：種子 667 → **669**（693 + 24 − 8 − 40 + 2 收縮膜）、總數下限 961 → **963**；AGENTS.md 同步 669。
+
+### 驗證結果
+- master **963**（+2）= 零件 634 / SA 95 / SB 52 / SC 25 / SD 9 / 其他組件 11 / 物料 137；組件鍵 192 不變；組件鍵/類別一致性 0 異常。
+- 收縮膜 parents：0.08*14mm **34** 組立、0.08*14.5mm **9** 組立（SB 34 + SC 9，全數保留）；圖檔 BOM 組立 children 為「圖檔 BOM ∪ 收縮膜」。
+- 無圖檔統計 196 → **198**（物料 2）；verify 11 項 / lint / build 全 PASS；文件同步（mapping-logic、data-mapping、AGENTS.md）。
+
+---
+
 ## A 項收尾（2026-08-18，無版本號）— Gemini 圖面 BOM 人工核對（4 品號）
 
 ### 需求內容
