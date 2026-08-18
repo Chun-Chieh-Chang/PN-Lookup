@@ -17,12 +17,31 @@ function norm(s) {
 // 合併進 master。圖檔為第一事實來源（圖檔證據的品項一定收錄），seed 已提供的品項僅補缺欄位不覆蓋。
 export function mergeDrawingsIntoMaster(master, extract) {
   const existing = new Map(master.parts.map((p) => [norm(p.partNo), p]));
+  // v7.8.9 別名索引：norm(別稱) → 規範 part（BOM 鍵規範化用）
+  for (const p of master.parts) {
+    for (const a of (p.alternates || [])) {
+      if (!existing.has(norm(a))) existing.set(norm(a), p);
+    }
+  }
+  const bomKey = (x) => {
+    const p = existing.get(norm(x));
+    return p ? p.partNo : x;
+  };
   const catByRole = { 組件: '組件圖候補', 零件: '零件圖', 物料: '物料圖' };
 
   function addPart(pn, role) {
     if (!pn) return null;
     const n = norm(pn);
-    const ex = existing.get(n);
+    let ex = existing.get(n);
+    if (!ex) {
+      // v7.8.9 互為別名合併：圖檔寫法命中既有 part 的別稱 → 併入既有實體
+      for (const p of existing.values()) {
+        if ((p.alternates || []).some((a) => norm(a) === n)) {
+          ex = p;
+          break;
+        }
+      }
+    }
     if (ex) return ex;
     const p = {
       id: pn, partNo: pn, name: pn, customer: '',
@@ -37,6 +56,8 @@ export function mergeDrawingsIntoMaster(master, extract) {
   }
 
   function addBomLink(parent, child) {
+    parent = bomKey(parent);
+    child = bomKey(child);
     if (!parent || !child || parent === child) return;
     if (!master.bom.children[parent]) master.bom.children[parent] = [];
     if (!master.bom.children[parent].includes(child)) master.bom.children[parent].push(child);
@@ -50,7 +71,7 @@ export function mergeDrawingsIntoMaster(master, extract) {
   //  圖檔為目前版次事實來源，且版次差異以圖面為準，如 SA0002 → H00-111-111-4）
   const drawingOwners = new Set();
   for (const it of (extract.items || [])) {
-    if ((it.bomLinks || []).length) drawingOwners.add(it.filePartNo);
+    if ((it.bomLinks || []).length) drawingOwners.add(bomKey(it.filePartNo));
   }
   for (const owner of drawingOwners) {
     const kids = master.bom.children[owner] || [];
@@ -91,7 +112,21 @@ export function convertUnifiedSeedToMaster(seedData) {
     // 以正規化品號為 key 去重：同一品號不同寫法（如 E09-000412-1 vs E09-000-412-1）合併，
     // 後到者的寫法保留為別稱，避免前端索引衝突
     const key = norm(p.partNo);
-    const existing = partsMap.get(key);
+    let existing = partsMap.get(key);
+    if (!existing) {
+      // v7.8.9 互為別名合併：新品號是既有 part 的別稱（如 R1-8112 ∈ E13-999-421.alternates），
+      // 或新品號別稱是既有 partNo → 併入既有單一實體，避免 BOM 鍵分裂（雙實體各自掛不同組件）
+      for (const ex of partsMap.values()) {
+        if (ex.alternates.some((a) => norm(a) === key)) {
+          existing = ex;
+          break;
+        }
+      }
+      if (!existing) {
+        const hit = alternates.find((a) => partsMap.has(norm(a)));
+        if (hit) existing = partsMap.get(norm(hit));
+      }
+    }
     if (!existing) {
       partsMap.set(key, {
         id: p.partNo,
@@ -213,8 +248,20 @@ export function convertUnifiedSeedToMaster(seedData) {
   const childrenMap = {};
   const parentsMap = {};
 
+  // v7.8.9 BOM 鍵規範化：parent/child 先解析為規範品號（norm 索引含 alternates），
+  // 避免同一品號兩種寫法（如 E13-999-421 ≡ R1-8112）在 BOM 結構中分裂為兩個鍵
+  const bomNormIndex = new Map();
+  for (const p of partsMap.values()) {
+    bomNormIndex.set(norm(p.partNo), p.partNo);
+    for (const a of p.alternates) bomNormIndex.set(norm(a), p.partNo);
+  }
+  const bomKey = (x) => bomNormIndex.get(norm(x)) || x;
+
   function addBomLink(parent, child) {
+    parent = bomKey(parent);
+    child = bomKey(child);
     if (!parent || !child) return;
+    if (parent === child) return;
     if (!childrenMap[parent]) childrenMap[parent] = [];
     if (!childrenMap[parent].includes(child)) childrenMap[parent].push(child);
 

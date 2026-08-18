@@ -48,8 +48,8 @@ if (existsSync(MASTER_PATH)) {
     `主資料庫獨一無二性: 總數 (${parts.length}) 必須等於不重複數量 (${uniqueNos.size})`
   );
   assert(
-    parts.length >= 1002,
-    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 圖檔優先管線 1002 筆（種子 707 + 圖檔提取 292 + E09 合併；707 = 693 + 24 scannedAssemblies − 8 MDXE − 2 收縮膜尺寸雜訊過濾）`
+    parts.length >= 962,
+    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 圖檔優先管線 962 筆（種子 667 + 圖檔提取 292 + E09 合併；667 = 693 + 24 scannedAssemblies − 8 MDXE − 2 收縮膜尺寸雜訊 − 40 互為別名雙實體合併）`
   );
 } else {
   console.log(`ℹ️ [CI 沙盒模式] 未檢測到本機私有資料庫 ${MASTER_PATH} (遵循 Zero-Private-Data .gitignore 規範)，略過本機檔案測試。`);
@@ -69,8 +69,8 @@ if (existsSync(RAW_SEED_PATH)) {
     `種子檔轉譯去重性: 轉譯總數 (${convParts.length}) 等於不重複數 (${convUnique.size})`
   );
   assert(
-    convParts.length === 707,
-    `種子檔轉譯筆數固化: 預期 707 筆實體品號（693 種子 + 24 組件圖識別補登 scannedAssemblies − 8 筆 MDXE 尾綴版次合併 − 2 筆收縮膜尺寸雜訊 0.08*14mm 過濾；圖檔提取由 mergeDrawings 增量）`
+    convParts.length === 667,
+    `種子檔轉譯筆數固化: 預期 667 筆實體品號（693 種子 + 24 組件圖識別補登 scannedAssemblies − 8 筆 MDXE 尾綴版次合併 − 2 筆收縮膜尺寸雜訊 0.08*14mm 過濾 − 40 筆互為別名雙實體合併；圖檔提取由 mergeDrawings 增量）`
   );
   assert(
     Object.keys(converted.bom.children).length === 181,

@@ -1,5 +1,22 @@
 # PN-Lookup 開發日誌
 
+## v7.8.10 — 去重管理強化：互為別名合併與 BOM 鍵規範化
+
+### 需求內容
+使用者回報：E13-999-421 與 R1-8112 互為別名，但可組裝目標分別顯示 12 / 14 個（應一致）→ 檢視去重管理。
+
+### 執行內容（CAPA）
+1. **RCA**：去重僅在 parts 層（`norm(partNo)` key + alternates）有效；**BOM 層 addBomLink 未規範化** — 各組件圖內文以不同寫法引用同品號（SB0083 圖寫 E13-999-421、R1-15197 圖寫 R1-8112），原始寫法直接成為 children/parents 鍵 → 分裂（59 個別名寫法引用 + 2 個別名組件鍵）。更深的根因：seed 中 `customerPartNumbers` 雙向建檔把**互為別名的兩寫法各自建為 part 實體**（E13-999-421 與 R1-8112 都是 partNo）。
+2. **修復（三層去重）**：
+   - parts 層互為別名合併：`addPart` 檢查新品號命中既有 part 的別稱（或反向）→ 併入單一實體（保留資料較全者 E13-999-421，R1-8112 成為別稱）；合併 40 組，合併後圖檔 907 唯一品號**零遺漏**（無誤傷）。
+   - BOM 鍵規範化：`convertUnifiedSeedToMaster` 與 `mergeDrawingsIntoMaster` 的 `addBomLink` 先以 norm 索引（含 alternates）解析為規範品號再建 link；圖檔取代邏輯的 owner 同步規範化。
+   - 驗證：剩餘分裂鍵 0；E13-999-421 與 R1-8112 可組裝目標合併為 **26 一致**。
+
+### 驗證結果
+- master：**962 parts**（種子 667 + 圖檔 292）/ 組件 **304** / 連結 **640**；`verifyCoreLogic` 基線更新（667/962）全數 PASS；`npm run lint` 0 錯誤；`npm run build` 成功。
+
+---
+
 ## v7.8.9 — 兩事實來源整合：圖檔為主 BOM、提取器漏件修復與雜訊過濾
 
 ### 需求內容
