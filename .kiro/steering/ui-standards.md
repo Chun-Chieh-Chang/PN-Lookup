@@ -1,5 +1,9 @@
 # UI/UX 介面設計規範
 
+> **真源 (Source of Truth)**：本文件為 Kiro 編輯器導向之速查版。AI 行為規則以 `.agents/AGENTS.md` 為唯一真源（`RULE[ui_minimum_font_size]`、`RULE[regression_defense_and_logic_freezing]` 等）；本文件僅速查引用，不另立規則，避免重複與分歧。
+>
+> **深色背景例外**：下方「顏色系統」禁止深色容器僅適用於淺色主介面；`ProductMindMap3DModal`（3D 空間畫布）與 `PartDetailModal` 之組件 badge（bg-slate-900）為深色畫布/強調元件，屬既定例外。
+
 ## 文字最小尺寸規則
 
 **所有 UI/UX 介面的文字不得小於 13px。**

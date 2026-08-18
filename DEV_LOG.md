@@ -1,5 +1,21 @@
 # PN-Lookup 開發日誌
 
+## 全域優化作業（2026-08-18，無版本號）— 死碼清理 / Skills 條款 / MECE / 文件同步
+
+### 執行內容（CAPA）
+1. **死碼清理（手術刀式，零功能 Regression）**：`tsc --noUnusedLocals/Parameters` 掃描 + 全倉庫零引用驗證後移除 4 處 — ① App.tsx 未使用 import `isImageFolderDismissed` ② imageLibrary.ts 零引用死函式 `isImageFolderDismissed()` ③ ProductMindMap3DModal.tsx 未使用 import `CATEGORY_META` ④ mindmapClassifier.ts 零引用死常數 `CATEGORY_META`（31 行）。
+2. **防回歸門禁**：tsconfig 啟用 `noUnusedLocals` / `noUnusedParameters` → 未來死碼在 `npm run lint` 即被攔截。
+3. **Skills 條款修訂（全局 `~/.claude/CLAUDE.md`）**：核查現有條款（PDCA/YAGNI/Check 等）無重複後，新增 `[Definition of Done] 任務完成定義與驗收標準` — 任務完成 = 達成預先設定之驗收標準；驗收標準於計畫擬定完成後隨即制訂並於執行前向使用者確認；驗收標準設為最高標準（可量化、可驗證、無歧義，禁模糊表述）；需求未明時先走反向提問。條文經重讀驗證無歧義。
+4. **MECE 整合**：`.kiro/steering/ui-standards.md` 與 `.agents/AGENTS.md` 之 13px 規則重疊 → `.kiro` 改為「真源引用」（單一真源：`.agents/AGENTS.md`），並補 3D 模態窗深色畫布例外註記；wiki/ 目錄確認不存在，不新建（YAGNI）。
+5. **文件同步**：README.md 更新至 v7.8.16（版本 badge、種子基線 693→667、功能列表補 v7.8.8~16、目錄結構補 mapping-logic.md）；docs/data-mapping.html 補 v7.8.16 行。
+
+### 驗證結果（最高標準）
+- `tsc --noEmit --noUnusedLocals --noUnusedParameters` → 0 錯誤；`npm run lint` → 0 錯誤；`npm run build` → verifyCoreLogic 11 項全 PASS + vite build 成功。
+- rg 覆核：`isImageFolderDismissed`、`CATEGORY_META` 全倉庫 0 引用；全倉庫無 `693` 舊基線、無 `v7.8.7` 版本殘留；version.ts / README / DEV_LOG 頂部版本一致（v7.8.16）。
+- Git：3 個原子化 commit（fix cleanup / docs sync）；推送前資安盤點 — `data/`、`rawdata/`、`*.xlsm`、`*.log`、`.env*` 皆受 .gitignore 保護未追蹤。
+
+---
+
 ## v7.8.16 — 物料類別按鈕顏色對齊三層體系
 
 ### 需求內容

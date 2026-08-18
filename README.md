@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.8.7)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.8.16)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算、3D 空間花瓣產品思維導圖與知識本體論 (Ontology) 平台**。
 
-![Version](https://img.shields.io/badge/version-v7.8.7-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.8.16-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -24,8 +24,12 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
   - **語意推理圖檔匹配**：當單品無直接圖檔時，自動沿 `usedInAssemblies` 父組件關係鏈推導圖面，並顯性標註「語意推導」徽章。
   - **Schema.org / JSON-LD 標準匯出**：產出符合國際 W3C / Schema.org (`@type: "MedicalDevice"`) 標準之知識本體檔案，支援 OS 原生另存新檔。
 - 🛡️ **數據固化與防迴歸確效門禁 (`verifyCoreLogic.js`)**：
-  - 於 `npm run build` 時自動運行 11 項測試，鎖定 693 筆種子去重品號、181 組 BOM 關聯階層、邊界防禦與本體約束。
+  - 於 `npm run build` 時自動運行 11 項測試，鎖定 667 筆種子去重品號（693 + 24 scannedAssemblies − 8 MDXE − 2 收縮膜雜訊 − 40 互為別名合併）、181 組 BOM 關聯階層、邊界防禦與本體約束。
   - 包含 CI 沙盒防禦模式（遵循 Zero Private Data 規範，跳過敏感離線檔測試）。
+- 🔀 **整合策略：圖檔為主（v7.8.8~v7.8.14）**：
+  - 組件有圖檔 BOM 時以圖檔展開粒度取代 Excel children；圖檔角色依內文證據判定（KEY UNIT 表頭 / PART NO+QTY 清單）；SPC 圖號註冊格式 `<圖號>_<版次>_<品號>` 解析尾段品號；BOM 鍵規範化 + 互為別名雙實體合併（分裂鍵歸零）。
+- 🏷️ **欄位篩選與物料類別三層體系（v7.8.13 / v7.8.15 / v7.8.16）**：
+  - 主搜尋列下方欄位篩選列：客戶 / 品號 / 物料類別 / 品名（可與 keyword AND 組合）；物料類別統一為 物料 / 零件 / 組件（SA~SD 組立 + 其他組件）三層，badge 顏色對應（深色=組件、灰=物料、綠=零件）。
 - 🖼️ **圖檔全自動超連結與 0 孤兒圖檔管理**：
   - 全自動遞迴掃描工程圖面檔，支援檔名高級正規化匹配、PDF 文字層提取、視覺 OCR 與本體語意推導多軌解析。
 - 🔄 **圖檔反向識別**：
@@ -46,7 +50,7 @@ PN-Lookup/
 ├── .kiro/                   # Kiro 編輯器導向規則 (steering/ui-standards.md)
 ├── data/                    # [隱私隔離] 本地單一真實資料庫 (pn-lookup-master.json)
 ├── rawdata/                 # [隱私隔離] 原始 Excel 與工程圖檔
-├── docs/                    # 技術規格文件 (data-mapping.html — 欄位映射規格)
+├── docs/                    # 技術規格文件（data-mapping.html — 欄位映射規格；mapping-logic.md — 映射邏輯與品質數據）
 ├── scripts/                 # 資料處理與確效驗證腳本
 │   ├── buildMaster.js       # Master Table 建置腳本（種子檔 → pn-lookup-master.json）
 │   ├── scanAssemblyImages.js# 圖檔掃描增補 (--apply / --auto / --all / --parent-of)
