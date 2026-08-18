@@ -45,6 +45,22 @@ export function mergeDrawingsIntoMaster(master, extract) {
   }
 
   let added = 0;
+  // v7.8.8 圖檔為主整合：組件有圖檔 BOM 時，取代 Excel 組件表 children
+  // （粒度差異：圖檔展開至最終零件 B06-410-111-1+B-077，Excel 以子組件 SA0001 為單位；
+  //  圖檔為目前版次事實來源，且版次差異以圖面為準，如 SA0002 → H00-111-111-4）
+  const drawingOwners = new Set();
+  for (const it of (extract.items || [])) {
+    if ((it.bomLinks || []).length) drawingOwners.add(it.filePartNo);
+  }
+  for (const owner of drawingOwners) {
+    const kids = master.bom.children[owner] || [];
+    delete master.bom.children[owner];
+    for (const k of kids) {
+      const arr = master.bom.parents[k];
+      if (arr) master.bom.parents[k] = arr.filter((p) => p !== owner);
+      if (master.bom.parents[k] && master.bom.parents[k].length === 0) delete master.bom.parents[k];
+    }
+  }
   for (const it of (extract.items || [])) {
     if (it.filePartNo && !existing.has(norm(it.filePartNo))) {
       addPart(it.filePartNo, it.role);
@@ -221,13 +237,13 @@ export function convertUnifiedSeedToMaster(seedData) {
           if (Array.isArray(item.children)) {
             for (const child of item.children) {
               const childNo = typeof child === 'string' ? child : (child.partNo || child.id);
-              if (childNo) {
-                addBomLink(assemblyId, childNo);
-                addPart({
-                  partNo: childNo,
-                  name: typeof child === 'object' ? child.name : childNo,
-                });
-              }
+              // v7.8.8 過濾 Excel 組件表雜訊（非品號 token：收縮膜尺寸 0.08*14mm、日期連寫等）
+              if (!childNo || !/^[A-Z0-9][A-Z0-9_.\-]*$/i.test(childNo) || /\*/.test(childNo)) continue;
+              addBomLink(assemblyId, childNo);
+              addPart({
+                partNo: childNo,
+                name: typeof child === 'object' ? child.name : childNo,
+              });
             }
           }
         }

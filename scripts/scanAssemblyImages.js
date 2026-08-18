@@ -79,8 +79,8 @@ function norm(s) {
   return String(s || '').replace(/[^A-Z0-9]+/gi, '').toUpperCase();
 }
 
-// 疑似品號 token：1~4 英文字母 + 數字 + 破折號，長度 >= 5
-const PART_NO_TOKEN_RE = /^[A-Z]{0,4}\d{1,4}(?:-[A-Z0-9]+)+$/i;
+// 疑似品號 token：字母前綴（可無數字，如 B-077）+ 破折號段，長度 >= 4
+const PART_NO_TOKEN_RE = /^[A-Z]{0,4}\d{0,4}(?:-[A-Z0-9]+)+$/i;
 
 function extractPartNoCandidates(text) {
   const out = new Set();
@@ -462,6 +462,12 @@ async function main() {
     }
 
     const candidates = extractPartNoCandidates(text);
+    // 補收：語法外（無破折號長 token，如 TA161BEPTG012B00）但 master 已登錄的品號
+    for (const t of String(text || '').split(/[\s,;:()[\].]+/)) {
+      const up = t.toUpperCase();
+      if (up.length < 4 || candidates.includes(up)) continue;
+      if (index.has(norm(up))) candidates.push(up);
+    }
     if (candidates.length === 0) {
       const role = extractMode ? roleOf(rel) : null;
       report.push({ file: fileName, assemblyId: rawAssemblyId, ok: false, reason: '未提取到品號' });
