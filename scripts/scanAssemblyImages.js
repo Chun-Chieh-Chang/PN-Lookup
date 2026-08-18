@@ -53,12 +53,21 @@ const scanAll = argv.includes('--all');
 const extractMode = argv.includes('--extract');
 const parentOfArg = argv.includes('--parent-of') ? argv[argv.indexOf('--parent-of') + 1] : null;
 
-// 圖檔角色（v7.8.7 圖檔優先管線）：依目錄判定
-// 組件 = 內文零件清單可建立 BOM；零件/物料 = 檔名即自身品號，不建立 BOM
-function roleOf(rel) {
+// 圖檔角色（v7.8.11）：物料資料夾 → 物料；其餘以圖內文證據判定
+// 組件 = 內文零件清單（BOM 表/組立字樣）可建立 BOM；零件 = 檔名即自身品號，不建立 BOM
+// v7.8.10 瑕疵：僅依目錄判定，客戶圖面/綜合圖面下的零件圖被誤歸「組件」（組件圖候補 125 個無 BOM）
+function roleOf(rel, text = '', known = []) {
   const p = rel.replace(/\\/g, '/');
   if (/物料資料\//.test(p)) return '物料';
   if (/廠內零件圖面/.test(p) || /ICU原料圖面/.test(p)) return '零件';
+  if (text) {
+    // 內文證據：零件清單表（KEY UNIT 表頭常為多空格分隔，如 KEY   UNIT   PART NO.）
+    if (/KEY\s*UNIT/i.test(text)) return '組件';
+    if (/PART\s*NO/i.test(text) && (/\bQTY\b|QUANTITY|\bITEM\b/i.test(text))) return '組件';
+    // 組立字樣需與多個子件候選共存（R1-16143 等規格圖「ASSY」僅為註記 → 零件）
+    if (/\bASSY\b|組立/i.test(text) && known.length >= 3) return '組件';
+    return '零件';
+  }
   return '組件';
 }
 
@@ -445,7 +454,7 @@ async function main() {
           titleBlocks.set(f, titleBlock);
         }
       } catch (e) {
-        const role = extractMode ? roleOf(rel) : null;
+        const role = extractMode ? roleOf(rel, text, []) : null;
         report.push({ file: fileName, assemblyId: rawAssemblyId, ok: false, reason: `PDF 無法讀取: ${e.message}` });
         if (extractMode) {
           const filePartNo = sanitizeFilePartNo(resolveAssemblyId(rawAssemblyId, [], index));
@@ -469,7 +478,7 @@ async function main() {
       if (index.has(norm(up))) candidates.push(up);
     }
     if (candidates.length === 0) {
-      const role = extractMode ? roleOf(rel) : null;
+      const role = extractMode ? roleOf(rel, text, []) : null;
       report.push({ file: fileName, assemblyId: rawAssemblyId, ok: false, reason: '未提取到品號' });
       if (extractMode) {
         const filePartNo = sanitizeFilePartNo(resolveAssemblyId(rawAssemblyId, [], index));
@@ -503,7 +512,7 @@ async function main() {
 
     unknown.sort();
     const assemblyId = resolveAssemblyId(rawAssemblyId, known, index);
-    const role = extractMode ? roleOf(rel) : null;
+    const role = extractMode ? roleOf(rel, text, known) : null;
 
     // 檔名品號：組件圖 = 解析後的組件 ID；零件/物料圖 = 剝除版本後綴的自身品號
     const filePartNo = sanitizeFilePartNo(assemblyId);

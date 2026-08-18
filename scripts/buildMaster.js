@@ -83,9 +83,15 @@ export function mergeDrawingsIntoMaster(master, extract) {
     }
   }
   for (const it of (extract.items || [])) {
-    if (it.filePartNo && !existing.has(norm(it.filePartNo))) {
-      addPart(it.filePartNo, it.role);
-      added++;
+    if (it.filePartNo) {
+      const isNew = !existing.has(norm(it.filePartNo));
+      const p = addPart(it.filePartNo, it.role);
+      if (isNew) added++;
+      // v7.8.11 候補降級：無 BOM 的「組件圖候補」依圖內文證據（無零件清單表）歸為零件圖
+      if (p && p.category === '組件圖候補' && it.role === '零件' && !(master.bom.children[p.partNo] || []).length) {
+        p.category = '零件圖';
+        p.notes = '由組件圖檔名識別，圖內文無零件清單（v7.8.11 降級為零件圖）';
+      }
     }
     for (const l of (it.bomLinks || [])) {
       addPart(l.assembly, '組件');
