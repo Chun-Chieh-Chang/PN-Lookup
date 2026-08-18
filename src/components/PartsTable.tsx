@@ -122,6 +122,9 @@ export const PartsTable: React.FC<PartsTableProps> = ({
 
   // Copy helpers
   const openImage = (url: string) => {
+    // 點擊開啟圖檔時懸浮預覽自動消失（含尚未觸發的延遲 timer）
+    hoverTimerRef.current && clearTimeout(hoverTimerRef.current);
+    setHoverThumb(null);
     window.open(url, '_blank', 'noopener');
   };
 
@@ -534,6 +537,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            hoverTimerRef.current && clearTimeout(hoverTimerRef.current);
+                            setHoverThumb(null);
                             setOpenMultiId(openMultiId === item.id ? null : item.id);
                           }}
                           className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 hover:bg-slate-200 transition-all cursor-pointer shadow-2xs"
