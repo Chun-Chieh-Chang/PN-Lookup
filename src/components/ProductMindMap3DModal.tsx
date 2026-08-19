@@ -483,7 +483,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
   // 展開節點 ID 集合（支援動態按需展開/收合層級）
   // 預設僅開展單一主體系（廠內品號編碼），保持視野極致簡潔清晰
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    () => new Set(['root', 'factory']),
+    () => new Set(['root']),
   );
 
   // 原始樹與 3D 圖資料

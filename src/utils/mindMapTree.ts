@@ -34,7 +34,7 @@ export const PALETTE = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// 從 Master Table 建構思維導圖
+// 從 Master Table 建構思維導圖（MECE 原則：不重覆、不漏失）
 // ────────────────────────────────────────────────────────────────────────────
 
 type MaterialGroup = 'raw' | 'material' | 'part' | 'assembly' | 'set';
@@ -89,6 +89,49 @@ function getCustomerSubCategory(part: PartItem): string | null {
   return null;
 }
 
+// 按前缀分組零件
+function groupByPrefix(parts: PartItem[]): Record<string, PartItem[]> {
+  const byPrefix: Record<string, PartItem[]> = {};
+  parts.forEach(p => {
+    const prefix = p.partNo.split('-')[0];
+    if (!byPrefix[prefix]) byPrefix[prefix] = [];
+    byPrefix[prefix].push(p);
+  });
+  return byPrefix;
+}
+
+// 構建零件節點（按前綴分組）
+function buildPartNodes(partList: PartItem[], depth: number = 2): MindMapNode[] {
+  const byPrefix = groupByPrefix(partList);
+  return Object.entries(byPrefix)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(0, 25) // 限制顯示數量
+    .map(([prefix, prefixParts]) => 
+      n(`part-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.part, depth, [], prefixParts)
+    );
+}
+
+// 構建節點的輔助函數
+const n = (
+  id: string, 
+  label: string, 
+  sublabel: string | undefined,
+  palette: typeof PALETTE.root, 
+  depth: number,
+  children: MindMapNode[],
+  partItems: PartItem[],
+  cat?: MindMapCategory,
+): MindMapNode => ({
+  id, label, sublabel,
+  color: palette.bg,
+  textColor: palette.text,
+  borderColor: palette.border,
+  children,
+  parts: partItems,
+  category: cat,
+  depth,
+});
+
 export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   // 按材質分組
   const groups: Record<MaterialGroup, PartItem[]> = {
@@ -122,129 +165,75 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
     }
   });
   
-  // 構建節點的輔助函數
-  const n = (
-    id: string, 
-    label: string, 
-    sublabel: string | undefined,
-    palette: typeof PALETTE.root, 
-    depth: number,
-    children: MindMapNode[],
-    partItems: PartItem[],
-    cat?: MindMapCategory,
-  ): MindMapNode => ({
-    id, label, sublabel,
-    color: palette.bg,
-    textColor: palette.text,
-    borderColor: palette.border,
-    children,
-    parts: partItems,
-    category: cat,
-    depth,
-  });
+  // 分離一般零件和客戶零件
+  const generalParts = groups.part.filter(p => !getCustomerSubCategory(p));
+  const customerParts = groups.part.filter(p => getCustomerSubCategory(p));
   
-  // 構建零件分組（按前綴分類顯示）
-  const buildPartNodes = (partList: PartItem[], depth: number = 2): MindMapNode[] => {
-    const byPrefix: Record<string, PartItem[]> = {};
-    partList.forEach(p => {
-      const prefix = p.partNo.split('-')[0];
-      if (!byPrefix[prefix]) byPrefix[prefix] = [];
-      byPrefix[prefix].push(p);
-    });
-    
-    return Object.entries(byPrefix)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(0, 20) // 限制顯示數量
-      .map(([prefix, prefixParts]) => 
-        n(`part-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.part, depth, [], prefixParts)
-      );
-  };
+  // 組件按 SA/SB/SC/SD 分類
+  const saParts = groups.assembly.filter(p => p.partNo.startsWith('SA'));
+  const sbParts = groups.assembly.filter(p => p.partNo.startsWith('SB'));
+  const scParts = groups.assembly.filter(p => p.partNo.startsWith('SC'));
+  const sdParts = groups.assembly.filter(p => p.partNo.startsWith('SD'));
+  const specialParts = groups.assembly.filter(p => 
+    !p.partNo.startsWith('SA') && !p.partNo.startsWith('SB') && 
+    !p.partNo.startsWith('SC') && !p.partNo.startsWith('SD')
+  );
   
-  // 構建客戶子分組
+  // Set 按 MDXE/MDXI 分類
+  const mdxeParts = groups.set.filter(p => p.partNo.startsWith('MDXE-'));
+  const mdxiParts = groups.set.filter(p => p.partNo.startsWith('MDXI-'));
+  
+  // 構建客戶子節點
   const buildCustomerNodes = (): MindMapNode[] => {
     const nodes: MindMapNode[] = [];
-    
     Object.entries(customerGroups).forEach(([custName, custParts]) => {
       if (custParts.length > 0) {
-        // 進一步按前綴分類
-        const byPrefix: Record<string, PartItem[]> = {};
-        custParts.forEach(p => {
-          const prefix = p.partNo.split('-')[0];
-          if (!byPrefix[prefix]) byPrefix[prefix] = [];
-          byPrefix[prefix].push(p);
-        });
-        
+        const byPrefix = groupByPrefix(custParts);
         const prefixNodes = Object.entries(byPrefix)
           .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([prefix, prefixParts]) => 
             n(`cust-${custName.toLowerCase()}-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.customer, 3, [], prefixParts)
           );
-        
         nodes.push(n(`cust-${custName.toLowerCase()}`, custName, `${custParts.length} 個品號`, PALETTE.customer, 2, prefixNodes, custParts));
       }
     });
-    
     return nodes;
   };
   
-  // 構建組件節點（按 SA/SB/SC/SD 分組）
+  // 構建組件子節點（MECE: SA/SB/SC/SD + 特殊）
   const buildAssemblyNodes = (): MindMapNode[] => {
     const nodes: MindMapNode[] = [];
     
-    // SA 系列
-    const saParts = groups.assembly.filter(p => p.partNo.startsWith('SA'));
     if (saParts.length > 0) {
-      nodes.push(n('assemblies-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(saParts, 3), saParts, 'factory_asm_sa'));
+      nodes.push(n('asm-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(saParts, 3), saParts, 'factory_asm_sa'));
     }
-    
-    // SB 系列
-    const sbParts = groups.assembly.filter(p => p.partNo.startsWith('SB'));
     if (sbParts.length > 0) {
-      nodes.push(n('assemblies-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sbParts, 3), sbParts, 'factory_asm_sb'));
+      nodes.push(n('asm-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sbParts, 3), sbParts, 'factory_asm_sb'));
     }
-    
-    // SC 系列
-    const scParts = groups.assembly.filter(p => p.partNo.startsWith('SC'));
     if (scParts.length > 0) {
-      nodes.push(n('assemblies-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(scParts, 3), scParts, 'factory_asm_sc'));
+      nodes.push(n('asm-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(scParts, 3), scParts, 'factory_asm_sc'));
     }
-    
-    // SD 系列
-    const sdParts = groups.assembly.filter(p => p.partNo.startsWith('SD'));
     if (sdParts.length > 0) {
-      nodes.push(n('assemblies-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sdParts, 3), sdParts, 'factory_asm_sd'));
+      nodes.push(n('asm-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sdParts, 3), sdParts, 'factory_asm_sd'));
     }
-    
-    // 特殊組件（3M41459 等）
-    const specialParts = groups.assembly.filter(p => !p.partNo.startsWith('SA') && !p.partNo.startsWith('SB') && !p.partNo.startsWith('SC') && !p.partNo.startsWith('SD'));
     if (specialParts.length > 0) {
-      nodes.push(n('assemblies-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2, buildPartNodes(specialParts, 3), specialParts));
+      nodes.push(n('asm-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2, buildPartNodes(specialParts, 3), specialParts));
     }
     
     return nodes;
   };
   
-  // 構建 Set 節點
+  // 構建 Set 子節點
   const buildSetNodes = (): MindMapNode[] => {
-    const mdxeParts = groups.set.filter(p => p.partNo.startsWith('MDXE-'));
-    const mdxiParts = groups.set.filter(p => p.partNo.startsWith('MDXI-'));
-    
     const nodes: MindMapNode[] = [];
-    
     if (mdxeParts.length > 0) {
-      nodes.push(n('sets-mdxe', 'MDXE Extension Set', `${mdxeParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxeParts, 3), mdxeParts, 'factory_set_mdxe'));
+      nodes.push(n('set-mdxe', 'MDXE Extension Set', `${mdxeParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxeParts, 3), mdxeParts, 'factory_set_mdxe'));
     }
-    
     if (mdxiParts.length > 0) {
-      nodes.push(n('sets-mdxi', 'MDXI I.V. Set', `${mdxiParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxiParts, 3), mdxiParts, 'factory_set_mdxi'));
+      nodes.push(n('set-mdxi', 'MDXI I.V. Set', `${mdxiParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxiParts, 3), mdxiParts, 'factory_set_mdxi'));
     }
-    
     return nodes;
   };
-  
-  // 一般零件（無客戶標識）
-  const generalParts = groups.part.filter(p => !getCustomerSubCategory(p));
-  const customerParts = groups.part.filter(p => getCustomerSubCategory(p));
   
   // 構建主樹
   return n('root', '產品識別教育訓練', `共 ${parts.length} 個品號 · 點擊展開`, PALETTE.root, 0, [
@@ -265,9 +254,9 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
       n('parts-customers', '客戶零件', `${customerParts.length} 個品號`, PALETTE.customer, 1, buildCustomerNodes(), customerParts)
     ] : []),
     
-    // 4. 組件
+    // 4. 組件（MECE: SA/SB/SC/SD + 特殊）
     ...(groups.assembly.length > 0 ? [
-      n('assemblies', '組件', `${groups.assembly.length} 個`, PALETTE.assembly, 1, buildAssemblyNodes(), groups.assembly)
+      n('assemblies', '組件', `${groups.assembly.length} 個組件`, PALETTE.assembly, 1, buildAssemblyNodes(), groups.assembly)
     ] : []),
     
     // 5. Set
