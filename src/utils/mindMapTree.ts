@@ -188,61 +188,24 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   };
   
   // 構建組件子節點（MECE: SA/SB/SC/SD + 特殊）
-  // 每個分類節點包含其實際的子零件（來自 BOM children）
-  const buildAssemblyNodes = (bomChildren: Record<string, string[]> = {}): MindMapNode[] => {
+  // 組件只顯示分類節點，不顯示具體品號列表
+  const buildAssemblyNodes = (): MindMapNode[] => {
     const nodes: MindMapNode[] = [];
     
-    // 輔助函數：構建單一組件的子節點（展開 BOM children）
-    const buildAssemblyDetail = (assemblyId: string, label: string, parts: PartItem[]): MindMapNode => {
-      const children = bomChildren[assemblyId] || [];
-      const childNodes = children.map(childId => {
-        const childPart = parts.find(p => p.partNo === childId);
-        if (!childPart) return null;
-        // 遞迴檢查是否還有子節點
-        const grandChildren = bomChildren[childId] || [];
-        if (grandChildren.length > 0) {
-          // 有子節點，遞迴構建
-          return buildAssemblyDetail(childId, childPart.name || childId, [childPart]);
-        } else {
-          // 葉節點
-          return n(childId, childPart.name || childId, `${childPart.customer || ''}`, PALETTE.part, 3, [], [childPart]);
-        }
-      }).filter(Boolean);
-      
-      return n(assemblyId, label, `${parts.length} 個品號`, PALETTE.assembly, 2, childNodes, parts);
-    };
-    
     if (saParts.length > 0) {
-      // SA 系列：顯示為一個節點，包含所有 SA 品號
-      // 如果需要展開 BOM，傳遞 bomChildren
-      nodes.push(n('asm-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, 
-        saParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])), 
-        saParts, 'factory_asm_sa'
-      ));
+      nodes.push(n('asm-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, [], [], 'factory_asm_sa'));
     }
     if (sbParts.length > 0) {
-      nodes.push(n('asm-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2,
-        sbParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
-        sbParts, 'factory_asm_sb'
-      ));
+      nodes.push(n('asm-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2, [], [], 'factory_asm_sb'));
     }
     if (scParts.length > 0) {
-      nodes.push(n('asm-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2,
-        scParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
-        scParts, 'factory_asm_sc'
-      ));
+      nodes.push(n('asm-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2, [], [], 'factory_asm_sc'));
     }
     if (sdParts.length > 0) {
-      nodes.push(n('asm-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2,
-        sdParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
-        sdParts, 'factory_asm_sd'
-      ));
+      nodes.push(n('asm-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2, [], [], 'factory_asm_sd'));
     }
     if (specialParts.length > 0) {
-      nodes.push(n('asm-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2,
-        specialParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
-        specialParts
-      ));
+      nodes.push(n('asm-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2, [], []));
     }
     
     return nodes;
