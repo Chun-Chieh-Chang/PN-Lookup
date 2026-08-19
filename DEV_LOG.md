@@ -2,6 +2,63 @@
 
 ## v7.9.0 — 圖檔語意識別：多模型分工（laguna+hy3）提取品號/品名/圖號/原料/BOM，輸出 JSON+Excel
 
+
+## v7.9.1 — 移除 3D 思維導圖功能 (Remove 3D MindMap Feature)
+
+### 需求內容
+使用者反映 3D 思維導圖功能存在顯示問題：
+- 組件子節點（如 3M41459、SB0068）與分類節點並列顯示
+- 客戶零件未按預期分組
+- 樹狀結構未遵循 MECE 原則
+
+經多次修復嘗試後，使用者決定完全移除該功能以確保系統穩定性。
+
+### 修正措施 (CAPA)
+
+#### 1. 移除來源檔案
+- ❌ `src/components/ProductMindMap3DModal.tsx` (59KB)
+- ❌ `src/utils/mindMapTree.ts` (17KB)
+- ❌ `src/utils/mindmapClassifier.ts` (17KB)
+- ❌ `src/utils/mindMapTree_original.ts` (12KB)
+
+#### 2. 清理 App.tsx 引用
+- 移除 `lazy` 和 `Suspense` import（不再使用）
+- 移除 `ProductMindMap3DModalLazy` 懶載入宣告
+- 移除 `isMindMap3DOpen` state
+- 移除 `<Suspense>` 包裹的 Modal 渲染區塊
+- 移除 `bomChildren` 相關變數（原本為 MindMap 準備）
+
+#### 3. 清理 Header.tsx 引用
+- 移除 `FolderTree` icon import
+- 移除 `onOpenMindMap` prop 定義
+- 移除解構賦值中的 `onOpenMindMap`
+- 移除「3D 思維導圖」按鈕 JSX 區塊
+
+#### 4. 編譯驗證
+```bash
+npm run lint  # ✅ 通過 (tsc --noEmit)
+```
+
+### 影響範圍
+| 項目 | 狀態 |
+|------|------|
+| 主系統功能 | ✅ 不受影響 |
+| 品號檢索 | ✅ 正常運作 |
+| BOM 管理 | ✅ 正常運作 |
+| 圖片管理 | ✅ 正常運作 |
+| 匯出/匯入 | ✅ 正常運作 |
+
+### 備份資訊
+- 原始 commit: `b39c1ff` (修正客戶零件顯示邏輯)
+- 保留分支: `backup/pre-cleanup-20260818` (含完整 MindMap 代碼)
+- 刪除 commit: `890dd04`
+
+---
+
+**完成時間**: 2026-08-19  
+**執行者**: AgnesCode AI Assistant
+
+
 ### 需求內容
 使用者要求從圖檔做語意識別（不依賴檔名猜測）：提取每張圖的 PART NO. / Description / DWG NO. / Material / BOM；掃描檔（無文字層）以 OCR 辨識後再語意化。後續追加：**整合各免費模型優勢**（多模型分工調用）、解析結果**預設輸出 JSON 與 Excel 兩檔**。
 
