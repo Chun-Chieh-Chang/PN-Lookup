@@ -189,7 +189,6 @@ export interface MM3DNode {
   textColor: string;
   r: number;
   parts: PartItem[];
-  bomChildren?: Record<string, string[]>;
   category?: string;
   part?: PartItem;
   parentId?: string;
@@ -454,7 +453,6 @@ interface ProductMindMap3DModalProps {
   isOpen: boolean;
   onClose: () => void;
   parts: PartItem[];
-  bomChildren?: Record<string, string[]>;
   imageLib?: ImageLibrary | null;
   bindings?: Record<string, string>;
   ocrIndex?: Map<string, string>;
@@ -465,7 +463,6 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
   isOpen,
   onClose,
   parts,
-  bomChildren = {},
   imageLib = null,
   bindings = {},
   ocrIndex = new Map(),
@@ -490,7 +487,7 @@ export const ProductMindMap3DModal: React.FC<ProductMindMap3DModalProps> = ({
   );
 
   // 原始樹與 3D 圖資料
-  const tree = useMemo(() => buildMindMapTree(parts, bomChildren), [parts, bomChildren]);
+  const tree = useMemo(() => buildMindMapTree(parts), [parts]);
   const fullGraph = useMemo(() => buildMindMap3DGraph(tree), [tree]);
   const { nodes: fullNodes, links: fullLinks, byId, parentOf, childrenOf, adjacency } = fullGraph;
 
