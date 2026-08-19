@@ -89,28 +89,6 @@ function getCustomerSubCategory(part: PartItem): string | null {
   return null;
 }
 
-// 按前缀分組零件
-function groupByPrefix(parts: PartItem[]): Record<string, PartItem[]> {
-  const byPrefix: Record<string, PartItem[]> = {};
-  parts.forEach(p => {
-    const prefix = p.partNo.split('-')[0];
-    if (!byPrefix[prefix]) byPrefix[prefix] = [];
-    byPrefix[prefix].push(p);
-  });
-  return byPrefix;
-}
-
-// 構建零件節點（按前綴分組）
-function buildPartNodes(partList: PartItem[], depth: number = 2): MindMapNode[] {
-  const byPrefix = groupByPrefix(partList);
-  return Object.entries(byPrefix)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(0, 25) // 限制顯示數量
-    .map(([prefix, prefixParts]) => 
-      n(`part-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.part, depth, [], prefixParts)
-    );
-}
-
 // 構建節點的輔助函數
 const n = (
   id: string, 
@@ -188,12 +166,21 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
     const nodes: MindMapNode[] = [];
     Object.entries(customerGroups).forEach(([custName, custParts]) => {
       if (custParts.length > 0) {
-        const byPrefix = groupByPrefix(custParts);
+        // 客戶零件下顯示具體品號（前綴分組）
+        const byPrefix: Record<string, PartItem[]> = {};
+        custParts.forEach(p => {
+          const prefix = p.partNo.split('-')[0];
+          if (!byPrefix[prefix]) byPrefix[prefix] = [];
+          byPrefix[prefix].push(p);
+        });
+        
         const prefixNodes = Object.entries(byPrefix)
           .sort((a, b) => a[0].localeCompare(b[0]))
+          .slice(0, 10) // 限制數量
           .map(([prefix, prefixParts]) => 
             n(`cust-${custName.toLowerCase()}-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.customer, 3, [], prefixParts)
           );
+        
         nodes.push(n(`cust-${custName.toLowerCase()}`, custName, `${custParts.length} 個品號`, PALETTE.customer, 2, prefixNodes, custParts));
       }
     });
@@ -201,23 +188,61 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   };
   
   // 構建組件子節點（MECE: SA/SB/SC/SD + 特殊）
-  const buildAssemblyNodes = (): MindMapNode[] => {
+  // 每個分類節點包含其實際的子零件（來自 BOM children）
+  const buildAssemblyNodes = (bomChildren: Record<string, string[]> = {}): MindMapNode[] => {
     const nodes: MindMapNode[] = [];
     
+    // 輔助函數：構建單一組件的子節點（展開 BOM children）
+    const buildAssemblyDetail = (assemblyId: string, label: string, parts: PartItem[]): MindMapNode => {
+      const children = bomChildren[assemblyId] || [];
+      const childNodes = children.map(childId => {
+        const childPart = parts.find(p => p.partNo === childId);
+        if (!childPart) return null;
+        // 遞迴檢查是否還有子節點
+        const grandChildren = bomChildren[childId] || [];
+        if (grandChildren.length > 0) {
+          // 有子節點，遞迴構建
+          return buildAssemblyDetail(childId, childPart.name || childId, [childPart]);
+        } else {
+          // 葉節點
+          return n(childId, childPart.name || childId, `${childPart.customer || ''}`, PALETTE.part, 3, [], [childPart]);
+        }
+      }).filter(Boolean);
+      
+      return n(assemblyId, label, `${parts.length} 個品號`, PALETTE.assembly, 2, childNodes, parts);
+    };
+    
     if (saParts.length > 0) {
-      nodes.push(n('asm-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(saParts, 3), saParts, 'factory_asm_sa'));
+      // SA 系列：顯示為一個節點，包含所有 SA 品號
+      // 如果需要展開 BOM，傳遞 bomChildren
+      nodes.push(n('asm-sa', 'SA 系列', `${saParts.length} 個組件`, PALETTE.assembly, 2, 
+        saParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])), 
+        saParts, 'factory_asm_sa'
+      ));
     }
     if (sbParts.length > 0) {
-      nodes.push(n('asm-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sbParts, 3), sbParts, 'factory_asm_sb'));
+      nodes.push(n('asm-sb', 'SB 系列', `${sbParts.length} 個組件`, PALETTE.assembly, 2,
+        sbParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
+        sbParts, 'factory_asm_sb'
+      ));
     }
     if (scParts.length > 0) {
-      nodes.push(n('asm-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(scParts, 3), scParts, 'factory_asm_sc'));
+      nodes.push(n('asm-sc', 'SC 系列', `${scParts.length} 個組件`, PALETTE.assembly, 2,
+        scParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
+        scParts, 'factory_asm_sc'
+      ));
     }
     if (sdParts.length > 0) {
-      nodes.push(n('asm-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2, buildPartNodes(sdParts, 3), sdParts, 'factory_asm_sd'));
+      nodes.push(n('asm-sd', 'SD 系列', `${sdParts.length} 個組件`, PALETTE.assembly, 2,
+        sdParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
+        sdParts, 'factory_asm_sd'
+      ));
     }
     if (specialParts.length > 0) {
-      nodes.push(n('asm-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2, buildPartNodes(specialParts, 3), specialParts));
+      nodes.push(n('asm-special', '特殊組件', `${specialParts.length} 個`, PALETTE.assembly, 2,
+        specialParts.map(p => buildAssemblyDetail(p.partNo, p.partNo, [p])),
+        specialParts
+      ));
     }
     
     return nodes;
@@ -227,10 +252,10 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   const buildSetNodes = (): MindMapNode[] => {
     const nodes: MindMapNode[] = [];
     if (mdxeParts.length > 0) {
-      nodes.push(n('set-mdxe', 'MDXE Extension Set', `${mdxeParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxeParts, 3), mdxeParts, 'factory_set_mdxe'));
+      nodes.push(n('set-mdxe', 'MDXE Extension Set', `${mdxeParts.length} 套`, PALETTE.set, 2, [], mdxeParts, 'factory_set_mdxe'));
     }
     if (mdxiParts.length > 0) {
-      nodes.push(n('set-mdxi', 'MDXI I.V. Set', `${mdxiParts.length} 套`, PALETTE.set, 2, buildPartNodes(mdxiParts, 3), mdxiParts, 'factory_set_mdxi'));
+      nodes.push(n('set-mdxi', 'MDXI I.V. Set', `${mdxiParts.length} 套`, PALETTE.set, 2, [], mdxiParts, 'factory_set_mdxi'));
     }
     return nodes;
   };
@@ -239,15 +264,15 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
   return n('root', '產品識別教育訓練', `共 ${parts.length} 個品號 · 點擊展開`, PALETTE.root, 0, [
     // 1. 原料（若有）
     ...(groups.raw.length > 0 ? [
-      n('raw', '原料', `${groups.raw.length} 種`, PALETTE.raw, 1, buildPartNodes(groups.raw, 2), groups.raw)
+      n('raw', '原料', `${groups.raw.length} 種`, PALETTE.raw, 1, [], groups.raw)
     ] : []),
     
     // 2. 物料
-    n('materials', '物料', `${groups.material.length} 種`, PALETTE.material, 1, buildPartNodes(groups.material, 2), groups.material, 'unclassified'),
+    n('materials', '物料', `${groups.material.length} 種`, PALETTE.material, 1, [], groups.material, 'unclassified'),
     
     // 3. 零件（含客戶分類）
     ...(generalParts.length > 0 ? [
-      n('parts-general', '廠內零件', `${generalParts.length} 個品號`, PALETTE.part, 1, buildPartNodes(generalParts, 2), generalParts)
+      n('parts-general', '廠內零件', `${generalParts.length} 個品號`, PALETTE.part, 1, [], generalParts)
     ] : []),
     
     ...(customerParts.length > 0 ? [
