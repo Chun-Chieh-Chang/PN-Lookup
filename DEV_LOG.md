@@ -1,5 +1,28 @@
 # PN-Lookup 開發日誌
 
+## v7.9.0 — 圖檔語意識別：多模型分工（laguna+hy3）提取品號/品名/圖號/原料/BOM，輸出 JSON+Excel
+
+### 需求內容
+使用者要求從圖檔做語意識別（不依賴檔名猜測）：提取每張圖的 PART NO. / Description / DWG NO. / Material / BOM；掃描檔（無文字層）以 OCR 辨識後再語意化。後續追加：**整合各免費模型優勢**（多模型分工調用）、解析結果**預設輸出 JSON 與 Excel 兩檔**。
+
+### 執行內容
+1. **semanticExtract.js（新管線）**：pdfjs v6 文字層提取（`[y=N]` 座標行序 → LLM 依 y 分組辨識表格列）→ 品質不足或掃描檔自動轉 tesseract.js OCR（psm 3、scale 5、eng+chi_sim、@napi-rs/canvas 離屏渲染 PNG）→ 再語意化。wasmUrl 採檔案系統路徑（NodeBinaryDataFactory 不認 file://）。
+2. **多模型分工**：`zenDualExtract` 並行調用 — **laguna-s-2.1-free 提取標題欄**（partNo/description/dwgNo/material，專用 TITLE_PROMPT）+ **hy3-free 提取 BOM**（專用 BOM_PROMPT）→ 結果合併；任一失敗即互為 fallback（hy3 補標題欄 / laguna 補 BOM）。端點 `opencode.ai/zen/v1/chat/completions`（key 讀 auth.json opencode 憑證）；429/503 退避重試。免費模型實測淘汰：nemotron-3-ultra/3.5-lightning 輸出思考文本不守 JSON、deepseek-v4-flash-free/mimo-v2.5-free 429 限流、agnes-2.0-flash 品質不穩（partNo 誤抓）。
+3. **檔名品號修正**：模型 partNo 與 drawings-extract 檔名品號（filePartNo）不一致 → 以檔名品號覆寫（第一事實來源）。
+4. **雙檔輸出**：`data/semantic-extract.json`（全欄位）+ `data/semantic-extract.xlsx`（工作表：圖檔解析總表 / BOM明細）；`--file/--match` 增量合併不覆寫。
+5. **buildMaster.js mergeSemanticIntoMaster**：語意補缺 — seed Excel 優先、語意僅補缺；material 雜訊過濾（供應商/色料行、品號樣式、FABBED）；新欄位 `description`（品名規格原文）/ `dwgNo`（圖號）寫入 master；語意 BOM 僅補充既有組件鍵 children 缺漏（MDXE-153-02 之 22-690200/22-690250/22-690300/22-691000 PVC 管路品號 ×4）。
+6. **前端**：PartItem 型別 + 明細卡新增「品名規格原文 (Description)」「圖號 (DWG NO.)」顯示；Excel round-trip 匯出/匯入保留 description/dwgNo；dedupeParts 補缺同步。
+
+### 驗證結果
+- 樣本 18/18 成功（品號與檔名吻合 17/17 可判 + ICU 對照表例外；OCR 掃描樣本 RM5003037/8013945/VLV-135-015/F17-999-615 品號全中）；MDXE-153-02 BOM 11/11（含 4 新管路品號）；BD-8003875 5、SD0002 5、3M41459 2。
+- master 963 → **971**（+8 語意 BOM 子件）；組件鍵 209 不變；語意補缺：material 7 / name 4 / dwgNo 15 / description 16。
+- verifyCoreLogic 全項 PASS（971 = 去重數、BOM 對稱/無循環 0 異常）；`npm run build` SUCCESS。
+
+### 待確認（使用者確認後處理）
+① 免費模型取捨（現行 laguna+hy3 分工）② 22-69xxxx 管路品號收錄（已收，確認）③ D10-240-251-1/-2 並存 ④ VLV-135-015-G16 ⑤ SB0001 BOM 提取不穩（無表頭版式）⑥ 中文描述亂碼（OCR 中文品質）⑦ dwgNo 收錄規則（null/版次/模具號）⑧ 全量 1514 圖批次執行策略（約 392 掃描檔需 OCR，免費模型限流）。
+
+---
+
 ## v7.8.20 — 無表頭 BOM 版式判別：輸液套延長管（MDXE-*_E）等 17 組件升級
 
 ### 需求內容

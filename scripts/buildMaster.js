@@ -7,6 +7,7 @@ const ROOT_DIR = join(__dirname, '..');
 const RAW_SEED_PATH = join(ROOT_DIR, 'rawdata', 'master_table_unified.json');
 const OUTPUT_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
 const EXTRACT_PATH = join(ROOT_DIR, 'data', 'drawings-extract.json');
+const SEMANTIC_PATH = join(ROOT_DIR, 'data', 'semantic-extract.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -117,6 +118,76 @@ export function mergeDrawingsIntoMaster(master, extract) {
   }
   master.totalParts = master.parts.length;
   return { added };
+}
+
+// v7.9.0 語意合併：semantic-extract.json（LLM 語意識別：品名規格/圖號/原料/BOM）→ master
+// 優先序：seed Excel 欄位 > 語意（seed 有值時語意不覆寫；僅補缺），檔名品號已由 v7.8.x 管線收錄
+// 語意 BOM 僅「補充」既有組件圖 children 缺漏（MDXE-153-02 之 22-69xxxx 管路品號）
+export function mergeSemanticIntoMaster(master, semantic) {
+  const existing = new Map(master.parts.map((p) => [norm(p.partNo), p]));
+  let materialFilled = 0, nameFilled = 0, dwgAdded = 0, descAdded = 0, bomAdded = 0;
+
+  // 語意 material 雜訊過濾：供應商/色料行、純品號樣式（HOO-111-111-1）、無意義詞（FABBED）
+  const isJunkMaterial = (s) => {
+    if (!s) return true;
+    const t = s.trim();
+    if (!t) return true;
+    if (/^(FABBED|N\/A|NONE|NA)$/i.test(t)) return true;
+    if (/UB!|FAR EAST|BABF|HELIOGEN|COLORANT|DESCRIPTION/i.test(t)) return true;
+    if (/^[A-Z0-9]+(?:-[A-Z0-9]+)+$/i.test(t)) return true; // 品號樣式（HOO-111-111-1）
+    return false;
+  };
+  const isJunkDescription = (s) => !s || String(s).trim().length > 160 || /\.\.\s/.test(s);
+
+  for (const it of (semantic.items || [])) {
+    if (!it.ok || !it.data) continue;
+    const pn = it.data.partNo;
+    if (!pn) continue;
+    const p = existing.get(norm(pn));
+    if (!p) continue;
+    const d = it.data;
+
+    if (d.description && !isJunkDescription(d.description)) {
+      if (!p.description) { p.description = d.description; descAdded++; }
+    }
+    if (d.dwgNo) {
+      if (!p.dwgNo) { p.dwgNo = d.dwgNo; dwgAdded++; }
+      else if (p.dwgNo !== d.dwgNo) {
+        // 版本/寫法差異（135-015 vs VLV-135-015、403801 vs 8003875）：語意與既有衝突時保留既有（seed/早期管線優先）
+      }
+    }
+    if (d.material && !isJunkMaterial(d.material)) {
+      if (!p.material) { p.material = d.material; materialFilled++; }
+    }
+    if (d.description && !isJunkDescription(d.description) && (!p.name || p.name === pn)) {
+      p.name = d.description; nameFilled++;
+    }
+    // 語意 BOM 補缺：只針對既有組件圖 children（組件鍵存在才補），僅收錄 master 尚未收錄的子件
+    const kids = master.bom.children[p.partNo];
+    if (kids && kids.length && Array.isArray(d.bom) && d.bom.length) {
+      for (const b of d.bom) {
+        const childNo = String(b.partNo || '').trim();
+        if (!childNo || norm(childNo) === norm(pn)) continue;
+        if (kids.some((k) => norm(k) === norm(childNo))) continue;
+        if (!existing.has(norm(childNo))) {
+          master.parts.push({
+            id: childNo, partNo: childNo, name: b.description || childNo, customer: '',
+            category: '零件', color: '', material: b.material || '',
+            moldNo: '', cavity: '',
+            notes: '由語意 BOM 補缺識別（v7.9.0 圖檔語意識別）',
+            alternates: [],
+          });
+          existing.set(norm(childNo), master.parts[master.parts.length - 1]);
+        }
+        master.bom.children[p.partNo].push(childNo);
+        if (!master.bom.parents[childNo]) master.bom.parents[childNo] = [];
+        if (!master.bom.parents[childNo].includes(p.partNo)) master.bom.parents[childNo].push(p.partNo);
+        bomAdded++;
+      }
+    }
+  }
+  master.totalParts = master.parts.length;
+  return { materialFilled, nameFilled, dwgAdded, descAdded, bomAdded };
 }
 
 export function convertUnifiedSeedToMaster(seedData) {
@@ -373,6 +444,15 @@ function buildMaster() {
     console.log(`Merged drawings-extract: +${added} 個檔名品號收錄（seed ${seedCount} → ${master.parts.length}）`);
   } else {
     console.log(`ℹ️ 未找到 ${EXTRACT_PATH}（先執行 node scripts/scanAssemblyImages.js --extract）`);
+  }
+
+  // v7.9.0 語意合併：品名規格/圖號/原料/BOM 補缺（semantic-extract.json）
+  if (existsSync(SEMANTIC_PATH)) {
+    const semantic = JSON.parse(readFileSync(SEMANTIC_PATH, 'utf-8'));
+    const { materialFilled, nameFilled, dwgAdded, descAdded, bomAdded } = mergeSemanticIntoMaster(master, semantic);
+    console.log(`Merged semantic-extract: 補缺 material ${materialFilled} / name ${nameFilled} / dwgNo ${dwgAdded} / description ${descAdded} / BOM 子件 ${bomAdded}`);
+  } else {
+    console.log(`ℹ️ 未找到 ${SEMANTIC_PATH}（先執行 node scripts/semanticExtract.js --sample）`);
   }
 
   // v7.8.15 物料類別三層體系：物料 / 零件 / 組件（SA~SD 組立 + 其他組件）

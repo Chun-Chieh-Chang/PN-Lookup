@@ -52,7 +52,7 @@ function buildAssemblySheet(
   return ws;
 }
 
-export const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt'];
+export const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt', 'description', 'dwgNo'];
 
 export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
@@ -111,6 +111,8 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     'components': p.components && p.components.length > 0 ? JSON.stringify(p.components) : '',
     'usedInAssemblies': p.usedInAssemblies && p.usedInAssemblies.length > 0 ? JSON.stringify(p.usedInAssemblies) : '',
     'createdAt': p.createdAt ?? '',
+    'description': p.description ?? '',
+    'dwgNo': p.dwgNo ?? '',
   }));
   const wsFull = XLSX.utils.json_to_sheet(fullData, { header: FULL_DATA_HEADERS });
   wsFull['!cols'] = FULL_DATA_HEADERS.map(() => ({ wch: 18 }));
@@ -148,6 +150,8 @@ export function parseExcelToParts(data: ArrayBuffer): PartItem[] {
         if (r['components']) try { item.components = JSON.parse(String(r['components'])); } catch { /* ignore */ }
         if (r['usedInAssemblies']) try { item.usedInAssemblies = JSON.parse(String(r['usedInAssemblies'])); } catch { /* ignore */ }
         if (r['createdAt']) item.createdAt = r['createdAt'];
+        if (r['description']) item.description = String(r['description']).trim();
+        if (r['dwgNo']) item.dwgNo = String(r['dwgNo']).trim();
         parsed.push(item);
       }
       if (parsed.length > 0) return enrichParts(parsed);

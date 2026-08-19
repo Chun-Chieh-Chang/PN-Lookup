@@ -14,6 +14,9 @@ export interface PartItem {
   components?: string[];
   usedInAssemblies?: string[];
   createdAt?: string;
+  // v7.9.0 圖檔語意識別欄位：品名規格原文（標題欄 DESCRIPTION）/ 圖號
+  description?: string;
+  dwgNo?: string;
 }
 
 export type SearchField = 'all' | 'partNo' | 'customer' | 'name';
