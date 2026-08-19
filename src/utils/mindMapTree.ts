@@ -178,10 +178,10 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
           .sort((a, b) => a[0].localeCompare(b[0]))
           .slice(0, 10) // 限制數量
           .map(([prefix, prefixParts]) => 
-            n(`cust-${custName.toLowerCase()}-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.customer, 3, [], prefixParts)
+            n(`cust-${custName.toLowerCase()}-${prefix}`, prefix, `${prefixParts.length} 個品號`, PALETTE.customer, 3, [], [])
           );
         
-        nodes.push(n(`cust-${custName.toLowerCase()}`, custName, `${custParts.length} 個品號`, PALETTE.customer, 2, prefixNodes, custParts));
+        nodes.push(n(`cust-${custName.toLowerCase()}`, custName, `${custParts.length} 個品號`, PALETTE.customer, 2, prefixNodes, []));
       }
     });
     return nodes;
@@ -239,7 +239,7 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
     ] : []),
     
     ...(customerParts.length > 0 ? [
-      n('parts-customers', '客戶零件', `${customerParts.length} 個品號`, PALETTE.customer, 1, buildCustomerNodes(), customerParts)
+      n('parts-customers', '客戶零件', `${customerParts.length} 個品號`, PALETTE.customer, 1, buildCustomerNodes(), [])
     ] : []),
     
     // 4. 組件（MECE: SA/SB/SC/SD + 特殊）
