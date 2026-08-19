@@ -244,7 +244,7 @@ export function buildMindMapTree(parts: PartItem[]): MindMapNode {
     
     // 4. 組件（MECE: SA/SB/SC/SD + 特殊）
     ...(groups.assembly.length > 0 ? [
-      n('assemblies', '組件', `${groups.assembly.length} 個組件`, PALETTE.assembly, 1, buildAssemblyNodes(), groups.assembly)
+      n('assemblies', '組件', `${groups.assembly.length} 個組件`, PALETTE.assembly, 1, buildAssemblyNodes(), [])
     ] : []),
     
     // 5. Set
