@@ -102,8 +102,11 @@ export function mergeDrawingsIntoMaster(master, extract) {
         p.notes = '由組件圖檔名識別，圖內文無零件清單（v7.8.11 降級為零件圖）';
       }
       // v7.8.14 SPC 圖號修正後：既有單品零件若有組件圖（內文零件清單）→ 升級為組件圖候補
-      if (p && p.category === '單品零件' && it.role === '組件' && (it.bomLinks || []).length) {
+      // v7.8.20 擴及「零件圖」（v7.8.11 無 BOM 證據降級者）：新證據（無表頭 BOM 版式組件圖）
+      // 出現 → 一併升級（R1-2357/R1-8392/MDXE-*_E 等）
+      if (p && (p.category === '單品零件' || p.category === '零件圖') && it.role === '組件' && (it.bomLinks || []).length) {
         p.category = '組件圖候補';
+        p.notes = '由組件圖檔名識別，圖內文有零件清單（v7.8.20 無表頭 BOM 版式判別）';
       }
     }
     for (const l of (it.bomLinks || [])) {
