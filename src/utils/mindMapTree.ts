@@ -1,4 +1,4 @@
-import { PartItem } from '../types';
+﻿import { PartItem } from '../types';
 import { classifyPart, MindMapCategory } from './mindmapClassifier';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -77,8 +77,10 @@ export function buildMindMapTree(parts: PartItem[], bomChildren: Record<string, 
   
   leafParts.forEach(part => {
     const r = classifyPart(part);
-    const bucket = classifiedParts.get(r.category)!;
-    bucket.push(part);
+    if (!classifiedParts.has(r.category)) {
+      classifiedParts.set(r.category, []);
+    }
+    classifiedParts.get(r.category)!.push(part);
   });
 
   // 構建零件節點（只保留有零件的分類）
