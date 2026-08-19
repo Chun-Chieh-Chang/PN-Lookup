@@ -304,18 +304,54 @@ function loadExtractIndex() {
   return idx;
 }
 
+// KEY UNIT 表頭偵測：同行「KEY UNIT」，或 y 座標相近的拆行 KEY + UNIT（SB0001 類版式）
+function findKeyUnit(lines) {
+  const ys = lines.map((l) => {
+    const m = l.match(/^\[y=(\d+)\]\s*(.*)$/);
+    return m ? { y: +m[1], text: m[2] } : null;
+  }).filter(Boolean);
+  if (ys.some((r) => /KEY\s*UNIT/i.test(r.text))) return true;
+  const keys = ys.filter((r) => /^KEY$/i.test(r.text.trim()));
+  const units = ys.filter((r) => /^UNIT$/i.test(r.text.trim()));
+  return keys.some((k) => units.some((u) => Math.abs(u.y - k.y) <= 60));
+}
+
 function needsOcr(lines) {
   if (lines.length < 3) return true;
-  const hasKu = lines.some((l) => /KEY\s*UNIT/i.test(l));
-  if (hasKu) {
-    const kuOk = lines.some((l) => /KEY\s*UNIT/i.test(l) && /DESCRIPTION|PART\s*NO/i.test(l));
-    if (!kuOk) return true;
+  if (findKeyUnit(lines)) {
+    // 同行表頭齊整（KEY UNIT 帶 DESCRIPTION/PART NO）→ 文字層可用
+    const wellFormed = lines.some((l) => /KEY\s*UNIT/i.test(l) && /DESCRIPTION|PART\s*NO/i.test(l));
+    // 拆行/錯位表頭：文字層仍可用（BOM 由規則兜底補齊），不需 OCR
+    if (!wellFormed && !lines.some((l) => /KEY\s*UNIT/i.test(l))) return false;
+    const hasKu = lines.some((l) => /KEY\s*UNIT/i.test(l));
+    if (hasKu && !wellFormed) return true;
   }
   return false;
 }
 
 function hasKeyUnit(lines) {
-  return lines.some((l) => /KEY\s*UNIT/i.test(l));
+  return findKeyUnit(lines);
+}
+
+// v7.9.1 規則 BOM 兜底：LLM BOM 為空但圖面有 KEY UNIT 表時，
+// 以品號行正則直接掃文字層（無表頭 BOM 版式：品號行 y 分散、表頭在上方，
+// 模型提取不穩 — SB0001 類）。行格式：[y=148] B06-410-111-1 / [y=172] B-077 8
+function ruleBomFallback(lines) {
+  const bom = [];
+  for (const l of lines) {
+    const m = l.match(/^\[y=\d+\]\s*([A-Z0-9]+-[A-Z0-9]+(?:-[A-Z0-9]+)*)(?:\s+(\d+))?$/);
+    if (m) {
+      bom.push({ partNo: m[1], description: '', qty: m[2] || '', material: '' });
+      continue;
+    }
+    // 收縮膜特例：*14mm 規格行 → 0.08*14mm（SB0001 等無表頭版式，規格與品號分列）
+    const s = l.match(/^\[y=\d+\]\s*\*\s*14(?:\.5)?\s*mm/i);
+    if (s) {
+      const spec = /14\.5/.test(l) ? '0.08*14.5mm' : '0.08*14mm';
+      if (!bom.some((b) => b.partNo === spec)) bom.push({ partNo: spec, description: '收縮膜 Shrink Band', qty: '', material: '' });
+    }
+  }
+  return bom;
 }
 
 async function main() {
@@ -326,6 +362,9 @@ async function main() {
   const fileArg = args.find((a) => a.startsWith('--file='))?.split('=')[1];
   const matchArg = args.find((a) => a.startsWith('--match='))?.split('=')[1];
   const sample = args.includes('--sample');
+  const all = args.includes('--all');
+  const force = args.includes('--force');
+  const batchSize = Number(args.find((a) => a.startsWith('--batch='))?.split('=')[1] || 6);
   if (providerArg === 'gemini' && !process.env.GOOGLE_API_KEY && !ocrOnly) {
     console.error('缺少 GOOGLE_API_KEY（.env）');
     process.exit(1);
@@ -342,10 +381,22 @@ async function main() {
     if (!targets.length) console.error(`--match 無符合：${matchArg}`);
   }
   else if (sample) targets = SAMPLE_NAMES.map((n) => (idx[n] ? { name: n, rel: idx[n].rel, filePartNo: idx[n].filePartNo } : null)).filter(Boolean);
+  else if (all) targets = Object.entries(idx).map(([name, v]) => ({ name, rel: v.rel, filePartNo: v.filePartNo }));
   else {
     console.error('需指定 --sample 或 --file=<rel路徑> 或 --match=<檔名子串>');
     process.exit(1);
   }
+  // v7.9.1 全量續跑：既有輸出中已成功且 partNo 非空者跳過（--force 強制重跑）
+  if (all && !force && existsSync(OUT_PATH)) {
+    try {
+      const prev = JSON.parse(readFileSync(OUT_PATH, 'utf-8'));
+      const done = new Set(prev.items.filter((r) => r.ok && r.data?.partNo).map((r) => r.file));
+      const before = targets.length;
+      targets = targets.filter((t) => !done.has(t.name));
+      console.log(`續跑模式：${before} → ${targets.length} 待處理（跳過 ${before - targets.length} 已完成）`);
+    } catch { /* 續跑資訊讀取失敗 → 全量重跑 */ }
+  }
+  if (all) console.log(`全量批次開始：${targets.length} 張，每批 ${batchSize} 張，批間休息 12s（避限流）`);
   const results = [];
   for (const t of targets) {
     const fullPath = resolve(ROOT, t.rel);
@@ -406,6 +457,16 @@ async function main() {
       }
     }
     const d = out.data;
+    // v7.9.1 規則 BOM 兜底：圖面有 KEY UNIT 表但模型 BOM 為空（無表頭/列錯位版式）→ 品號行規則掃描
+    if (method === 'text-layer' && hasKeyUnit(lines) && !(d.bom || []).length) {
+      const ruleBom = ruleBomFallback(lines);
+      if (ruleBom.length) {
+        console.log(`  規則 BOM 兜底：${ruleBom.map((b) => b.partNo + (b.qty ? `×${b.qty}` : '')).join(', ')}`);
+        d.bom = ruleBom;
+        out.models = out.models || {};
+        out.models.bomRule = 'rule-fallback';
+      }
+    }
     // 檔名品號為第一事實來源：模型 partNo 不一致時以檔名品號修正（filePartNo 已剝離版本尾綴/前綴）
     const fp = t.filePartNo;
     if (fp && d.partNo && fp !== d.partNo) {
@@ -419,23 +480,35 @@ async function main() {
     console.log(`  material: ${d.material}`);
     console.log(`  bom: ${Array.isArray(d.bom) ? d.bom.length : 0} 列`);
     results.push({ file: t.name, method, ok: true, data: d, models: out.models, warn: out.warn, lines: lines.length });
+    // v7.9.1 批間休息：避限流（--batch=N 預設 6，最後一張不休息）
+    if (all && batchSize > 0 && results.length % batchSize === 0 && results.length < targets.length) {
+      console.log(`  ── 批次休息 12s（已完成 ${results.length}/${targets.length}）──`);
+      await new Promise((r) => setTimeout(r, 12000));
+    }
+    // v7.9.1 checkpoint：每 20 張寫入一次（中斷續跑不丟失）
+    if (all && !ocrOnly && results.length % 20 === 0 && results.length < targets.length) {
+      const total = await writeOutput(results, false);
+      console.log(`  ── checkpoint 已寫入（累計 ${total} 筆）──`);
+    }
   }
   if (!ocrOnly) {
-    let merged = results;
-    if (!sample && existsSync(OUT_PATH)) {
-      try {
-        const prev = JSON.parse(readFileSync(OUT_PATH, 'utf-8'));
-        const seen = new Set(results.map((r) => r.file));
-        merged = [...prev.items.filter((r) => !seen.has(r.file)), ...results];
-      } catch { /* 覆寫 */ }
-    }
-    writeFileSync(OUT_PATH, JSON.stringify({ generatedAt: new Date().toISOString(), model: modelArg || 'laguna-s-2.1-free+hy3-free', items: merged }, null, 2));
-    await writeExcel(merged);
-    const okCount = merged.filter((r) => r.ok).length;
-    console.log(`\n===== 完成：${okCount}/${merged.length} 成功（本次 ${results.length}） =====`);
-    console.log(`  JSON  → ${OUT_PATH}`);
-    console.log(`  Excel → ${OUT_XLSX_PATH}`);
+    await writeOutput(results, sample);
   }
+}
+
+// v7.9.1 checkpoint：合併既有輸出後寫入 JSON+Excel（all 模式每 20 張調用，避免中途遺失）
+async function writeOutput(results, sample) {
+  let merged = results;
+  if (!sample && existsSync(OUT_PATH)) {
+    try {
+      const prev = JSON.parse(readFileSync(OUT_PATH, 'utf-8'));
+      const seen = new Set(results.map((r) => r.file));
+      merged = [...prev.items.filter((r) => !seen.has(r.file)), ...results];
+    } catch { /* 覆寫 */ }
+  }
+  writeFileSync(OUT_PATH, JSON.stringify({ generatedAt: new Date().toISOString(), model: modelArg || 'laguna-s-2.1-free+hy3-free', items: merged }, null, 2));
+  await writeExcel(merged);
+  return merged.length;
 }
 
 async function writeExcel(results) {
