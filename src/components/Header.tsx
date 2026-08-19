@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon, FolderTree } from 'lucide-react';
+import { Search, FileSpreadsheet, ListChecks, Image as ImageIcon } from 'lucide-react';
 import { APP_VERSION } from '../version';
 
 interface HeaderProps {
@@ -7,7 +7,6 @@ interface HeaderProps {
 
   onOpenExportImport: () => void;
   onEnterAdmin?: () => void;
-  onOpenMindMap?: () => void;
   imageFolderName?: string | null;
   imageCount?: number;
   orphanCount?: number;
@@ -20,7 +19,6 @@ export const Header: React.FC<HeaderProps> = ({
 
   onOpenExportImport,
   onEnterAdmin,
-  onOpenMindMap,
   imageFolderName,
   imageCount,
   orphanCount = 0,
@@ -73,16 +71,6 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
 
-            {onOpenMindMap && (
-              <button
-                onClick={onOpenMindMap}
-                className="btn-tactile inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-slate-900 hover:bg-slate-800 text-white border border-slate-700 shadow-xs cursor-pointer"
-                title="開啟 3D 空間花瓣產品思維導圖"
-              >
-                <FolderTree className="w-4 h-4 text-sky-400" />
-                <span>3D 思維導圖</span>
-              </button>
-            )}
 
             <button
               onClick={onOpenBatchSearch}

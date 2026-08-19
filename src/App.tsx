@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Header } from './components/Header';
 import { StatsBar } from './components/StatsBar';
 import { SearchControls } from './components/SearchControls';
@@ -10,7 +10,7 @@ import { ExportImportModal } from './components/ExportImportModal';
 import { ImageFolderModal } from './components/ImageFolderModal';
 import { AdminPanel } from './components/AdminPanel';
 import { PartItem, FilterState } from './types';
-import { getItemType, enrichParts, initBOM, stripDerivedFields, getBOMChildren } from './utils/bomEngine';
+import { getItemType, enrichParts, initBOM, stripDerivedFields } from './utils/bomEngine';
 import { loadParts, saveParts, dedupeParts } from './utils/partsService';
 import { IS_STATIC_MODE } from './utils/serverStatus';
 import { dedupeAlternates } from './utils/alternates';
@@ -27,10 +27,6 @@ import { loadBindings, saveBindings, getOrphanFiles, loadDismissedOrphans, saveD
 import { ImageBindModal } from './components/ImageBindModal';
 import { OrphanImagesModal } from './components/OrphanImagesModal';
 
-// 3D 思維導圖視窗僅在開啟時按需載入（three.js 避免拖慢首屏）
-const ProductMindMap3DModalLazy = lazy(() =>
-  import('./components/ProductMindMap3DModal').then((m) => ({ default: m.ProductMindMap3DModal }))
-);
 
 const STORAGE_KEY_PARTS = 'medical_parts_system_data_v2';
 
@@ -81,7 +77,7 @@ export default function App() {
 
   // 資料匯出/匯入視窗狀態（預設關閉，僅由使用者手動點擊 Header「匯入 / 匯出」開啟）
   const [isExportImportOpen, setIsExportImportOpen] = useState(false);
-  const bomChildren = useMemo(() => getBOMChildren(), []);
+
 
   // 圖檔資料夾：自動靜默恢復上次選擇；預設不主動彈窗干擾使用者（僅由 Header「圖檔資料夾」手動開啟）
   const [imageLib, setImageLib] = useState<ImageLibrary | null>(null);
@@ -220,7 +216,6 @@ export default function App() {
 
   const [selectedDetailItem, setSelectedDetailItem] = useState<PartItem | null>(null);
   const [isOrphansModalOpen, setIsOrphansModalOpen] = useState(false);
-  const [isMindMap3DOpen, setIsMindMap3DOpen] = useState(false);
 
   // 標記排除/重複別稱孤兒圖檔（本機限定）
   const [dismissedOrphans, setDismissedOrphans] = useState<Set<string>>(() => loadDismissedOrphans());
@@ -432,7 +427,6 @@ export default function App() {
         onOpenBatchSearch={() => setIsBatchSearchOpen(true)}
 
         onOpenExportImport={() => setIsExportImportOpen(true)}
-        onOpenMindMap={() => setIsMindMap3DOpen(true)}
         onEnterAdmin={() => {
           window.location.hash = 'admin';
         }}
@@ -559,22 +553,6 @@ export default function App() {
         onSingleOcr={handleSingleOcr}
       />
 
-      <Suspense fallback={null}>
-        {isMindMap3DOpen && (
-          <ProductMindMap3DModalLazy
-            isOpen={true}
-            onClose={() => setIsMindMap3DOpen(false)}
-            parts={parts}
-            bomChildren={bomChildren}
-            imageLib={imageLib}
-            bindings={bindings}
-            ocrIndex={ocrIndex}
-            onSelectPart={(pn) => {
-              setFilterState((prev) => ({ ...prev, keyword: pn, searchField: 'partNo' }));
-            }}
-          />
-        )}
-      </Suspense>
 
       {/* Footer */}
       <footer className="mt-auto py-3 text-[13px] text-slate-500 border-t border-slate-200 bg-white">
