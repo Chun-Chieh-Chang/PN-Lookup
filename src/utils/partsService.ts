@@ -23,6 +23,8 @@ export function dedupeParts(parts: PartItem[]): PartItem[] {
     if (!existing.color && p.color) existing.color = p.color;
     if (!existing.material && p.material) existing.material = p.material;
     if (!existing.notes && p.notes) existing.notes = p.notes;
+    if (!existing.description && p.description) existing.description = p.description;
+    if (!existing.dwgNo && p.dwgNo) existing.dwgNo = p.dwgNo;
   }
   return Array.from(seen.values());
 }

@@ -168,6 +168,27 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               <p className="text-base font-medium text-slate-900">{item.name}</p>
             </div>
 
+            {(item.description || item.dwgNo) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2.5 border-t border-slate-200/80">
+                {item.description && item.description !== item.name && (
+                  <div>
+                    <span className="text-[13px] text-slate-500 block mb-1 font-medium">品名規格原文 (Description)</span>
+                    <p className="text-[13px] text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                )}
+                {item.dwgNo && (
+                  <div>
+                    <span className="text-[13px] text-slate-500 block mb-1 font-medium">圖號 (DWG NO.)</span>
+                    <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-900 font-mono font-semibold text-[13px] rounded border border-sky-300">
+                      {item.dwgNo}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {(item.category || item.color || item.material) && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-200/80">
                 {item.category && (

@@ -424,23 +424,23 @@
     <thead><tr><th>指標</th><th>數值</th></tr></thead>
     <tbody>
       <tr><td>master 品號總數</td><td>963（種子 669 + 圖檔提取 292；669 = 693 + 24 − 8 MDXE − 40 互為別名合併 + 2 收縮膜物料 0.08*14mm / 0.08*14.5mm（v7.8.19）；v7.8.14 SPC 圖號格式修正 −1：SPC0005450 → RAW0000336）</td></tr>
-      <tr><td>BOM 組件數（bom.children 鍵數）</td><td>192（seed 181 全數保留 + 圖檔組件圖 11；v7.8.11 移除偽組件 65）</td></tr>
-      <tr><td>BOM 父子連結總數</td><td>451（v7.8.11 清除規格書/零件圖誤建之雜訊連結；v7.8.14 移除 SPC 圖號偽連結）</td></tr>
-      <tr><td>有組件（parents）的品號</td><td>192（<strong>全部可解析為已登錄組件</strong>）</td></tr>
+      <tr><td>BOM 組件數（bom.children 鍵數）</td><td>209（seed 181 全數保留 + 圖檔組件圖 28；v7.8.20 無表頭 BOM 版式 +17）</td></tr>
+      <tr><td>BOM 父子連結總數</td><td>563（v7.8.20 +112）</td></tr>
+      <tr><td>有組件（parents）的品號</td><td>209（<strong>全部可解析為已登錄組件</strong>）</td></tr>
       <tr><td>無法解析為 master 品號的父鍵</td><td><strong>0</strong>（v7.8.5 修復前為 51.3%）</td></tr>
       <tr><td>孤兒圖（檔名品號未登錄）</td><td><strong>0</strong>（圖檔唯一檔名品號 872 零遺漏；僅 7 張無品號圖：對照表 + XXXX 占位符，正確排除）</td></tr>
       <tr><td>去重管理（v7.8.10）</td><td>parts 層 norm 去重 + 互為別名雙實體合併（40 組，如 E13-999-421 ⇄ R1-8112）+ BOM 鍵規範化（分裂鍵 0）</td></tr>
       <tr><td>角色判定（v7.8.11）</td><td>內文證據分層：KEY UNIT 表頭 / PART NO+QTY・ITEM / ASSY+候選≥3 → 組件；其餘 → 零件（修正目錄規則誤判；組件圖候補 147 → 6 全有 BOM）</td></tr>
       <tr><td>review 降噪（v7.8.12）</td><td>郵遞區號過濾（5 位純數字如 CA 92673）+ 加工複本別名自洽排除 → review 46 → 4 條全已人工確認；待確認事項 0</td></tr>
       <tr><td>SPC 圖號註冊格式（v7.8.14）</td><td>&lt;圖號&gt;_&lt;版次&gt;_&lt;品號&gt; 整串檢測 → 尾段為品號；SPC0005450 → <strong>RAW0000336</strong>（children [E13-999-421, RAW0000335]）；圖號 SPC\d+ 非品號不收入候選；單品零件有組件圖 → 升級組件圖候補（64 個）</td></tr>
-      <tr><td>物料類別三層體系（v7.8.15/v7.8.19）</td><td>物料（137，含收縮膜 2）/ 零件（634）/ 組件（SA 95 / SB 52 / SC 25 / SD 9 / 其他組件 11）；篩選下拉三組 optgroup 分組</td></tr>
+      <tr><td>物料類別三層體系（v7.8.15/v7.8.19/v7.8.20）</td><td>物料（137，含收縮膜 2）/ 零件（617）/ 組件（SA 95 / SB 52 / SC 25 / SD 9 / 其他組件 28）；篩選下拉三組 optgroup 分組</td></tr>
       <tr><td>類別 badge 顏色（v7.8.16）</td><td>三色對應三層體系：深色=組件、淺灰=物料、淺綠=零件（移除客戶特規/輔料歷史分支）</td></tr>
       <tr><td>內文欄位 vs 檔名品號不一致</td><td>26 張已於 2026-08-17 逐張人工核對：<strong>全部以檔名品號為準</strong>；欄位提取自動化後僅剩 0 未解案例</td></tr>
       <tr><td>Excel BOM vs 圖檔 BOM 交叉驗證（v7.8.8/9）</td><td>一致 47 / 不一致 70；<strong>整合策略：圖檔為主</strong>（組件有圖檔 BOM 時以展開粒度取代 Excel children；7 組逐張核對為粒度差異無衝突；版次以圖面為準）</td></tr>
       <tr><td>客戶資訊補齊（v7.8.8）</td><td>品號掛客戶 524/963（零漏掛）；模具號碼 379 / 穴數 376</td></tr>
       <tr><td>無 BOM 參與的品號</td><td>769（無父無子，含取代後失去引用的 Excel 概念組件，資料事實）</td></tr>
       <tr><td>未登錄組件來源</td><td>已全數收錄為 master 品號（圖檔提取 292 + scannedAssemblies 24）</td></tr>
-      <tr><td>圖檔提取數</td><td>1514（組件 249 / 零件 1126 / 物料 139；唯一檔名品號 872，master 命中 100%）</td></tr>
+      <tr><td>圖檔提取數</td><td>1514（組件 268 / 零件 1107 / 物料 139；唯一檔名品號 872，master 命中 100%）</td></tr>
     </tbody>
   </table>
   <div class="alert alert-info">

@@ -17,3 +17,5 @@ coverage/
 *.csv
 *.ffs_db
 .vscode/
+
+data/tessdata/

@@ -1,18 +1,44 @@
 # PN-Lookup 開發日誌
 
-## v7.8.19 — 收縮膜收錄為物料實體（0.08*14mm / 0.08*14.5mm）
+## v7.9.0 — 圖檔語意識別：多模型分工（laguna+hy3）提取品號/品名/圖號/原料/BOM，輸出 JSON+Excel
 
 ### 需求內容
-使用者決定：收縮膜（Shrink Band）收錄呈現，品號以圖面/Excel 原樣 `0.08*14mm`、`0.08*14.5mm` 表示。
+使用者要求從圖檔做語意識別（不依賴檔名猜測）：提取每張圖的 PART NO. / Description / DWG NO. / Material / BOM；掃描檔（無文字層）以 OCR 辨識後再語意化。後續追加：**整合各免費模型優勢**（多模型分工調用）、解析結果**預設輸出 JSON 與 Excel 兩檔**。
 
-### 執行內容（CAPA）
-1. **現況**：收縮膜在圖面 KEY UNIT 表 PART NO. 欄以尺寸規格呈現（0.08X14mm / 0.08*14mm，DESCRIPTION=Shrink Band，MATERIAL=PVC）；seed 組立表以 `0.08*14mm`/`0.08*14.5mm`（name=收縮膜）存在於 43 個 SB/SC 組立 children；原被 buildMaster 星號雜訊過濾剔除。
-2. **buildMaster.js**：①白名單收錄 — `SHRINK_BAND_RE`（`^0\.08\*14(?:\.5)?mm$`）放行，其餘含 `*` 仍過濾；category 設 `物料圖` → 輸出映射 `物料`（135 → **137**）；②**圖檔 BOM 取代時保留物料 children** — mergeDrawingsIntoMaster 取代 Excel children 時，物料類（收縮膜）不刪除、與圖檔 BOM 合併（根因：圖檔提取器不將尺寸視為品號 token，圖檔 BOM 不含收縮膜，原取代邏輯將其一併剔除，只剩 8/0 個父）。
-3. **verifyCoreLogic 基線**：種子 667 → **669**（693 + 24 − 8 − 40 + 2 收縮膜）、總數下限 961 → **963**；AGENTS.md 同步 669。
+### 執行內容
+1. **semanticExtract.js（新管線）**：pdfjs v6 文字層提取（`[y=N]` 座標行序 → LLM 依 y 分組辨識表格列）→ 品質不足或掃描檔自動轉 tesseract.js OCR（psm 3、scale 5、eng+chi_sim、@napi-rs/canvas 離屏渲染 PNG）→ 再語意化。wasmUrl 採檔案系統路徑（NodeBinaryDataFactory 不認 file://）。
+2. **多模型分工**：`zenDualExtract` 並行調用 — **laguna-s-2.1-free 提取標題欄**（partNo/description/dwgNo/material，專用 TITLE_PROMPT）+ **hy3-free 提取 BOM**（專用 BOM_PROMPT）→ 結果合併；任一失敗即互為 fallback（hy3 補標題欄 / laguna 補 BOM）。端點 `opencode.ai/zen/v1/chat/completions`（key 讀 auth.json opencode 憑證）；429/503 退避重試。免費模型實測淘汰：nemotron-3-ultra/3.5-lightning 輸出思考文本不守 JSON、deepseek-v4-flash-free/mimo-v2.5-free 429 限流、agnes-2.0-flash 品質不穩（partNo 誤抓）。
+3. **檔名品號修正**：模型 partNo 與 drawings-extract 檔名品號（filePartNo）不一致 → 以檔名品號覆寫（第一事實來源）。
+4. **雙檔輸出**：`data/semantic-extract.json`（全欄位）+ `data/semantic-extract.xlsx`（工作表：圖檔解析總表 / BOM明細）；`--file/--match` 增量合併不覆寫。
+5. **buildMaster.js mergeSemanticIntoMaster**：語意補缺 — seed Excel 優先、語意僅補缺；material 雜訊過濾（供應商/色料行、品號樣式、FABBED）；新欄位 `description`（品名規格原文）/ `dwgNo`（圖號）寫入 master；語意 BOM 僅補充既有組件鍵 children 缺漏（MDXE-153-02 之 22-690200/22-690250/22-690300/22-691000 PVC 管路品號 ×4）。
+6. **前端**：PartItem 型別 + 明細卡新增「品名規格原文 (Description)」「圖號 (DWG NO.)」顯示；Excel round-trip 匯出/匯入保留 description/dwgNo；dedupeParts 補缺同步。
 
 ### 驗證結果
-- master **963**（+2）= 零件 634 / SA 95 / SB 52 / SC 25 / SD 9 / 其他組件 11 / 物料 137；組件鍵 192 不變；組件鍵/類別一致性 0 異常。
-- 收縮膜 parents：0.08*14mm **34** 組立、0.08*14.5mm **9** 組立（SB 34 + SC 9，全數保留）；圖檔 BOM 組立 children 為「圖檔 BOM ∪ 收縮膜」。
+- 樣本 18/18 成功（品號與檔名吻合 17/17 可判 + ICU 對照表例外；OCR 掃描樣本 RM5003037/8013945/VLV-135-015/F17-999-615 品號全中）；MDXE-153-02 BOM 11/11（含 4 新管路品號）；BD-8003875 5、SD0002 5、3M41459 2。
+- master 963 → **971**（+8 語意 BOM 子件）；組件鍵 209 不變；語意補缺：material 7 / name 4 / dwgNo 15 / description 16。
+- verifyCoreLogic 全項 PASS（971 = 去重數、BOM 對稱/無循環 0 異常）；`npm run build` SUCCESS。
+
+### 待確認（使用者確認後處理）
+① 免費模型取捨（現行 laguna+hy3 分工）② 22-69xxxx 管路品號收錄（已收，確認）③ D10-240-251-1/-2 並存 ④ VLV-135-015-G16 ⑤ SB0001 BOM 提取不穩（無表頭版式）⑥ 中文描述亂碼（OCR 中文品質）⑦ dwgNo 收錄規則（null/版次/模具號）⑧ 全量 1514 圖批次執行策略（約 392 掃描檔需 OCR，免費模型限流）。
+
+---
+
+## v7.8.20 — 無表頭 BOM 版式判別：輸液套延長管（MDXE-*_E）等 17 組件升級
+
+### 需求內容
+使用者指證：`輸液套延長管`（MDXE-153-02 等）實為**組件**而非零件 — 其圖檔（如 MDXE-153-02_E.pdf）內文含明確 BOM 結構（自身品號 + 8 個子件）卻因無 KEY UNIT/PART NO 表頭被判零件。需補強 roleOf 規則使無表頭 BOM 版式正確判為組件，同時排除加工圖/適用註記誤傷。
+
+### 執行內容（CAPA）
+1. **根因**：roleOf 僅依 KEY UNIT / PART NO / ASSEMBLY 表頭判定組件；無表頭 BOM 版式（MDXE-*_E：品號直列 + 自身品號）落入零件。v7.8.11 曾因 ICU 規格書（含上方組裝目標註記）誤判大量組件而清除其 BOM → children 資料缺失，無法沿用 children 自證排除。
+2. **scanAssemblyImages.js roleOf（v7.8.20 規則）**：無表頭分支新增 — `known ≥ 3` 且內文含**自身品號**時判組件；三類排除維持零件：①加工複本（檔名 `-MC` 標記 / `_mdx` 尾綴）；②SPC 原料圖（`SPC\d+_` 圖號，CIV/RAW）；③known 任一品號為組件鍵（children 存在）→ 上方組裝目標（R1-15197 含 E13-999-421）。
+3. **buildMaster.js mergeDrawingsIntoMaster**：組件圖候補升級條件由 `單品零件` 擴及 `零件圖`（v7.8.11 無證據降級者，新證據出現一併升級：R1-2357/R1-15769/R1-16501/R1-8392/R1-8393/R1-15170）；notes 註記 v7.8.20 判別來源。
+4. **文件同步**：mapping-logic.md / data-mapping.html — 組件鍵 192→**209**、BOM 連結 451→**563**、角色分布 249/1126/139→**268/1107/139**、類別三層（零件 634→617、其他組件 11→28）。
+
+### 驗證結果
+- master **963** = 零件 617 / SA 95 / SB 52 / SC 25 / SD 9 / 其他組件 28 / 物料 137；組件鍵 **209**（+17）。
+- 新增組件鍵 17：MDXE-019-03/029-01/054-01/064-01/105-01/153-02/155-01/205-02（輸液套延長管系列，children 5~8）+ 8003875/X3299AAM（BD 組件圖）+ R1-2357/R1-15769/R1-16501/R1-8392/R1-8393/R1-15170。
+- 排除驗證：R1-10134-MC 等加工複本、SPC0005450 RAW/CIV 原料圖、R1-15197（含 E13-999-421 組裝目標）維持零件。
+- 一致性：組件鍵↔類別 0 異常；children→parents 雙向對稱 0 異常；BOM 無循環 0；verify 全項 PASS；`npm run build` SUCCESS；無圖檔 198 不變。
 - 無圖檔統計 196 → **198**（物料 2）；verify 11 項 / lint / build 全 PASS；文件同步（mapping-logic、data-mapping、AGENTS.md）。
 
 ---

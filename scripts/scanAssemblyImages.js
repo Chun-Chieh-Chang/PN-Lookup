@@ -56,7 +56,7 @@ const parentOfArg = argv.includes('--parent-of') ? argv[argv.indexOf('--parent-o
 // 圖檔角色（v7.8.11）：物料資料夾 → 物料；其餘以圖內文證據判定
 // 組件 = 內文零件清單（BOM 表/組立字樣）可建立 BOM；零件 = 檔名即自身品號，不建立 BOM
 // v7.8.10 瑕疵：僅依目錄判定，客戶圖面/綜合圖面下的零件圖被誤歸「組件」（組件圖候補 125 個無 BOM）
-function roleOf(rel, text = '', known = [], parents = null, assemblyId = '') {
+function roleOf(rel, text = '', known = [], parents = null, assemblyId = '', childrenMap = null) {
   const p = rel.replace(/\\/g, '/');
   if (/物料資料\//.test(p)) return '物料';
   if (/廠內零件圖面/.test(p) || /ICU原料圖面/.test(p)) return '零件';
@@ -71,6 +71,19 @@ function roleOf(rel, text = '', known = [], parents = null, assemblyId = '') {
     // （SA0145(Rev.B)-C、R1-2392_6、R1-3529_05 等；避免「適用於 XXX」註記誤傷：僅比對自身父組立）
     if (known.length && parents && assemblyId &&
         known.some((k) => (parents[k.partNo] || []).includes(assemblyId))) return '組件';
+    // v7.8.20 無表頭 BOM 版式判別（MDXE-*_E、BD-* 等）：內文含自身品號 + ≥3 品號（自身+2 子件以上）
+    // 時判組件；排除三類非組件圖 → 維持零件：
+    //   ① 加工複本（-MC 標記 / _mdx 尾綴）：內文為適用組裝目標註記（R1-10134-MC 含 R1-15853）
+    //   ② SPC 原料圖（SPC\d+_ 圖號）：內文為原料規格清單（CIV/RAW）
+    //   ③ known 任一品號為組件鍵（children 存在）→ 上方組裝目標（R1-15197 含 E13-999-421）
+    if (known.length >= 3 && assemblyId && childrenMap) {
+      const self = norm(assemblyId);
+      if (known.some((k) => norm(k.partNo) === self)) {
+        if (/[-_]MC[_.]/i.test(p) || /_mdx/i.test(p) || /SPC\d+_/i.test(p)) return '零件';
+        const isNote = known.some((k) => (childrenMap[k.partNo] || []).length > 0);
+        if (!isNote) return '組件';
+      }
+    }
     return '零件';
   }
   return '組件';
@@ -526,7 +539,7 @@ async function main() {
 
     unknown.sort();
     const assemblyId = resolveAssemblyId(rawAssemblyId, known, index);
-    const role = extractMode ? roleOf(rel, text, known, master.bom.parents, assemblyId) : null;
+    const role = extractMode ? roleOf(rel, text, known, master.bom.parents, assemblyId, master.bom.children) : null;
 
     // 檔名品號：組件圖 = 解析後的組件 ID；零件/物料圖 = 剝除版本後綴的自身品號
     const filePartNo = sanitizeFilePartNo(assemblyId);
