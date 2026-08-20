@@ -139,6 +139,11 @@ export function mergeSemanticIntoMaster(master, semantic) {
   };
   const isJunkDescription = (s) => !s || String(s).trim().length > 160 || /\.\.\s/.test(s);
 
+  // v7.9.1 BOM 補缺品號白名單：語意 BOM 子件僅收錄有效品號格式，過濾材質/品名/模具號/尺寸雜訊
+  const PN_RE = /^(?:[A-Z]{1,4}\d{1,4}(?:-\d{1,4}){1,3}[A-Z0-9]?|[A-Z]{2,4}\d{4,7}|\d{1,2}[A-Z]\d{3,6}|\d{4,}(?:-\d+)*|\d{2,3}(?:-\d+){1,3})$/i;
+  const PN_JUNK_RE = /^(SHRINK|STOPPER|BAG|CAP|VENT|N\/A|NONE|TRANS|BENISON|HANNAH|JIAN|IR\s*NIPOL|POLY|PVC|ABS|PE|HDPE|LDPE|FABRIC|RUBBER|SILICONE|O-RING|LATCH|LOCK|SEAL|SPRING|GASKET|\d{1,3}(?:\.\d+)?mm?|0\.0\d+.*|9494|TRANS\s*9494)$/i;
+  const PN_MOULDEX_RE = /^M\d{3,4}-R\d+$/i;
+
   for (const it of (semantic.items || [])) {
     if (!it.ok || !it.data) continue;
     const pn = it.data.partNo;
@@ -169,6 +174,11 @@ export function mergeSemanticIntoMaster(master, semantic) {
         const childNo = String(b.partNo || '').trim();
         if (!childNo || norm(childNo) === norm(pn)) continue;
         if (kids.some((k) => norm(k) === norm(childNo))) continue;
+        // 品號格式白名單：不符合 → 略過（材質/品名/模具號/尺寸雜訊不收錄）
+        if (!PN_RE.test(childNo) || PN_JUNK_RE.test(childNo) || PN_MOULDEX_RE.test(childNo)) {
+          console.log(`  [BOM 雜訊略過] ${pn} → ${childNo}（${(b.description || '').slice(0, 30)}）`);
+          continue;
+        }
         if (!existing.has(norm(childNo))) {
           master.parts.push({
             id: childNo, partNo: childNo, name: b.description || childNo, customer: '',
