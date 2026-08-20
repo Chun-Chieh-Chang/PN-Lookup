@@ -136,7 +136,12 @@ async function ocrPdf(filePath) {
       const ctx = cv.getContext('2d');
       await page.render({ canvasContext: ctx, viewport }).promise;
       page.cleanup();
-      const { data: ocrText } = await worker.recognize(cv.toBuffer('image/png'));
+      // v7.9.1 OCR 單頁超時保護：tesseract worker 偶發死鎖（SB0087 卡 50min+）→ 180s 超時拋錯
+      const recognize = worker.recognize(cv.toBuffer('image/png'));
+      const { data: ocrText } = await Promise.race([
+        recognize,
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`OCR 單頁超時（第 ${i} 頁 >180s）`)), 180000)),
+      ]);
       lines.push(...ocrText.text.split('\n').map((l) => l.trim()).filter(Boolean));
     }
   } finally {
@@ -278,11 +283,14 @@ async function agnesExtract(textLines, fileName) {
   };
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const resp = await fetch(AGNES_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-        body: JSON.stringify(body),
-      });
+      const resp = await Promise.race([
+        fetch(AGNES_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+          body: JSON.stringify(body),
+        }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('agnes 請求超時（>120s）')), 120000)),
+      ]);
       const d = await resp.json();
       if (!resp.ok) return { ok: false, error: `agnes ${resp.status}: ${d.error?.message || JSON.stringify(d).slice(0, 200)}` };
       const content = d.choices?.[0]?.message?.content?.trim();
@@ -363,8 +371,10 @@ async function main() {
   const matchArg = args.find((a) => a.startsWith('--match='))?.split('=')[1];
   const sample = args.includes('--sample');
   const all = args.includes('--all');
+  const retryFailed = args.includes('--retry-failed');
   const force = args.includes('--force');
   const batchSize = Number(args.find((a) => a.startsWith('--batch='))?.split('=')[1] || 6);
+  const batchRestMs = Number(args.find((a) => a.startsWith('--rest='))?.split('=')[1] || (retryFailed ? 90000 : 12000));
   if (providerArg === 'gemini' && !process.env.GOOGLE_API_KEY && !ocrOnly) {
     console.error('缺少 GOOGLE_API_KEY（.env）');
     process.exit(1);
@@ -382,6 +392,11 @@ async function main() {
   }
   else if (sample) targets = SAMPLE_NAMES.map((n) => (idx[n] ? { name: n, rel: idx[n].rel, filePartNo: idx[n].filePartNo } : null)).filter(Boolean);
   else if (all) targets = Object.entries(idx).map(([name, v]) => ({ name, rel: v.rel, filePartNo: v.filePartNo }));
+  else if (retryFailed) {
+    const prev = JSON.parse(readFileSync(OUT_PATH, 'utf-8'));
+    targets = prev.items.filter((r) => !r.ok && idx[r.file]).map((r) => ({ name: r.file, rel: idx[r.file].rel, filePartNo: idx[r.file].filePartNo || null }));
+    console.log(`retry-failed：${targets.length} 筆待重試（批間 90s）`);
+  }
   else {
     console.error('需指定 --sample 或 --file=<rel路徑> 或 --match=<檔名子串>');
     process.exit(1);
@@ -420,7 +435,10 @@ async function main() {
     }
     if (method === 'ocr') {
       try {
-        lines = await ocrPdf(fullPath);
+        lines = await Promise.race([
+          ocrPdf(fullPath),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('OCR 整張超時（>600s）')), 600000)),
+        ]);
       } catch (e) {
         console.log(`  [FAIL] OCR 失敗：${e.message}`);
         results.push({ file: t.name, method, ok: false, error: e.message });
@@ -443,7 +461,10 @@ async function main() {
     if (method === 'text-layer' && hasKeyUnit(lines) && !(out.data.bom || []).length) {
       console.log(`  KEY UNIT 表格偵測但 BOM 為空 → OCR 二次提取`);
       try {
-        const ocrLines = await ocrPdf(fullPath);
+        const ocrLines = await Promise.race([
+          ocrPdf(fullPath),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('OCR 二次提取超時（>600s）')), 600000)),
+        ]);
         const out2 = await extractFn(ocrLines, t.name);
         if (out2.ok && (out2.data.bom || []).length) {
           lines = ocrLines;
@@ -480,24 +501,24 @@ async function main() {
     console.log(`  material: ${d.material}`);
     console.log(`  bom: ${Array.isArray(d.bom) ? d.bom.length : 0} 列`);
     results.push({ file: t.name, method, ok: true, data: d, models: out.models, warn: out.warn, lines: lines.length });
-    // v7.9.1 批間休息：避限流（--batch=N 預設 6，最後一張不休息）
-    if (all && batchSize > 0 && results.length % batchSize === 0 && results.length < targets.length) {
-      console.log(`  ── 批次休息 12s（已完成 ${results.length}/${targets.length}）──`);
-      await new Promise((r) => setTimeout(r, 12000));
+    // v7.9.1 批間休息：避限流（--batch=N，--rest=毫秒 可調；retry-failed 預設 90s）
+    if ((all || retryFailed) && batchSize > 0 && results.length % batchSize === 0 && results.length < targets.length) {
+      console.log(`  ── 批次休息 ${Math.round(batchRestMs / 1000)}s（已完成 ${results.length}/${targets.length}）──`);
+      await new Promise((r) => setTimeout(r, batchRestMs));
     }
     // v7.9.1 checkpoint：每 20 張寫入一次（中斷續跑不丟失）
-    if (all && !ocrOnly && results.length % 20 === 0 && results.length < targets.length) {
-      const total = await writeOutput(results, false);
+    if ((all || retryFailed) && !ocrOnly && results.length % 20 === 0 && results.length < targets.length) {
+      const total = await writeOutput(results, false, modelArg || ZEN_MODEL_DEFAULT + '+hy3-free');
       console.log(`  ── checkpoint 已寫入（累計 ${total} 筆）──`);
     }
   }
   if (!ocrOnly) {
-    await writeOutput(results, sample);
+    await writeOutput(results, sample, modelArg || ZEN_MODEL_DEFAULT + '+hy3-free');
   }
 }
 
 // v7.9.1 checkpoint：合併既有輸出後寫入 JSON+Excel（all 模式每 20 張調用，避免中途遺失）
-async function writeOutput(results, sample) {
+async function writeOutput(results, sample, modelLabel) {
   let merged = results;
   if (!sample && existsSync(OUT_PATH)) {
     try {
@@ -506,7 +527,7 @@ async function writeOutput(results, sample) {
       merged = [...prev.items.filter((r) => !seen.has(r.file)), ...results];
     } catch { /* 覆寫 */ }
   }
-  writeFileSync(OUT_PATH, JSON.stringify({ generatedAt: new Date().toISOString(), model: modelArg || 'laguna-s-2.1-free+hy3-free', items: merged }, null, 2));
+  writeFileSync(OUT_PATH, JSON.stringify({ generatedAt: new Date().toISOString(), model: modelLabel || 'laguna-s-2.1-free+hy3-free', items: merged }, null, 2));
   await writeExcel(merged);
   return merged.length;
 }
