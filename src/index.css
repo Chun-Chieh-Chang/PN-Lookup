@@ -59,21 +59,6 @@
   transform: translateY(1px);
 }
 
-/* 專業高資訊密度表格選中行指示器 */
-.table-row-selected {
-  position: relative;
-}
-.table-row-selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background-color: #0284C7;
-  border-radius: 0 2px 2px 0;
-}
-
 /* Custom Scrollbar - 緊湊優雅捲軸 */
 ::-webkit-scrollbar {
   width: 6px;

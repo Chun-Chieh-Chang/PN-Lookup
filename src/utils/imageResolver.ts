@@ -120,18 +120,6 @@ export function resolveAllImages(
   return results;
 }
 
-export function resolveImage(
-  partNo: string,
-  alternates: string[] | undefined,
-  lib: ImageLibrary | null,
-  bindings: Record<string, string>,
-  ocrIndex: Map<string, string>,
-  relatedParts?: string[],
-): ImageResolution | null {
-  const all = resolveAllImages(partNo, alternates, lib, bindings, ocrIndex, relatedParts);
-  return all.length > 0 ? all[0] : null;
-}
-
 // ---------- 反向識別：由圖檔內文找出「該品號可組成的產品」 ----------
 export interface ReverseBomCandidate {
   partNo: string;

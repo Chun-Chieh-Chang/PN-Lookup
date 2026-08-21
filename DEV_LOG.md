@@ -25,6 +25,47 @@ v7.9.0 樣本驗證通過後，對全部 1514 張圖執行語意識別（品號/
 
 ---
 
+## v7.9.2 — 五分類物料體系 + ICU 原料料號對照表導入 + Tool-Calling 色系遷移
+
+### 需求內容
+1. 建構五分類物料體系（原料/物料/零件/組件/SET），前端支援分類篩選與 badge 樣式。
+2. 導入 ICU 原料料號對照表（`rawdata/客戶(ICU)原料料號對照表.xlsx`），覆蓋既有材料規格 + 新增品項。
+3. 套用 Tool-Calling Precision Instrument 色系（Glacier Workbench + Cobalt Blue Accent）。
+4. 全域程式碼與檔案優化：死碼清理、文件對齊、unused 依賴移除。
+
+### 執行內容（CAPA）
+1. **五分類體系**（`buildMaster.js`）：
+   - 原料 25 筆（`ICU_MATERIAL_PNS` Set：28-0397、75-0485 等 25 個化學材料料號）。
+   - SET 114 筆（`MDXE-`/`MDXI-` 前綴全系列 + `SET_MANUAL` 12 個：8003875、X3299AAM、EB/EC/ED/EG/DB 系列）。
+   - 物料 137 / 零件 552 / 組件 181 不變。
+   - 分類優先序：SET > 原料 > 組件 > 物料 > 零件。
+2. **ICU 導入**（`importICU.js` + `mergeICUPartsIntoMaster`）：
+   - 解析 167 筆（跨列原料合併），8 種客戶：ICU(120)/MDX(40)/GVS(2)/CardioMed(1)/SIMS(1)/Bard(1)/RMS(1)/PFM(1)。
+   - 合併鍵為 `norm(partNo)`（不含 customer）；已有品號覆蓋 material/color/moldNo/cavity/dwgNo，不覆蓋 customer。
+   - 129 覆蓋 + 38 新增，master 989→1027。
+3. **Tool-Calling 色系遷移**（11 files, 174 insertions, 157 deletions）：
+   - Workbench 底色 `#F8FAFC`→`#f1f5f9` (Slate 100)；glass-header 改實體白色面板+鈷藍左飾條。
+   - 品牌主色 `sky-700`→`sky-600` (#0284C7 Cobalt Blue)；所有 focus ring 統一 `sky-600`。
+   - 選取列/分頁/Checkbox `indigo`→`sky` 統一；AdminPanel/ImageBindModal `gray`→`slate` 全面統一。
+   - CSS variables 重命名為 design token 風格，移除 dark-mode 廢棄變數。
+4. **程式碼優化**：
+   - 移除 unused npm packages：`react-force-graph-3d`、`three`、`@types/three`。
+   - 刪除 orphaned root files：`new`（空檔）、`upload_*.jpg`（上傳殘留）。
+   - 移除 dead CSS：`.table-row-selected`（已無使用）。
+   - 移除 unused export：`resolveImage()`（已被 `resolveAllImages()` 取代）。
+5. **文件對齊**：
+   - `version.ts` → `v7.9.2`；`package.json` version → `7.9.2`。
+   - `README.md` 全面重寫：移除 3D MindMap、更新功能列表、補充五分類/ICU/語意 BOM。
+   - `mapping-logic.md`：BOM links 563→603、新增 §2.2 ICU 導入/§2.3 白名單/§2.4 五分類、§9 品質數據更新。
+   - `DEV_LOG.md`：補充本條目。
+
+### 驗證結果
+- verifyCoreLogic 全項 PASS（1027 = 去重數、BOM 對稱/無循環 0 異常）；`npm run build` SUCCESS。
+- master 1027 = 原料 25 / 物料 137 / 零件 552 / 組件 181 / SET 114。
+- 交付 commits：色系遷移 `7293e5f` → 文件更新 `7ec9ed9` → 優化清理（本批次）。
+
+---
+
 ## v7.9.0 — 圖檔語意識別：多模型分工（laguna+hy3）提取品號/品名/圖號/原料/BOM，輸出 JSON+Excel
 
 

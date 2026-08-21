@@ -1,7 +1,7 @@
 {
   "name": "pn-lookup",
   "private": true,
-  "version": "2.0.0",
+  "version": "7.9.2",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -19,15 +19,12 @@
     "pdfjs-dist": "^6.2.108",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "react-force-graph-3d": "^1.29.1",
     "tesseract.js": "^7.0.0",
-    "three": "^0.185.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^22.14.0",
-    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.0.4",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
