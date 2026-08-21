@@ -522,8 +522,8 @@ function buildMaster() {
     console.log(`ℹ️ 未找到 ${ICU_PATH}（先執行 node scripts/importICU.js）`);
   }
 
-  // v7.8.15 物料類別三層體系：物料 / 零件 / 組件（SA~SD 組立 + 其他組件）
-  // 內部邏輯判斷維持細粒度值（單品零件/零件圖/組件圖候補/物料圖），僅輸出前統一映射
+  // v7.8.15 物料類別三層體系 → v7.9.2 五分類：原料 / 物料 / 零件 / 組件 / SET
+  // 內部邏輯判斷維持細粒度值，僅輸出前統一映射
   const CATEGORY_ALIAS = {
     單品零件: '零件',
     零件圖: '零件',
@@ -534,6 +534,44 @@ function buildMaster() {
     const alias = CATEGORY_ALIAS[p.category];
     if (alias) p.category = alias;
   }
+
+  // v7.9.2 原料分類：ICU 原料料號對照表的材料料號 → 原料
+  const ICU_MATERIAL_PNS = new Set([
+    '28-0397', '75-0485', '75-1396', '75-1861', '75-2117', '75-2567', '75-2568',
+    '90-9634', 'R1-1000', 'R1-1034', 'R1-1036', 'R1-1073', 'R1-1092', 'R1-1176',
+    'R1-1203', 'R1-8328', 'R1-8329', 'R1-8337', 'R1-8959', 'R1-9066', 'R1-10002',
+    'R1-10046', 'R1-10143', 'R1-15157', 'R1-16132',
+  ]);
+  let rawMatCount = 0;
+  for (const p of master.parts) {
+    if (ICU_MATERIAL_PNS.has(p.partNo) && p.category === '零件') {
+      p.category = '原料';
+      rawMatCount++;
+    }
+  }
+  if (rawMatCount) console.log(`分類修正: ${rawMatCount} 筆材料 → 原料`);
+
+  // v7.9.2 SET 分類：含輸液管的組件 → SET
+  // 1. MDXE / MDXI 系列（所有）
+  // 2. 8003875、X3299AAM
+  // 3. EB/EC/ED/EG/DB 系列中的輸液套延長管
+  const SET_MANUAL = new Set([
+    '8003875', 'X3299AAM',
+    'EB03002', 'EB03013SA', 'EB06002', 'EB07201', 'EB07202', 'EB09601',
+    'EC07201', 'ED03001', 'EG01401', 'DB00605',
+  ]);
+  let setCount = 0;
+  for (const p of master.parts) {
+    if (p.category === 'SET') continue; // 已是 SET
+    const isMDXE = /^MDXE-/.test(p.partNo);
+    const isMDXI = /^MDXI-/.test(p.partNo);
+    const isManualSET = SET_MANUAL.has(p.partNo);
+    if (isMDXE || isMDXI || isManualSET) {
+      p.category = 'SET';
+      setCount++;
+    }
+  }
+  if (setCount) console.log(`分類修正: ${setCount} 筆組件 → SET`);
 
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');

@@ -39,6 +39,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   const CATEGORY_OPTIONS = [
     '物料',
     '零件',
+    '原料',
+    'SET',
     'SA組立',
     'SB組立',
     'SC組立',

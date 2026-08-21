@@ -157,6 +157,8 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
               {[
                 { label: '物料', match: (c: string) => c === '物料' },
                 { label: '零件', match: (c: string) => c === '零件' },
+                { label: '原料', match: (c: string) => c === '原料' },
+                { label: 'SET', match: (c: string) => c === 'SET' },
                 { label: '組件', match: (c: string) => c.endsWith('組立') || c === '其他組件' },
               ].map((g) => {
                 const groupCats = categories.filter(g.match);
@@ -168,7 +170,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
                   </optgroup>
                 );
               })}
-              {categories.filter((c) => !['物料', '零件'].includes(c) && !c.endsWith('組立') && c !== '其他組件')
+              {categories.filter((c) => !['物料', '零件', '原料', 'SET'].includes(c) && !c.endsWith('組立') && c !== '其他組件')
                 .map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
