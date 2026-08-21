@@ -471,14 +471,14 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     <button
                       onClick={() => onViewDetail(item)}
                       className={`btn-tactile inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-[13px] font-semibold border transition-all cursor-pointer shadow-2xs ${
-                        (item.category && item.category.includes('組件')) || isAssembly
-                          ? 'bg-slate-900 text-sky-400 border-slate-700 hover:bg-slate-800'
-                          : (item.category && item.category.includes('物料'))
-                          ? 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200'
-                          : item.category === 'SET'
+                        item.category === 'SET'
                           ? 'bg-violet-50 text-violet-900 border-violet-300 hover:bg-violet-100'
                           : item.category === '原料'
                           ? 'bg-amber-50 text-amber-900 border-amber-300 hover:bg-amber-100'
+                          : (item.category && item.category.includes('組件')) || isAssembly
+                          ? 'bg-slate-900 text-sky-400 border-slate-700 hover:bg-slate-800'
+                          : (item.category && item.category.includes('物料'))
+                          ? 'bg-slate-100 text-slate-800 border-slate-300 hover:bg-slate-200'
                           : 'bg-emerald-50 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
                       }`}
                       title={isAssembly ? '查看組成此組件的所有零件' : '查看可組成該零件的相應組件'}
