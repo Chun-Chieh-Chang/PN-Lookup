@@ -8,6 +8,7 @@ const RAW_SEED_PATH = join(ROOT_DIR, 'rawdata', 'master_table_unified.json');
 const OUTPUT_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
 const EXTRACT_PATH = join(ROOT_DIR, 'data', 'drawings-extract.json');
 const SEMANTIC_PATH = join(ROOT_DIR, 'data', 'semantic-extract.json');
+const ICU_PATH = join(ROOT_DIR, 'data', 'icu-parts.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -439,6 +440,51 @@ export function convertUnifiedSeedToMaster(seedData) {
   };
 }
 
+// v7.9.1 ICU 原料料號對照表：合併 ICU 零件（覆蓋 material/color/moldNo/cavity/dwgNo，新增不存在品號）
+export function mergeICUPartsIntoMaster(master, icuParts) {
+  const existing = new Map(master.parts.map((p) => [norm(p.partNo), p]));
+  let updated = 0, added = 0;
+
+  for (const icu of icuParts) {
+    const n = norm(icu.partNo);
+    const ex = existing.get(n);
+
+    if (ex) {
+      // 已存在：以 Excel 為主覆蓋 material（及 color/moldNo/cavity/dwgNo）
+      if (icu.material) ex.material = icu.material;
+      if (icu.color) ex.color = icu.color;
+      if (icu.moldNo) ex.moldNo = icu.moldNo;
+      if (icu.cavity) ex.cavity = String(icu.cavity);
+      if (icu.dwgNo) ex.dwgNo = icu.dwgNo;
+      // name：英文名為主，中文名為輔
+      if (icu.nameEN && !ex.description) ex.description = icu.nameEN;
+      if (icu.nameCN && (!ex.name || ex.name === ex.partNo)) ex.name = icu.nameCN;
+      updated++;
+    } else {
+      // 新品號：收錄為零件
+      master.parts.push({
+        id: icu.partNo,
+        partNo: icu.partNo,
+        name: icu.nameCN || icu.nameEN || icu.partNo,
+        customer: icu.customer || 'ICU',
+        category: '零件',
+        color: icu.color || '',
+        material: icu.material || '',
+        moldNo: icu.moldNo || '',
+        cavity: icu.cavity || '',
+        notes: '由ICU原料料號對照表導入',
+        alternates: [],
+        description: icu.nameEN || '',
+        dwgNo: icu.dwgNo || '',
+      });
+      existing.set(n, master.parts[master.parts.length - 1]);
+      added++;
+    }
+  }
+
+  return { updated, added };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -465,6 +511,15 @@ function buildMaster() {
     console.log(`Merged semantic-extract: 補缺 material ${materialFilled} / name ${nameFilled} / dwgNo ${dwgAdded} / description ${descAdded} / BOM 子件 ${bomAdded}`);
   } else {
     console.log(`ℹ️ 未找到 ${SEMANTIC_PATH}（先執行 node scripts/semanticExtract.js --sample）`);
+  }
+
+  // v7.9.1 ICU 原料料號對照表：覆蓋 material + 新增不存在品號
+  if (existsSync(ICU_PATH)) {
+    const icuParts = JSON.parse(readFileSync(ICU_PATH, 'utf-8'));
+    const { updated, added } = mergeICUPartsIntoMaster(master, icuParts);
+    console.log(`Merged ICU parts: 覆蓋 ${updated} / 新增 ${added}（共 ${icuParts.length} 筆）`);
+  } else {
+    console.log(`ℹ️ 未找到 ${ICU_PATH}（先執行 node scripts/importICU.js）`);
   }
 
   // v7.8.15 物料類別三層體系：物料 / 零件 / 組件（SA~SD 組立 + 其他組件）
