@@ -320,31 +320,31 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   };
 
   const renderAssemblyGroup = (prefix: string, groupKeys: string[]) => (
-    <div key={prefix} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="px-4 py-2.5 bg-gray-100 border-b border-gray-200 font-bold text-gray-700 text-sm">
+    <div key={prefix} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200 font-bold text-slate-700 text-sm">
         {prefix} 組立 ({groupKeys.length} 筆)
       </div>
       {groupKeys.length === 0 ? (
-        <div className="p-4 text-sm text-gray-400">無 {prefix} 資料</div>
+        <div className="p-4 text-sm text-slate-400">無 {prefix} 資料</div>
       ) : (
         <div className="divide-y divide-gray-100 text-sm">
           {groupKeys.map(key => {
             const partName = parts.find(p => p.partNo === key)?.name || key;
             const comps = children[key] || [];
             return (
-              <div key={key} className="p-3 hover:bg-gray-50">
+              <div key={key} className="p-3 hover:bg-slate-50">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center space-x-2">
-                    <button onClick={() => handleRemoveAssembly(key)} className="p-0.5 text-gray-300 hover:text-red-500 cursor-pointer" title="刪除組立">
+                    <button onClick={() => handleRemoveAssembly(key)} className="p-0.5 text-slate-300 hover:text-red-500 cursor-pointer" title="刪除組立">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                    <span className="font-mono font-bold text-blue-700">{key}</span>
-                    <span className="text-gray-500 truncate max-w-xs">{partName}</span>
-                    <span className="text-gray-400 text-[13px]">({comps.length} 個零件)</span>
+                    <span className="font-mono font-bold text-sky-700">{key}</span>
+                    <span className="text-slate-500 truncate max-w-xs">{partName}</span>
+                    <span className="text-slate-400 text-[13px]">({comps.length} 個零件)</span>
                   </div>
                   <button
                     onClick={() => setEditingKey(editingKey === key ? null : key)}
-                    className="px-2 py-1 text-[13px] bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 cursor-pointer"
+                    className="px-2 py-1 text-[13px] bg-sky-50 text-sky-700 border border-sky-200 rounded hover:bg-sky-100 cursor-pointer"
                   >
                     {editingKey === key ? '取消' : '編輯零件'}
                   </button>
@@ -355,15 +355,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                     {comps.map((comp, ci) => {
                       const compName = parts.find(p => p.partNo === comp)?.name || comp;
                       return (
-                        <div key={ci} className="flex items-center justify-between py-0.5 px-2 rounded hover:bg-gray-100 group">
+                        <div key={ci} className="flex items-center justify-between py-0.5 px-2 rounded hover:bg-slate-100 group">
                           <div className="flex items-center space-x-2">
-                            <span className="text-gray-400 text-[13px]">{ci + 1}.</span>
-                            <span className="font-mono text-gray-700">{comp}</span>
-                            <span className="text-gray-400 truncate max-w-[200px]">{compName !== comp ? compName : ''}</span>
+                            <span className="text-slate-400 text-[13px]">{ci + 1}.</span>
+                            <span className="font-mono text-slate-700">{comp}</span>
+                            <span className="text-slate-400 truncate max-w-[200px]">{compName !== comp ? compName : ''}</span>
                           </div>
                           <button
                             onClick={() => handleRemoveComponent(key, ci)}
-                            className="p-0.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                            className="p-0.5 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                             title="移除零件"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -377,27 +377,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                 {editingKey === key && (
                   <div className="ml-6 mt-2 relative">
                     <div className="flex items-center space-x-2">
-                      <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         placeholder="搜尋品號加入..."
-                        className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                         autoFocus
                       />
                     </div>
                     {searchResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
                         {searchResults.map(p => (
                           <button
                             key={p.partNo}
                             onClick={() => handleAddComponent(key, p.partNo)}
-                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center space-x-2 cursor-pointer"
+                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 flex items-center space-x-2 cursor-pointer"
                           >
                             <Plus className="w-3 h-3 text-emerald-500 shrink-0" />
-                            <span className="font-mono text-blue-700">{p.partNo}</span>
-                            <span className="text-gray-500 truncate">{p.name}</span>
+                            <span className="font-mono text-sky-700">{p.partNo}</span>
+                            <span className="text-slate-500 truncate">{p.name}</span>
                           </button>
                         ))}
                       </div>
@@ -413,19 +413,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="sticky top-0 z-50 bg-white border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer" title="返回主畫面">
+          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer" title="返回主畫面">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">後台管理</h1>
+          <h1 className="text-lg font-bold text-slate-900">後台管理</h1>
         </div>
         <div className="flex items-center space-x-3">
           {message && (
             <span className={`text-sm ${message.includes('失敗') ? 'text-red-600' : 'text-emerald-600'}`}>{message}</span>
           )}
-          {syncState === 'saving' && <span className="text-sm text-gray-500">同步中...</span>}
+          {syncState === 'saving' && <span className="text-sm text-slate-500">同步中...</span>}
           {syncState === 'saved' && <span className="text-sm text-emerald-600">已自動同步至伺服器</span>}
           {syncState === 'error' && <span className="text-sm text-red-600">同步失敗，請確認伺服器執行中</span>}
           {!serverOnline && <span className="text-sm text-amber-600">離線模式（變更僅存本機）</span>}
@@ -435,36 +435,36 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
 
         {/* 品號管理：搜尋刪除 + 新增 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
-            <PackagePlus className="w-4 h-4 text-blue-500" />
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center space-x-2">
+            <PackagePlus className="w-4 h-4 text-sky-500" />
             <span>品號管理（共 {parts.length} 筆）</span>
           </h2>
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={partSearch}
               onChange={e => setPartSearch(e.target.value)}
               placeholder="搜尋品號或品名以刪除..."
-              className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
             />
           </div>
           {partSearch && (
             <div className="mt-3 space-y-1">
               {partSearchResults.length === 0 && (
-                <p className="text-sm text-gray-400 py-2">查無符合條件的品號</p>
+                <p className="text-sm text-slate-400 py-2">查無符合條件的品號</p>
               )}
               {partSearchResults.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-gray-100 group">
+                <div key={p.id} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-100 group">
                   <div className="flex items-center space-x-2 min-w-0">
-                    <span className="font-mono text-blue-700">{p.partNo}</span>
-                    <span className="text-gray-500 truncate">{p.name}</span>
-                    <span className="text-gray-400 text-[13px] truncate">{p.customer}</span>
+                    <span className="font-mono text-sky-700">{p.partNo}</span>
+                    <span className="text-slate-500 truncate">{p.name}</span>
+                    <span className="text-slate-400 text-[13px] truncate">{p.customer}</span>
                   </div>
                   <button
                     onClick={() => handleDeletePart(p)}
-                    className="p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                    className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                     title="刪除品號"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -474,49 +474,49 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
             </div>
           )}
 
-          <div className="border-t border-gray-100 mt-4 pt-4">
-            <h3 className="text-[13px] font-bold text-gray-500 mb-2">新增品號</h3>
+          <div className="border-t border-slate-100 mt-4 pt-4">
+            <h3 className="text-[13px] font-bold text-slate-500 mb-2">新增品號</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-500 mb-1">客戶 *</label>
+                <label className="block text-sm text-slate-500 mb-1">客戶 *</label>
                 <input
                   type="text"
                   list="admin-customers"
                   value={newPart.customer}
                   onChange={e => setNewPart(prev => ({ ...prev, customer: e.target.value }))}
                   placeholder="客戶名稱"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
                 <datalist id="admin-customers">
                   {existingCustomers.map(c => <option key={c} value={c} />)}
                 </datalist>
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">品號 *</label>
+                <label className="block text-sm text-slate-500 mb-1">品號 *</label>
                 <input
                   type="text"
                   value={newPart.partNo}
                   onChange={e => setNewPart(prev => ({ ...prev, partNo: e.target.value }))}
                   placeholder="品號 (如 A02-410-111)"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">品名 *</label>
+                <label className="block text-sm text-slate-500 mb-1">品名 *</label>
                 <input
                   type="text"
                   value={newPart.name}
                   onChange={e => setNewPart(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="品名規格"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">物料類別</label>
+                <label className="block text-sm text-slate-500 mb-1">物料類別</label>
                 <select
                   value={newPart.category}
                   onChange={e => setNewPart(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-sky-600"
                 >
                   {CATEGORY_OPTIONS.map(c => (
                     <option key={c} value={c}>{c}</option>
@@ -524,50 +524,50 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                 </select>
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">顏色</label>
+                <label className="block text-sm text-slate-500 mb-1">顏色</label>
                 <input
                   type="text"
                   value={newPart.color}
                   onChange={e => setNewPart(prev => ({ ...prev, color: e.target.value }))}
                   placeholder="如: 本 / 白 / 綠 (選填)"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">原料</label>
+                <label className="block text-sm text-slate-500 mb-1">原料</label>
                 <input
                   type="text"
                   value={newPart.material}
                   onChange={e => setNewPart(prev => ({ ...prev, material: e.target.value }))}
                   placeholder="如: ABS TOYOLAC (選填)"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">備註</label>
+                <label className="block text-sm text-slate-500 mb-1">備註</label>
                 <input
                   type="text"
                   value={newPart.notes}
                   onChange={e => setNewPart(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="備註（選填）"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-sm text-gray-500 mb-1">替代品號（可互相替代，逗號/空格分隔）</label>
+                <label className="block text-sm text-slate-500 mb-1">替代品號（可互相替代，逗號/空格分隔）</label>
                 <input
                   type="text"
                   value={newPart.alternates}
                   onChange={e => setNewPart(prev => ({ ...prev, alternates: e.target.value }))}
                   placeholder="例如: D09-410-111-1、3M55567"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
             </div>
             <div className="flex items-center space-x-3 mt-3">
               <button
                 onClick={handleAddPartSubmit}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>新增品號</span>
@@ -580,24 +580,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         </div>
 
         {/* 客戶管理：篩選改名刪除 + 新增客戶 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center space-x-2">
             <Users className="w-4 h-4 text-indigo-500" />
             <span>客戶管理（{existingCustomers.length} 家客戶）</span>
           </h2>
           <div className="relative mb-3">
-            <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={customerFilter}
               onChange={e => setCustomerFilter(e.target.value)}
               placeholder="篩選客戶名稱..."
-              className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+              className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
             />
           </div>
           <div className="space-y-1.5">
             {customerGroups.map(c => (
-              <div key={c.name} className="py-2 px-2 rounded hover:bg-gray-100">
+              <div key={c.name} className="py-2 px-2 rounded hover:bg-slate-100">
                 {renamingCustomer === c.name ? (
                   <div className="flex items-center space-x-2">
                     <input
@@ -605,7 +605,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                       value={renameValue}
                       onChange={e => setRenameValue(e.target.value)}
                       placeholder="新客戶名稱"
-                      className="flex-1 px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900 focus:outline-none focus:border-blue-500"
+                      className="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-300 rounded-md text-sm text-slate-900 focus:outline-none focus:border-sky-600"
                       autoFocus
                     />
                     <button
@@ -615,13 +615,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                         }
                         setRenamingCustomer(null);
                       }}
-                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-md cursor-pointer"
+                      className="px-2.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-sm rounded-md cursor-pointer"
                     >
                       確認
                     </button>
                     <button
                       onClick={() => setRenamingCustomer(null)}
-                      className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-md border border-gray-200 cursor-pointer"
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm rounded-md border border-slate-200 cursor-pointer"
                     >
                       取消
                     </button>
@@ -629,21 +629,21 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                 ) : (
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center space-x-2 min-w-0">
-                      <span className="font-medium text-gray-800">{c.name}</span>
-                      <span className="text-[13px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full border border-gray-200">{c.count} 筆</span>
-                      <span className="text-gray-400 text-[13px] font-mono truncate hidden sm:inline">{c.samples.join(', ')}</span>
+                      <span className="font-medium text-slate-800">{c.name}</span>
+                      <span className="text-[13px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full border border-slate-200">{c.count} 筆</span>
+                      <span className="text-slate-400 text-[13px] font-mono truncate hidden sm:inline">{c.samples.join(', ')}</span>
                     </div>
                     <div className="flex items-center space-x-1 shrink-0">
                       <button
                         onClick={() => { setRenamingCustomer(c.name); setRenameValue(c.name); }}
-                        className="p-1 text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors cursor-pointer"
+                        className="p-1 text-slate-300 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors cursor-pointer"
                         title="改名（套用至該客戶所有品號）"
                       >
                         <PenLine className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteCustomer(c)}
-                        className="p-1 text-gray-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                        className="p-1 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                         title="刪除客戶（含所有品號）"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -654,29 +654,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               </div>
             ))}
             {customerGroups.length === 0 && (
-              <p className="text-sm text-gray-400 py-2">查無符合條件的客戶</p>
+              <p className="text-sm text-slate-400 py-2">查無符合條件的客戶</p>
             )}
           </div>
 
-          <div className="border-t border-gray-100 mt-4 pt-4">
-            <h3 className="text-[13px] font-bold text-gray-500 mb-2 flex items-center space-x-1.5">
+          <div className="border-t border-slate-100 mt-4 pt-4">
+            <h3 className="text-[13px] font-bold text-slate-500 mb-2 flex items-center space-x-1.5">
               <Building2 className="w-3.5 h-3.5 text-indigo-500" />
               <span>新增客戶（既有產品賣給新客戶時，品號可搜尋既有品號，品名自動帶入）</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm text-gray-500 mb-1">客戶名稱 *</label>
+                <label className="block text-sm text-slate-500 mb-1">客戶名稱 *</label>
                 <input
                   type="text"
                   value={newCustomer.customer}
                   onChange={e => setNewCustomer(prev => ({ ...prev, customer: e.target.value }))}
                   placeholder="客戶名稱"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div className="relative">
-                <label className="block text-sm text-gray-500 mb-1">品號 *（可搜尋既有品號）</label>
-                <Search className="w-3.5 h-3.5 text-gray-400 absolute right-3 top-[34px]" />
+                <label className="block text-sm text-slate-500 mb-1">品號 *（可搜尋既有品號）</label>
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-[34px]" />
                 <input
                   type="text"
                   value={newCustomer.partNo}
@@ -688,10 +688,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                   onFocus={() => setShowCustomerPartSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowCustomerPartSuggestions(false), 150)}
                   placeholder="輸入或搜尋既有品號"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
                 {showCustomerPartSuggestions && customerPartSuggestions.length > 0 && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
+                  <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-44 overflow-y-auto">
                     {customerPartSuggestions.map(p => (
                       <button
                         key={p.id}
@@ -700,18 +700,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                           setCustomerPartQuery('');
                           setShowCustomerPartSuggestions(false);
                         }}
-                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between space-x-2 cursor-pointer"
+                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-slate-100 flex items-center justify-between space-x-2 cursor-pointer"
                       >
-                        <span className="font-mono text-blue-700 shrink-0">{p.partNo}</span>
-                        <span className="text-gray-500 truncate">{p.name}</span>
-                        <span className="text-gray-400 text-[13px] shrink-0">{p.customer}</span>
+                        <span className="font-mono text-sky-700 shrink-0">{p.partNo}</span>
+                        <span className="text-slate-500 truncate">{p.name}</span>
+                        <span className="text-slate-400 text-[13px] shrink-0">{p.customer}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">品名 *</label>
+                <label className="block text-sm text-slate-500 mb-1">品名 *</label>
                 <input
                   type="text"
                   value={newCustomer.name}
@@ -723,24 +723,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                     }
                   }}
                   placeholder="品名規格（選取既有品號自動帶入）"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-500 mb-1">備註</label>
+                <label className="block text-sm text-slate-500 mb-1">備註</label>
                 <input
                   type="text"
                   value={newCustomer.notes}
                   onChange={e => setNewCustomer(prev => ({ ...prev, notes: e.target.value }))}
                   placeholder="備註（選填）"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 />
               </div>
             </div>
             <div className="flex items-center space-x-3 mt-3">
               <button
                 onClick={handleAddCustomerSubmit}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>新增客戶</span>
@@ -755,24 +755,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         {/* BOM 階層維護 */}
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
-            <Layers className="w-4 h-4 text-blue-500" />
-            <h2 className="text-sm font-bold text-gray-700">BOM 階層維護（組立編號 → 零件）</h2>
+            <Layers className="w-4 h-4 text-sky-500" />
+            <h2 className="text-sm font-bold text-slate-700">BOM 階層維護（組立編號 → 零件）</h2>
           </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <h3 className="text-[13px] font-bold text-gray-500 mb-2">新增組立編號</h3>
+          <div className="bg-white rounded-xl border border-slate-200 p-4">
+            <h3 className="text-[13px] font-bold text-slate-500 mb-2">新增組立編號</h3>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
                 value={addKey}
                 onChange={e => setAddKey(e.target.value.toUpperCase())}
                 placeholder="輸入組立編號 (如 SA9999)"
-                className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600"
                 onKeyDown={e => { if (e.key === 'Enter') handleAddAssembly(); }}
               />
               <button
                 onClick={handleAddAssembly}
                 disabled={!addKey.trim()}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-gray-700 font-medium rounded-lg flex items-center space-x-1 border border-gray-200 cursor-pointer"
+                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 font-medium rounded-lg flex items-center space-x-1 border border-slate-200 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>新增</span>
@@ -784,8 +784,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
         </div>
 
         {/* 完整資料備份 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center space-x-2">
+        <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <h2 className="text-sm font-bold text-slate-700 mb-3 flex items-center space-x-2">
             <DatabaseBackup className="w-4 h-4 text-emerald-500" />
             <span>完整資料備份（品號 + BOM 一次打包）</span>
           </h2>
@@ -815,14 +815,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               <Download className="w-4 h-4" />
               <span>匯入完整備份</span>
             </button>
-            <span className="text-[13px] text-gray-400">
+            <span className="text-[13px] text-slate-400">
               格式等同伺服器唯一真源 data/pn-lookup-master.json；匯入會覆蓋現有品號與 BOM 資料
             </span>
           </div>
         </div>
 
         {/* Summary */}
-        <div className="text-sm text-gray-400 text-center py-2 space-y-1">
+        <div className="text-sm text-slate-400 text-center py-2 space-y-1">
           <p>共 {parts.length} 筆品號、{existingCustomers.length} 家客戶、{assemblyKeys.length} 個組立編號、{Object.values(children).flat().length} 個零件對應</p>
           {orphanPartNos.length > 0 && (
             <p>BOM 中有 {orphanPartNos.length} 個零件編號不在品號表中（原料/通用件屬正常）</p>

@@ -257,7 +257,7 @@ export const OrphanImagesModal: React.FC<OrphanImagesModalProps> = ({
                         onToggleDismiss && (
                           <button
                             onClick={() => onToggleDismiss(name)}
-                            className="btn-tactile px-3 py-1.5 rounded-lg text-[13px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 hover:bg-indigo-100 transition-colors cursor-pointer shadow-2xs"
+                            className="btn-tactile px-3 py-1.5 rounded-lg text-[13px] font-bold bg-sky-50 text-sky-800 border border-sky-200 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs"
                           >
                             ↺ 復原對應
                           </button>

@@ -46,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({
           
           {/* Logo & Title */}
           <div className="flex items-center space-x-3.5">
-            <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-center text-sky-400 font-bold shadow-xs">
-              <Search className="w-5 h-5 text-sky-400" />
+            <div className="w-10 h-10 rounded-xl bg-sky-600 border border-sky-700/50 flex items-center justify-center text-white font-bold shadow-xs">
+              <Search className="w-5 h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2.5">
@@ -122,9 +122,9 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={onOpenExportImport}
-              className="btn-tactile inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-sky-700 hover:bg-sky-600 text-white border border-sky-800/50 shadow-2xs gap-1.5 cursor-pointer"
+              className="btn-tactile inline-flex items-center px-3.5 py-1.5 text-sm font-semibold rounded-lg bg-sky-600 hover:bg-sky-500 text-white border border-sky-700/50 shadow-2xs gap-1.5 cursor-pointer"
             >
-              <FileSpreadsheet className="w-4 h-4 text-sky-200" />
+              <FileSpreadsheet className="w-4 h-4 text-sky-100" />
               <span>匯出與匯入</span>
             </button>
 

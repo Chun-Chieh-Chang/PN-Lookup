@@ -27,7 +27,7 @@ interface SearchControlsProps {
 
 const labelCls = 'text-[13px] font-semibold text-slate-500 shrink-0';
 const inputCls =
-  'bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-500/15 transition-all shadow-2xs font-sans font-medium';
+  'bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600 focus:bg-white focus:ring-2 focus:ring-sky-600/15 transition-all shadow-2xs font-sans font-medium';
 
 export const SearchControls: React.FC<SearchControlsProps> = ({
   keyword,
@@ -69,7 +69,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
               value={keyword}
               onChange={(e) => onKeywordChange(e.target.value)}
               placeholder="搜尋品號 (如 A02-410-111)、品名或客戶名稱..."
-              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white focus:ring-2 focus:ring-sky-500/15 transition-all shadow-2xs font-sans font-medium"
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600 focus:bg-white focus:ring-2 focus:ring-sky-600/15 transition-all shadow-2xs font-sans font-medium"
               autoFocus
             />
             {keyword && (

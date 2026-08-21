@@ -230,7 +230,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             <span className="text-slate-600 font-medium">
               顯示 <strong className="text-slate-900 font-bold font-mono">{sortedItems.length}</strong> 筆結果
               {selectedIds.length > 0 && (
-                <span className="ml-2 text-indigo-600 font-bold">
+                <span className="ml-2 text-sky-600 font-bold">
                   (已選取 {selectedIds.length} 筆)
                 </span>
               )}
@@ -239,7 +239,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
             {selectedIds.length > 0 && (
               <button
                 onClick={handleCopySelected}
-                className="inline-flex items-center space-x-1.5 px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[13px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
+                className="inline-flex items-center space-x-1.5 px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-[13px] font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
               >
                 <ClipboardCheck className="w-3.5 h-3.5" />
                 <span>複製所選品號清單</span>
@@ -285,7 +285,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono font-semibold focus:outline-none focus:border-indigo-500 shadow-2xs"
+                className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono font-semibold focus:outline-none focus:border-sky-600 shadow-2xs"
               >
                 <option value={10}>10 筆</option>
                 <option value={25}>25 筆</option>
@@ -310,7 +310,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     selectedIds.length === paginatedItems.length
                   }
                   onChange={handleSelectAll}
-                  className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  className="rounded border-slate-300 bg-white text-sky-600 focus:ring-sky-500 cursor-pointer"
                 />
               </th>
 
@@ -376,7 +376,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                   key={item.id}
                   className={`group transition-colors ${
                     isSelected
-                      ? 'bg-indigo-50 hover:bg-indigo-100'
+                      ? 'bg-sky-50 hover:bg-sky-100'
                       : 'hover:bg-slate-50'
                   }`}
                 >
@@ -386,7 +386,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => handleSelectRow(item.id)}
-                      className="rounded border-slate-300 bg-white text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      className="rounded border-slate-300 bg-white text-sky-600 focus:ring-sky-500 cursor-pointer"
                     />
                   </td>
 
@@ -704,7 +704,7 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     onClick={() => setCurrentPage(pNum)}
                     className={`px-3 py-1 rounded-lg text-sm font-mono font-medium transition-colors cursor-pointer ${
                       validPage === pNum
-                        ? 'bg-indigo-600 text-white'
+                        ? 'bg-sky-600 text-white'
                         : 'bg-white text-slate-600 hover:text-slate-800 border border-slate-200'
                     }`}
                   >

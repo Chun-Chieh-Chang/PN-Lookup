@@ -401,14 +401,14 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
           </div>
 
           {/* 客戶料號工作表匯入 — 清淡柔和靛藍色 */}
-          <div className="p-3.5 sm:p-4 bg-indigo-50/40 rounded-xl border border-indigo-200/80 shadow-2xs space-y-2.5">
-            <h3 className="font-bold text-indigo-900 flex items-center space-x-2 text-[13px]">
-              <Tags className="w-4 h-4 text-indigo-700" />
+          <div className="p-3.5 sm:p-4 bg-sky-50/40 rounded-xl border border-sky-200/80 shadow-2xs space-y-2.5">
+            <h3 className="font-bold text-sky-900 flex items-center space-x-2 text-[13px]">
+              <Tags className="w-4 h-4 text-sky-700" />
               <span>客戶料號工作表匯入（三碼互換）</span>
             </h3>
             <p className="text-slate-500 text-[13px] leading-relaxed">
               從「產品一覽表.xlsm」的「客戶料號」工作表匯入：圖面編號、產品編號、零件編號(客) 三欄互為可替代品號。
-              主品號以 <strong className="text-indigo-950">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
+              主品號以 <strong className="text-sky-950">圖面編號</strong> 為優先，其餘兩碼自動歸入替代品號；
               既有資料任一碼命中即自動合併（不重複建檔），全資料庫代碼唯一性檢查。
             </p>
             <div className="pt-1">
@@ -416,7 +416,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 type="file"
                 accept=".xlsx,.xlsm"
                 onChange={handleCustomerSheetUpload}
-                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-indigo-300 file:text-[13px] file:font-semibold file:bg-white file:text-indigo-900 hover:file:bg-indigo-100 cursor-pointer"
+                className="block w-full text-[13px] text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-sky-300 file:text-[13px] file:font-semibold file:bg-white file:text-sky-900 hover:file:bg-sky-100 cursor-pointer"
               />
             </div>
           </div>
