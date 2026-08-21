@@ -143,6 +143,8 @@ export function mergeSemanticIntoMaster(master, semantic) {
   const PN_RE = /^(?:[A-Z]{1,4}\d{1,4}(?:-\d{1,4}){1,3}[A-Z0-9]?|[A-Z]{2,4}\d{4,7}|\d{1,2}[A-Z]\d{3,6}|\d{4,}(?:-\d+)*|\d{2,3}(?:-\d+){1,3})$/i;
   const PN_JUNK_RE = /^(SHRINK|STOPPER|BAG|CAP|VENT|N\/A|NONE|TRANS|BENISON|HANNAH|JIAN|IR\s*NIPOL|POLY|PVC|ABS|PE|HDPE|LDPE|FABRIC|RUBBER|SILICONE|O-RING|LATCH|LOCK|SEAL|SPRING|GASKET|\d{1,3}(?:\.\d+)?mm?|0\.0\d+.*|9494|TRANS\s*9494)$/i;
   const PN_MOULDEX_RE = /^M\d{3,4}-R\d+$/i;
+  // 語意 BOM 補缺排除清單（使用者確認之模型誤讀品號）
+  const PN_MANUAL_BLACKLIST = /^(BO6-410-311-1|HO0-111-041-1|HOO-111-111-4|HOO-111-341-1|HOO0-111-131-5|A01-210-131|E13-999-421-5)$/i;
 
   for (const it of (semantic.items || [])) {
     if (!it.ok || !it.data) continue;
@@ -175,7 +177,7 @@ export function mergeSemanticIntoMaster(master, semantic) {
         if (!childNo || norm(childNo) === norm(pn)) continue;
         if (kids.some((k) => norm(k) === norm(childNo))) continue;
         // 品號格式白名單：不符合 → 略過（材質/品名/模具號/尺寸雜訊不收錄）
-        if (!PN_RE.test(childNo) || PN_JUNK_RE.test(childNo) || PN_MOULDEX_RE.test(childNo)) {
+        if (!PN_RE.test(childNo) || PN_JUNK_RE.test(childNo) || PN_MOULDEX_RE.test(childNo) || PN_MANUAL_BLACKLIST.test(childNo)) {
           console.log(`  [BOM 雜訊略過] ${pn} → ${childNo}（${(b.description || '').slice(0, 30)}）`);
           continue;
         }
