@@ -31,7 +31,7 @@ interface PartsTableProps {
   onCustomerClick: (customerName: string) => void;
 }
 
-type SortField = 'customer' | 'partNo' | 'category' | 'name';
+type SortField = 'customer' | 'partNo' | 'dwgNo' | 'revision' | 'category' | 'name' | 'color' | 'material' | 'materialCode';
 
 export const PartsTable: React.FC<PartsTableProps> = ({
   items,
@@ -106,8 +106,8 @@ export const PartsTable: React.FC<PartsTableProps> = ({
       valA = a.category || (typeA === 'assembly' ? '組件 Assembly' : '零件 Part');
       valB = b.category || (typeB === 'assembly' ? '組件 Assembly' : '零件 Part');
     } else {
-      valA = a[sortField] || '';
-      valB = b[sortField] || '';
+      valA = (a[sortField as keyof PartItem] as string) || '';
+      valB = (b[sortField as keyof PartItem] as string) || '';
     }
 
     return valA.localeCompare(valB, 'zh-Hant', { numeric: true, sensitivity: 'base' });
@@ -335,11 +335,51 @@ export const PartsTable: React.FC<PartsTableProps> = ({
               </th>
 
               <th
+                onClick={() => handleSort('dwgNo')}
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>圖號 (DWG No)</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('revision')}
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors text-center"
+              >
+                <div className="flex items-center justify-center space-x-1">
+                  <span>版本 (REV)</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th
                 onClick={() => handleSort('category')}
                 className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
               >
                 <div className="flex items-center space-x-1">
                   <span>物料類別</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('color')}
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>顏色</span>
+                  <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
+                </div>
+              </th>
+
+              <th
+                onClick={() => handleSort('material')}
+                className="p-3 cursor-pointer hover:text-slate-800 transition-colors"
+              >
+                <div className="flex items-center space-x-1">
+                  <span>原料名稱 / 編碼</span>
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-60" />
                 </div>
               </th>
@@ -466,7 +506,38 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     </div>
                   </td>
 
-                  {/* Item Type Badge */}
+                  {/* DWG No */}
+                  <td className="p-3 py-3 font-mono text-[13px]">
+                    {item.dwgNo ? (
+                      <div className="flex items-center space-x-1.5">
+                        <span className="px-2 py-0.5 rounded font-semibold text-sky-900 bg-sky-50 border border-sky-200 shadow-2xs">
+                          {highlightText(item.dwgNo, searchKeyword)}
+                        </span>
+                        <button
+                          onClick={() => handleCopyPartNo(`${item.id}-dwg`, item.dwgNo!)}
+                          className="btn-tactile p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="複製圖號"
+                        >
+                          {copiedId === `${item.id}-dwg` ? <Check className="w-3 h-3 text-emerald-700" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 font-sans">-</span>
+                    )}
+                  </td>
+
+                  {/* Revision */}
+                  <td className="p-3 py-3 text-center">
+                    {item.revision ? (
+                      <span className="inline-block font-mono font-bold text-[13px] text-slate-700 bg-slate-100 border border-slate-300 rounded px-2 py-0.5 shadow-2xs">
+                        {item.revision}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400 font-sans">-</span>
+                    )}
+                  </td>
+
+                  {/* Item Type Badge (Category) */}
                   <td className="p-3 py-3">
                     <button
                       onClick={() => onViewDetail(item)}
@@ -488,24 +559,46 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                     </button>
                   </td>
 
+                  {/* Color */}
+                  <td className="p-3 py-3 text-[13px]">
+                    {item.color ? (
+                      <span className="inline-block px-2.5 py-0.5 font-semibold text-amber-900 bg-amber-50 rounded border border-amber-200 shadow-2xs">
+                        {highlightText(item.color, searchKeyword)}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Material Name & Material Code */}
+                  <td className="p-3 py-3 text-[13px] max-w-[200px]">
+                    <div className="flex flex-col gap-1">
+                      {item.material ? (
+                        <div className="truncate font-mono font-medium text-slate-800" title={item.material}>
+                          {highlightText(item.material, searchKeyword)}
+                        </div>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                      {item.materialCode && (
+                        <div className="flex items-center gap-1">
+                          <span className="px-1.5 py-0.2 rounded font-mono text-[13px] font-semibold text-emerald-900 bg-emerald-50 border border-emerald-200" title={`原料編碼: ${item.materialCode}`}>
+                            {item.materialCode}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+
                   {/* Part Name */}
                   <td className="p-3 text-slate-600 max-w-md py-3.5">
                     <div className="flex flex-col gap-1">
                       <div className="truncate font-medium text-slate-800" title={item.name}>
                         {highlightText(item.name, searchKeyword)}
                       </div>
-                      {(item.color || item.material) && (
-                        <div className="flex flex-wrap items-center gap-1.5 text-[13px]">
-                          {item.color && (
-                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded border border-amber-200 text-[13px]">
-                              顏色: {item.color}
-                            </span>
-                          )}
-                          {item.material && (
-                            <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 font-mono rounded border border-emerald-200 text-[13px]">
-                              原料: {item.material}
-                            </span>
-                          )}
+                      {item.description && item.description !== item.name && (
+                        <div className="truncate text-[13px] text-slate-500 font-sans" title={item.description}>
+                          {highlightText(item.description, searchKeyword)}
                         </div>
                       )}
                     </div>

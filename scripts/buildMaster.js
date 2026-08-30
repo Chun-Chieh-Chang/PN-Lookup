@@ -9,6 +9,7 @@ const OUTPUT_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
 const EXTRACT_PATH = join(ROOT_DIR, 'data', 'drawings-extract.json');
 const SEMANTIC_PATH = join(ROOT_DIR, 'data', 'semantic-extract.json');
 const ICU_PATH = join(ROOT_DIR, 'data', 'icu-parts.json');
+const V7_DRAWINGS_PATH = join(ROOT_DIR, 'data', 'drawings_extract_v7.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -485,6 +486,116 @@ export function mergeICUPartsIntoMaster(master, icuParts) {
   return { updated, added };
 }
 
+// v7.9.5 圖檔工程最新成果融合：drawings_extract_v7.json（9大欄位整合與組件/SET結構化BOM）
+export function mergeV7DrawingsIntoMaster(master, v7Data) {
+  const partsMap = new Map(master.parts.map((p) => [norm(p.partNo), p]));
+  let matCnt = 0, colCnt = 0, dwgCnt = 0, descCnt = 0, catCnt = 0, bomDetailCnt = 0;
+
+  const drawingsByPn = new Map();
+  for (const it of (v7Data.items || [])) {
+    const pn = it.partNo;
+    if (!pn) continue;
+    const n = norm(pn);
+    if (!drawingsByPn.has(n)) drawingsByPn.set(n, []);
+    drawingsByPn.get(n).push(it);
+  }
+
+  for (const p of master.parts) {
+    const n = norm(p.partNo);
+    const dwgList = drawingsByPn.get(n);
+    if (dwgList && dwgList.length > 0) {
+      let bestDwg = dwgList[0];
+      for (const d of dwgList) {
+        if (d.materialCode || (d.bom && d.bom.length)) {
+          bestDwg = d;
+          break;
+        }
+      }
+
+      // 1. 圖檔檔名
+      if (bestDwg.fileName) p.drawingFileName = bestDwg.fileName;
+      // 2. 圖號
+      if (bestDwg.drawingNo) {
+        p.dwgNo = bestDwg.drawingNo;
+        dwgCnt++;
+      } else if (!p.dwgNo) {
+        p.dwgNo = p.partNo;
+      }
+      // 3. 版本
+      if (bestDwg.revision) p.revision = bestDwg.revision;
+      // 5. 品名原文/描述
+      if (bestDwg.description && (!p.description || p.description === p.partNo)) {
+        p.description = bestDwg.description;
+        descCnt++;
+      }
+      // 6. 顏色
+      if (bestDwg.color && !p.color) {
+        p.color = bestDwg.color;
+        colCnt++;
+      }
+      // 7. 原料名稱
+      if (bestDwg.materialName && (!p.material || p.material === '零件' || p.material === 'N/A')) {
+        p.material = bestDwg.materialName;
+        matCnt++;
+      }
+      // 8. 原料編碼
+      if (bestDwg.materialCode) p.materialCode = bestDwg.materialCode;
+
+      // 分類校正 (組件)
+      if (bestDwg.category === '組件' && (p.category === '零件' || p.category === '單品零件' || p.category === '零件圖')) {
+        p.category = '其他組件';
+        catCnt++;
+      }
+    }
+
+    // 9. 組件/SET 結構化 BOM 零件清單 (單位用量、品號、品名、原料名稱、原料編號)
+    const isAssyOrSet = (p.category && (p.category.includes('組件') || p.category.includes('組立') || p.category === 'SET'));
+    if (isAssyOrSet) {
+      const bomDetails = [];
+      const v7Boms = [];
+      if (dwgList) {
+        for (const d of dwgList) {
+          if (d.bom && d.bom.length) v7Boms.push(...d.bom);
+        }
+      }
+
+      if (v7Boms.length > 0) {
+        for (const b of v7Boms) {
+          const cpn = (b.partNo || '').trim();
+          if (!cpn) continue;
+          const childPart = partsMap.get(norm(cpn));
+          bomDetails.push({
+            partNo: cpn,
+            name: b.description || (childPart ? (childPart.name || childPart.description) : cpn),
+            qty: String(b.qty || '1'),
+            material: b.material || (childPart ? childPart.material : '') || '',
+            materialCode: (childPart ? childPart.materialCode : '') || '',
+          });
+        }
+      } else {
+        const childPns = (master.bom && master.bom.children && master.bom.children[p.partNo]) || [];
+        for (const cpn of childPns) {
+          const childPart = partsMap.get(norm(cpn));
+          bomDetails.push({
+            partNo: cpn,
+            name: childPart ? (childPart.name || childPart.description || cpn) : cpn,
+            qty: '1',
+            material: (childPart ? childPart.material : '') || '',
+            materialCode: (childPart ? childPart.materialCode : '') || '',
+          });
+        }
+      }
+
+      if (bomDetails.length > 0) {
+        p.bomDetails = bomDetails;
+        bomDetailCnt++;
+      }
+    }
+  }
+
+  return { matCnt, colCnt, dwgCnt, descCnt, catCnt, bomDetailCnt };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -520,6 +631,15 @@ function buildMaster() {
     console.log(`Merged ICU parts: 覆蓋 ${updated} / 新增 ${added}（共 ${icuParts.length} 筆）`);
   } else {
     console.log(`ℹ️ 未找到 ${ICU_PATH}（先執行 node scripts/importICU.js）`);
+  }
+
+  // v7.9.5 圖檔工程最新成果融合：drawings_extract_v7.json（100% 材質覆蓋、顏色、圖號、組件判定）
+  if (existsSync(V7_DRAWINGS_PATH)) {
+    const v7Data = JSON.parse(readFileSync(V7_DRAWINGS_PATH, 'utf-8'));
+    const { matCnt, colCnt, dwgCnt, descCnt, catCnt } = mergeV7DrawingsIntoMaster(master, v7Data);
+    console.log(`Merged v7 drawings: 補齊 material ${matCnt} / color ${colCnt} / dwgNo ${dwgCnt} / desc ${descCnt} / category ${catCnt}`);
+  } else {
+    console.log(`ℹ️ 未找到 ${V7_DRAWINGS_PATH}`);
   }
 
   // v7.8.15 物料類別三層體系 → v7.9.2 五分類：原料 / 物料 / 零件 / 組件 / SET

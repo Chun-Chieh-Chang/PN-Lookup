@@ -1,6 +1,40 @@
 # PN-Lookup 開發日誌
 
-## v7.9.5 — 圖面數據邏輯全面淨化、圖號/版本/顏色深度識別補全與組件圖檔實體轉移
+## v7.9.6 — 9 大核心工程規格全面整合、組件/SET 結構化 BOM 明細構建與 UI 全面升級
+
+### 需求內容
+1. 依據製造與工程規範全面整合 9 大核心欄位：
+   - 1. 圖檔檔名 (`drawingFileName`)
+   - 2. 圖號 (`dwgNo` / Drawing number)
+   - 3. 版本 (`revision` / REV.)
+   - 4. 品號 (`partNo` / Part number)
+   - 5. 品名 (`name` / `description`)
+   - 6. 顏色 (`color` / Color)
+   - 7. 原料名稱 (`material` / Material)
+   - 8. 原料編碼 (`materialCode` / Material Code)
+   - 9. 物料類別 (`category` / Category)：嚴格對齊原料、物料、零件、組件、SET 五大分類。
+2. 組件與 SET 結構化記錄：連帶記錄組成零件之「單位用量 (Qty)」、「品號」、「品名」、「原料名稱」、「原料編號」。
+3. 前端 UI 用戶介面全面升級：
+   - 主表格 (`PartsTable`) 新增圖號、版本、顏色、原料名稱與原料編碼欄位，支援全欄位正序排序。
+   - 詳情彈窗 (`PartDetailModal`) 建立專屬組件/SET 結構化子零件明細表格，支援子零件一鍵點擊跳轉。
+   - 全域搜尋引擎 (`App.tsx`) 支援圖號、原料、原料編碼與顏色之即時模糊匹配。
+
+### 執行內容 (CAPA)
+1. **資料模型與管線整合 (`buildMaster.js`)**：
+   - 定義 `mergeV7DrawingsIntoMaster` 融合管線，將 967 筆圖檔工程成果直接注入主資料庫 `pn-lookup-master.json`。
+   - 為 231 個組件與 SET 實體建立 `bomDetails` 結構化陣列，完整收錄用量、品號、品名、原料與編碼。
+2. **型別擴充 (`types.ts`)**：
+   - 新增 `BomComponentDetail` 介面，並擴充 `PartItem` 型別。
+3. **UI 互動與字級防禦 (`PartsTable.tsx` / `PartDetailModal.tsx`)**：
+   - 主表格直觀展示 9 大核心規格，全介面文字嚴格遵守 ≥13px 規範。
+   - 彈窗新增子零件用量與材質對照表，消除工程端重複翻找困擾。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 清查並修正 `drawings_extract_v7.xlsx` 與 JSON 中的數據邏輯問題（BOM 自環、視圖標註雜訊、品名大面積缺失、表名矛盾）。

@@ -376,11 +376,27 @@ export default function App() {
           ? item.name.toLowerCase().startsWith(q)
           : item.name.toLowerCase().includes(q);
 
-        if (filterState.searchField === 'partNo') return matchPartNo || matchAlternates;
+        const matchDwgNo = item.dwgNo
+          ? (isExact ? item.dwgNo.toLowerCase().startsWith(q) : item.dwgNo.toLowerCase().includes(q))
+          : false;
+
+        const matchMaterial = item.material
+          ? item.material.toLowerCase().includes(q)
+          : false;
+
+        const matchMaterialCode = item.materialCode
+          ? item.materialCode.toLowerCase().includes(q)
+          : false;
+
+        const matchColor = item.color
+          ? item.color.toLowerCase().includes(q)
+          : false;
+
+        if (filterState.searchField === 'partNo') return matchPartNo || matchAlternates || matchDwgNo;
         if (filterState.searchField === 'customer') return matchCustomer;
         if (filterState.searchField === 'name') return matchName;
 
-        return matchPartNo || matchAlternates || matchCustomer || matchName;
+        return matchPartNo || matchAlternates || matchCustomer || matchName || matchDwgNo || matchMaterial || matchMaterialCode || matchColor;
       }
 
       return true;

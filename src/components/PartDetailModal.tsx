@@ -166,57 +166,69 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
                 <span>品名規格 (Part Name)</span>
               </span>
               <p className="text-base font-medium text-slate-900">{item.name}</p>
+              {item.description && item.description !== item.name && (
+                <p className="text-[13px] text-slate-600 bg-white p-2 mt-1.5 rounded-lg border border-slate-200 leading-relaxed font-sans">
+                  <span className="text-slate-400 font-medium mr-1">原文描述:</span>
+                  {item.description}
+                </p>
+              )}
             </div>
 
-            {(item.description || item.dwgNo) && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2.5 border-t border-slate-200/80">
-                {item.description && item.description !== item.name && (
-                  <div>
-                    <span className="text-[13px] text-slate-500 block mb-1 font-medium">品名規格原文 (Description)</span>
-                    <p className="text-[13px] text-slate-800 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-                )}
-                {item.dwgNo && (
-                  <div>
-                    <span className="text-[13px] text-slate-500 block mb-1 font-medium">圖號 (DWG NO.)</span>
-                    <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-900 font-mono font-semibold text-[13px] rounded border border-sky-300">
-                      {item.dwgNo}
-                    </span>
-                  </div>
-                )}
+            {/* 9 大工程規格網格 */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2.5 border-t border-slate-200/80">
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">圖號 (DWG No.)</span>
+                <span className="inline-block px-2 py-0.5 bg-sky-50 text-sky-900 font-mono font-semibold text-[13px] rounded border border-sky-300">
+                  {item.dwgNo || '-'}
+                </span>
               </div>
-            )}
 
-            {(item.category || item.color || item.material) && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2.5 border-t border-slate-200/80">
-                {item.category && (
-                  <div>
-                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">物料類別</span>
-                    <span className="inline-block px-2 py-0.5 bg-white text-slate-800 font-semibold rounded text-[13px] border border-slate-300">
-                      {item.category}
-                    </span>
-                  </div>
-                )}
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">版本 (REV.)</span>
+                <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 font-mono font-bold text-[13px] rounded border border-slate-300">
+                  {item.revision || '-'}
+                </span>
+              </div>
 
-                {item.color && (
-                  <div>
-                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">顏色</span>
-                    <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-900 font-semibold rounded text-[13px] border border-amber-300">
-                      {item.color}
-                    </span>
-                  </div>
-                )}
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">物料類別</span>
+                <span className="inline-block px-2 py-0.5 bg-white text-slate-800 font-semibold rounded text-[13px] border border-slate-300">
+                  {item.category || (isAssembly ? '組件' : '零件')}
+                </span>
+              </div>
 
-                {item.material && (
-                  <div className="sm:col-span-1">
-                    <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">原料</span>
-                    <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-900 font-mono font-semibold text-[13px] rounded border border-emerald-300">
-                      {item.material}
-                    </span>
-                  </div>
-                )}
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">顏色 (Color)</span>
+                <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-900 font-semibold rounded text-[13px] border border-amber-300">
+                  {item.color || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* 原料規格與編碼 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2.5 border-t border-slate-200/80">
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">原料名稱 (Material)</span>
+                <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-900 font-mono font-semibold text-[13px] rounded border border-emerald-300">
+                  {item.material || '-'}
+                </span>
+              </div>
+
+              <div>
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">原料編碼 (Material Code)</span>
+                <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-800 font-mono font-semibold text-[13px] rounded border border-slate-300">
+                  {item.materialCode || '-'}
+                </span>
+              </div>
+            </div>
+
+            {/* 圖檔檔名 */}
+            {item.drawingFileName && (
+              <div className="pt-2.5 border-t border-slate-200/80">
+                <span className="text-[13px] text-slate-500 block mb-0.5 font-medium">圖檔檔名 (Drawing File)</span>
+                <span className="inline-block px-2 py-0.5 bg-slate-50 text-slate-700 font-mono text-[13px] rounded border border-slate-200 break-all">
+                  {item.drawingFileName}
+                </span>
               </div>
             )}
 
@@ -246,18 +258,71 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             )}
           </div>
 
-          {/* BOM Section: If Assembly, show components; If Part, show assemblies it can form */}
+          {/* BOM Section: If Assembly or SET, show structured components table */}
           {isAssembly ? (
-            <div className="p-3.5 sm:p-4 bg-emerald-50/40 rounded-xl border border-emerald-200/80 shadow-2xs space-y-2.5">
+            <div className="p-3.5 sm:p-4 bg-emerald-50/40 rounded-xl border border-emerald-200/80 shadow-2xs space-y-3">
               <div className="flex items-center justify-between border-b border-emerald-200/60 pb-2">
                 <h3 className="font-bold text-emerald-900 flex items-center space-x-2 text-[13px]">
                   <Boxes className="w-4 h-4 text-emerald-700" />
-                  <span>組成該組件的所有零件 (Components)</span>
+                  <span>組成該組件/SET的所有零件清單 (BOM Details)</span>
                 </h3>
-                <span className="text-[13px] text-emerald-800/80 font-mono">共 {componentsList.length} 項關聯零件</span>
+                <span className="text-[13px] text-emerald-800/80 font-mono">
+                  共 {(item.bomDetails?.length || componentsList.length)} 項子零件
+                </span>
               </div>
 
-              {componentsList.length > 0 ? (
+              {/* 結構化 BOM 清單表格 */}
+              {item.bomDetails && item.bomDetails.length > 0 ? (
+                <div className="overflow-x-auto border border-emerald-200 rounded-lg bg-white shadow-2xs">
+                  <table className="w-full text-left border-collapse text-[13px]">
+                    <thead>
+                      <tr className="bg-emerald-100/50 text-emerald-900 border-b border-emerald-200 font-semibold text-[13px]">
+                        <th className="p-2.5 w-16 text-center">用量</th>
+                        <th className="p-2.5">品號 (Part No.)</th>
+                        <th className="p-2.5">品名規格 (Description)</th>
+                        <th className="p-2.5">原料名稱 (Material)</th>
+                        <th className="p-2.5">原料編碼</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-emerald-100/60">
+                      {item.bomDetails.map((b, idx) => {
+                        const targetPart = allParts.find(p => p.partNo.toUpperCase() === b.partNo.toUpperCase());
+                        return (
+                          <tr key={`${b.partNo}-${idx}`} className="hover:bg-emerald-50/30 transition-colors">
+                            <td className="p-2.5 text-center font-mono font-bold text-slate-700">
+                              {b.qty || '1'}
+                            </td>
+                            <td className="p-2.5 font-mono font-bold text-slate-900">
+                              <div className="flex items-center space-x-1.5">
+                                {targetPart ? (
+                                  <button
+                                    onClick={() => onSelectRelated(targetPart)}
+                                    className="text-sky-700 hover:text-sky-900 hover:underline cursor-pointer font-bold"
+                                    title="點擊查看此零件詳情"
+                                  >
+                                    {b.partNo}
+                                  </button>
+                                ) : (
+                                  <span>{b.partNo}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-2.5 text-slate-700">
+                              {b.name || '-'}
+                            </td>
+                            <td className="p-2.5 font-mono text-emerald-800 font-medium">
+                              {b.material || '-'}
+                            </td>
+                            <td className="p-2.5 font-mono text-slate-600">
+                              {b.materialCode || '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : componentsList.length > 0 ? (
                 <div className="grid gap-2">
                   {componentsList.map((rel, idx) => (
                     <button
