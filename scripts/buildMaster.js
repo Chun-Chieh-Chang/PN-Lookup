@@ -15,6 +15,8 @@ const SET_EXTRACT_PATH = join(ROOT_DIR, 'data', 'set_drawings_extract.json');
 const OCR_RESULTS_PATH = join(ROOT_DIR, 'data', 'ocr_results_141.json');
 const MATERIAL_EXTRACT_PATH = join(ROOT_DIR, 'data', 'material_drawings_extract.json');
 const MATERIAL_OCR_PATH = join(ROOT_DIR, 'data', 'ocr_results_material_60.json');
+const RESIN_EXTRACT_PATH = join(ROOT_DIR, 'data', 'resin_drawings_extract.json');
+const RESIN_OCR_PATH = join(ROOT_DIR, 'data', 'ocr_results_resin_2.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -1053,6 +1055,78 @@ export function mergeMaterialDrawingsIntoMaster(master, matData, ocrData) {
   return { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, bomUpdated };
 }
 
+// v7.10.6 原料庫圖面全量融合：resin_drawings_extract.json + ocr_results_resin_2.json (28 份原料規格書)
+export function mergeResinDrawingsIntoMaster(master, resinData, ocrData) {
+  const partsMap = new Map();
+  for (const p of master.parts) {
+    partsMap.set(norm(p.partNo), p);
+    for (const a of (p.alternates || [])) {
+      partsMap.set(norm(a), p);
+    }
+  }
+
+  let fileUpdated = 0, revUpdated = 0, colUpdated = 0, matUpdated = 0, catUpdated = 0, codeUpdated = 0;
+
+  for (const item of (resinData.parts || [])) {
+    const pnRaw = item.partNo;
+    if (!pnRaw) continue;
+    
+    // 支援 -MC 比對
+    let p = partsMap.get(norm(pnRaw));
+    if (!p && pnRaw.includes('-MC')) {
+      p = partsMap.get(norm(pnRaw.replace('-MC', '')));
+    }
+    if (!p) continue;
+
+    // 1. 關聯專屬原料圖檔
+    if (!p.drawingFileName || p.drawingFileName.includes('待補') || !p.drawingFileName.endsWith('.pdf')) {
+      p.drawingFileName = item.fileName;
+      fileUpdated++;
+    }
+
+    // 2. 更新最新版次
+    if (item.revision && (!p.revision || p.revision === 'N/A' || p.revision === '-')) {
+      p.revision = item.revision;
+      revUpdated++;
+    }
+
+    // 3. 原料材質更新
+    if (item.material && (!p.material || p.material === '零件' || p.material === '組件' || p.material === '原料' || p.material === 'N/A')) {
+      p.material = item.material;
+      matUpdated++;
+    }
+
+    // 4. 顏色更新
+    if (item.color && !p.color) {
+      p.color = item.color;
+      colUpdated++;
+    }
+
+    // 5. 原廠料號/原料編碼更新
+    if (item.materialCode && !p.materialCode) {
+      p.materialCode = item.materialCode;
+      codeUpdated++;
+    }
+
+    // 6. 分類鎖定為「原料」
+    if (p.category !== '原料') {
+      p.category = '原料';
+      catUpdated++;
+    }
+
+    // 7. 將帶 -MC 圖號納入別名
+    if (pnRaw.includes('-MC') && norm(pnRaw) !== norm(p.partNo)) {
+      const alts = new Set(p.alternates || []);
+      if (!alts.has(pnRaw)) {
+        alts.add(pnRaw);
+        p.alternates = Array.from(alts).sort();
+      }
+    }
+  }
+
+  return { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, codeUpdated };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -1134,6 +1208,16 @@ function buildMaster() {
     console.log(`Merged Material drawings: 關聯圖檔 ${fileUpdated} / 版本 ${revUpdated} / 顏色 ${colUpdated} / 原料 ${matUpdated} / 分類 ${catUpdated} / BOM富化 ${bomUpdated}`);
   } else {
     console.log(`ℹ️ 未找到 ${MATERIAL_EXTRACT_PATH}`);
+  }
+
+  // v7.10.6 原料庫圖面全量融合：resin_drawings_extract.json + ocr_results_resin_2.json (28 份原料規格書)
+  if (existsSync(RESIN_EXTRACT_PATH)) {
+    const resinData = JSON.parse(readFileSync(RESIN_EXTRACT_PATH, 'utf-8'));
+    const ocrData = existsSync(RESIN_OCR_PATH) ? JSON.parse(readFileSync(RESIN_OCR_PATH, 'utf-8')) : null;
+    const { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, codeUpdated } = mergeResinDrawingsIntoMaster(master, resinData, ocrData);
+    console.log(`Merged Resin drawings: 關聯圖檔 ${fileUpdated} / 版本 ${revUpdated} / 顏色 ${colUpdated} / 原料 ${matUpdated} / 原料編碼 ${codeUpdated} / 分類 ${catUpdated}`);
+  } else {
+    console.log(`ℹ️ 未找到 ${RESIN_EXTRACT_PATH}`);
   }
 
   // v7.8.15 物料類別三層體系 → v7.9.2 五分類：原料 / 物料 / 零件 / 組件 / SET

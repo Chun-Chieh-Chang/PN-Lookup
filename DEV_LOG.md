@@ -1,6 +1,32 @@
 # PN-Lookup 開發日誌
 
-## v7.10.5 — 原料庫 (Drawings/原料) 28 份圖檔全量結構化萃取與 2 筆掃描圖檔精準標記
+## v7.10.6 — 原料庫 2 筆掃描圖檔 OCR 全量辨識與 28 份原料規格書深度整併 Master Table (五大庫別全量大圓滿)
+
+### 需求內容
+1. 啟動 OCR 對原料庫 2 筆純掃描圖檔 (`75-2117_1.pdf` 與 `R1-1176_2.pdf`) 進行光學文字與規格辨識。
+2. 將原料庫全部 28 份圖檔（含 2 筆 OCR 成果）深度整併入系統主資料庫 (`pn-lookup-master.json` 與 `buildMaster.js`)。
+
+### 執行內容 (CAPA)
+1. **2 筆原料掃描圖檔 OCR 辨識 (`scripts/ocr_resin_scanned.mjs`)**：
+   - 2 / 2 筆全部成功 100% 萃取出文字層，產出 `data/ocr_results_resin_2.json`。
+2. **Master Table 原料全量融合 (`scripts/buildMaster.js`)**：
+   - 新增 `mergeResinDrawingsIntoMaster` 融合階段：
+     - 關聯專屬原料圖檔：**27 筆**。
+     - 更新/補齊最新版本：**27 筆**。
+     - 補齊顏色標記：**26 筆**（如 Clear, Blue Tint, Yellow, White, Glow）。
+     - 補齊原料材質：**12 筆**（PC, PCTG, PVC, ABS, Valox, HDPE, PP, Colorant）。
+     - 補齊原廠料號編碼：**26 筆**（如 Megarad 2081-15, Eastar DN003, Geon 161J 等）。
+     - 物料類別鎖定：**27 筆** 100% 劃歸為「原料」。
+3. **五大庫別全量融合大圓滿 (Grand Unification)**：
+   - 零件、組件、SET、物料、原料 5 大資料夾、共 1,503 份圖檔全數完成結構化萃取與 Master Table 深度整併。
+   - 重新生成最新 `data/pn-lookup-master.xlsx`。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 遍歷 `rawdata\Drawings\原料` 資料夾中 PDF 圖檔內的 9 大規格資訊（圖檔檔名、圖號、版本、品號、品名規格、顏色、原料名稱、原料編碼、物料類別）。
