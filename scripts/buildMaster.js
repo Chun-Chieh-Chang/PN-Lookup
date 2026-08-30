@@ -12,6 +12,7 @@ const ICU_PATH = join(ROOT_DIR, 'data', 'icu-parts.json');
 const V7_DRAWINGS_PATH = join(ROOT_DIR, 'data', 'drawings_extract_v7.json');
 const ASSEMBLY_EXTRACT_PATH = join(ROOT_DIR, 'data', 'assembly_drawings_extract.json');
 const SET_EXTRACT_PATH = join(ROOT_DIR, 'data', 'set_drawings_extract.json');
+const OCR_RESULTS_PATH = join(ROOT_DIR, 'data', 'ocr_results_141.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -792,6 +793,84 @@ export function mergeSetDrawingsIntoMaster(master, setData) {
   return { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, bomUpdated };
 }
 
+// v7.9.9 OCR 掃描圖檔辨識成果融合：ocr_results_141.json（141 筆掃描圖檔、819 行子零件展開）
+export function mergeOcrResultsIntoMaster(master, ocrData) {
+  const partsMap = new Map();
+  for (const p of master.parts) {
+    partsMap.set(norm(p.partNo), p);
+    for (const a of (p.alternates || [])) {
+      partsMap.set(norm(a), p);
+    }
+  }
+
+  let matUpdated = 0, colUpdated = 0, bomUpdated = 0;
+  const bomChildren = master.bom.children || {};
+  const bomParents = master.bom.parents || {};
+
+  for (const r of (ocrData.results || [])) {
+    const pnRaw = (r.partNo || '').trim().toUpperCase();
+    if (!pnRaw) continue;
+    const targetPn = pnRaw === 'X3299' ? 'X3299AAM' : pnRaw;
+    const p = partsMap.get(norm(targetPn));
+    if (!p) continue;
+
+    // 1. 原料材質補齊
+    if (r.extractedMaterial && (!p.material || p.material === '零件' || p.material === '組件' || p.material === 'N/A' || p.material === 'NONE')) {
+      p.material = r.extractedMaterial;
+      matUpdated++;
+    }
+
+    // 2. 顏色補齊
+    if (r.extractedColor && !p.color) {
+      p.color = r.extractedColor;
+      colUpdated++;
+    }
+
+    // 3. 結構化 BOM 擴充
+    const newBoms = r.bomDetails || [];
+    if (newBoms.length > 0) {
+      const curBoms = p.bomDetails || [];
+      const existingCpns = new Set(curBoms.map((b) => norm(b.partNo)));
+      const mergedBoms = [...curBoms];
+      let hasNew = false;
+
+      for (const nb of newBoms) {
+        const cpn = norm(nb.partNo);
+        if (!existingCpns.has(cpn) && cpn !== norm(p.partNo)) {
+          const childPart = partsMap.get(cpn);
+          mergedBoms.push({
+            partNo: nb.partNo,
+            name: nb.name || (childPart ? (childPart.name || childPart.description) : nb.partNo),
+            qty: String(nb.qty || '1'),
+            material: nb.material || (childPart ? childPart.material : '') || '',
+            materialCode: (childPart ? childPart.materialCode : '') || '',
+          });
+          existingCpns.add(cpn);
+          hasNew = true;
+        }
+      }
+
+      p.bomDetails = mergedBoms;
+      if (hasNew) bomUpdated++;
+
+      // 同步更新 master.bom.children / parents
+      const pNo = p.partNo;
+      if (!bomChildren[pNo]) bomChildren[pNo] = [];
+      for (const b of mergedBoms) {
+        const cNo = (b.partNo || '').trim();
+        if (!cNo || norm(cNo) === norm(pNo)) continue;
+        if (!bomChildren[pNo].includes(cNo)) bomChildren[pNo].push(cNo);
+        if (!bomParents[cNo]) bomParents[cNo] = [];
+        if (!bomParents[cNo].includes(pNo)) bomParents[cNo].push(pNo);
+      }
+    }
+  }
+
+  master.bom.children = bomChildren;
+  master.bom.parents = bomParents;
+  return { matUpdated, colUpdated, bomUpdated };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -854,6 +933,15 @@ function buildMaster() {
     console.log(`Merged SET drawings: 關聯圖檔 ${fileUpdated} / 版本 ${revUpdated} / 顏色 ${colUpdated} / 原料 ${matUpdated} / 分類 ${catUpdated} / BOM富化 ${bomUpdated}`);
   } else {
     console.log(`ℹ️ 未找到 ${SET_EXTRACT_PATH}`);
+  }
+
+  // v7.9.9 OCR 掃描圖檔辨識成果融合：ocr_results_141.json（141 筆掃描圖檔、819 行子零件展開）
+  if (existsSync(OCR_RESULTS_PATH)) {
+    const ocrData = JSON.parse(readFileSync(OCR_RESULTS_PATH, 'utf-8'));
+    const { matUpdated, colUpdated, bomUpdated } = mergeOcrResultsIntoMaster(master, ocrData);
+    console.log(`Merged OCR results: 補齊 material ${matUpdated} / color ${colUpdated} / BOM富化 ${bomUpdated}`);
+  } else {
+    console.log(`ℹ️ 未找到 ${OCR_RESULTS_PATH}`);
   }
 
   // v7.8.15 物料類別三層體系 → v7.9.2 五分類：原料 / 物料 / 零件 / 組件 / SET

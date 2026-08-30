@@ -1,6 +1,28 @@
 # PN-Lookup 開發日誌
 
-## v7.9.9 — SET 提取成果融入 Master Table 與 141 筆掃描圖檔批次 OCR 全量解析
+## v7.10.0 — 141 筆掃描圖檔 OCR 成果全面整併入 Master Table 與自動化管線固化
+
+### 需求內容
+1. 將 141 筆純掃描圖檔經 OCR 萃取出的成果（包含材質、顏色以及 819 行 BOM 子零件明細）全面整併入系統主資料庫 (`pn-lookup-master.json`)。
+2. 固化於建置管線 `scripts/buildMaster.js` 中，確保完全可重複且 100% 通過軟體確效。
+
+### 執行內容 (CAPA)
+1. **Master Table OCR 融合 (`scripts/buildMaster.js`)**：
+   - 新增 `mergeOcrResultsIntoMaster` 處理階段：
+     - 補齊/精化原料材質 (material)：8 筆。
+     - 補齊顏色 (color)：57 筆。
+     - 結構化 BOM 擴充與富化：**140 筆組件/SET**（總組件數從 232 擴增至 343 筆）。
+     - 同步對齊雙向 mapping (`bom.children` 與 `bom.parents`)，杜絕自環引用。
+2. **成果產出**：
+   - 更新 `data/pn-lookup-master.json`。
+   - 保留專屬 Excel 成果：`data/ocr_results_141.xlsx`。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 將 SET 提取成果進一步整併入 master table (`pn-lookup-master.json` 與 `buildMaster.js`)。
