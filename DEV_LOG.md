@@ -1,5 +1,53 @@
 # PN-Lookup 開發日誌
 
+## v7.10.8 — 磁碟掃描補遺：修復 drawingFileName / revision 欄位大量空缺問題
+
+### 需求內容
+- Master Table 的 `drawingFileName` 與 `revision` 欄位在零件、組件、物料、SET 等分類中存在大量空白，且已知圖檔庫中實際有對應圖檔，情況極不合理，需查明原因並解決。
+
+### 原因與根因分析 (RCA)
+
+**診斷流程**：
+1. 執行 `diagnose_file_fields.py` → 確認零件 136/463 筆（29.4%）缺失 `drawingFileName`
+2. 執行 `rca_missing_filename.py` → 確認 136 筆全部是「品號在 `drawings_extract_v7.json` 中找不到」
+3. 執行 `check_actual_files.py` → 確認其中 75 筆磁碟上確實存在對應 PDF，61 筆為真實空缺（ICU 客供圖面）
+
+**根本原因**：
+- `mergeV7DrawingsIntoMaster` 透過 `it.partNo`（圖面內文萃取欄位）比對，而 `extract_drawings_v7.py` 在解析部分圖面（A01-210-xxx、B06-410-xxx、C09-350-xxx、D09-210-xxx、D10-xxx 等系列）時，`partNo` 欄位解析失敗（傳回空值），導致這 75 份圖檔的品號無法被 `mergeV7DrawingsIntoMaster` 匹配，最終 `drawingFileName` 與 `revision` 欄位留白。
+- 其餘 61 筆為 ICU 客供圖面（`CIV/BC/B-/AF/DB/DC/EF` 開頭），本司不持有圖檔，屬**正常合理的真實空缺**。
+
+### 矯正與預防措施 (CAPA)
+
+1. **新增 `repairMissingDrawingLinks(master, drawingDirs)` 函式**（`scripts/buildMaster.js` v7.10.8）：
+   - 對 `drawingFileName` 仍為空的品號，直接遞迴掃描 `rawdata/Drawings/零件|組件|SET|物料|原料` 各子資料夾
+   - 建立 `norm(baseName) → { fileName, revision }` PDF 索引
+   - 支援精確比對（normalize 後完全一致）與前綴容忍比對（最多 14 字元，最少 8 字元）
+   - 同步從 PDF 檔名正規表達式提取 `Rev.X` 版本號
+
+2. **在 buildMaster 管線最末段呼叫**（`deduplicateMutualAlternates` 之後、`writeFileSync` 之前）
+
+3. **在頂層 import 增加 `readdirSync`**（原有 `readFileSync` 的同一行）
+
+### 驗證結果
+
+**修復效果**：
+- 補齊 `drawingFileName`：**81 筆**（零件 75 + 其他分類 6）
+- 補齊 `revision`：**67 筆**
+
+**修復後缺失率**：
+| 分類 | 修復前缺失 | 修復後缺失 | 說明 |
+|------|-----------|-----------|------|
+| 零件 (463筆) | 136筆 (29.4%) | **58筆 (12.5%)** | 58筆為ICU客供/外包件，合理空缺 |
+| 組件 (0筆)  | 0筆 | 0筆 | — |
+| SET (140筆) | 1筆 | **1筆** | MDXE-012-11 種子資料不完整 |
+| 物料 (141筆) | 6筆 | **3筆** | 收縮膜無正式圖面、含路徑不一致 |
+| 原料 (27筆) | 0筆 | 0筆 | — |
+
+- `verifyCoreLogic.js`：10 項核心不變量 100% 全部通過 ✅
+- `npm run build`：Vite 生產環境打包 100% 成功 ✅
+
+---
+
 ## v7.10.7 — 專案全量重構優化、死碼與無效資源清理、全域文件對齊與還原基準點建立
 
 ### 需求內容

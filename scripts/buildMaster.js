@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
@@ -603,7 +603,59 @@ export function mergeV7DrawingsIntoMaster(master, v7Data) {
   return { matCnt, colCnt, dwgCnt, descCnt, catCnt, bomDetailCnt };
 }
 
-// v7.9.7 組件庫圖面全量融合：assembly_drawings_extract.json（357 筆圖檔、1,133 行子零件展開）
+// v7.10.8 磁碟掃描補遺：對 drawingFileName / revision 仍為空的品號，直接掃描 Drawings 子資料夾
+// 進行 PDF 檔名正規化比對，補齊缺失欄位。
+// 解決根因：drawings_extract_v7.json 只收錄了 478 筆 partNo 有效解析的品號，
+// 而有 75 筆零件圖檔（A01/B06/C09/D09/D10 等）的圖面 partNo 欄位在 v7 萃取時解析失敗，
+// 導致 mergeV7DrawingsIntoMaster 無法比對，造成 drawingFileName 與 revision 空白。
+export function repairMissingDrawingLinks(master, drawingDirs) {
+  // 構建 pdf 檔名索引 — 對指定子資料夾遞迴掃描
+  const pdfIndex = new Map(); // norm(base) → { fileName, revision }
+  const revRe = /[([\[]\s*[Rr][Ee][Vv][.\s]*([A-Z0-9]+)\s*[)\]]/;
+
+  function scanDir(dir) {
+    let entries;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch (e) { return; }
+    for (const ent of entries) {
+      if (ent.isDirectory()) { scanDir(dir + '/' + ent.name); continue; }
+      if (!ent.name.toLowerCase().endsWith('.pdf')) continue;
+      const base = ent.name.replace(/\.pdf$/i, '');
+      const mRev = base.match(/[([\[]\s*[Rr][Ee][Vv][.\s]*([A-Z0-9]+)\s*[)\]]/);
+      const rev = mRev ? `Rev.${mRev[1].toUpperCase()}` : '';
+      const clean = base.replace(/\s*[([\[].*?[)\]]/g, '').trim();
+      const k = clean.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      if (k && !pdfIndex.has(k)) pdfIndex.set(k, { fileName: ent.name, revision: rev });
+    }
+  }
+
+  for (const dir of (drawingDirs || [])) scanDir(dir.replace(/\\/g, '/'));
+
+  let linked = 0, revFilled = 0;
+  for (const p of master.parts) {
+    if (p.drawingFileName && p.drawingFileName.endsWith('.pdf')) continue;
+    const k = p.partNo.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+    let hit = pdfIndex.get(k);
+    if (!hit) {
+      for (const [mapK, mapV] of pdfIndex) {
+        const minLen = Math.min(k.length, mapK.length, 14);
+        if (minLen >= 8 && mapK.startsWith(k.substring(0, minLen)) && k.startsWith(mapK.substring(0, minLen))) {
+          hit = mapV; break;
+        }
+      }
+    }
+    if (hit) {
+      p.drawingFileName = hit.fileName;
+      linked++;
+      if (hit.revision && (!p.revision || p.revision === 'N/A' || p.revision === '-')) {
+        p.revision = hit.revision;
+        revFilled++;
+      }
+    }
+  }
+  return { linked, revFilled };
+}
+
+
 export function mergeAssemblyDrawingsIntoMaster(master, assyData) {
   const partsMap = new Map();
   for (const p of master.parts) {
@@ -1273,8 +1325,15 @@ function buildMaster() {
   const { removedCount, remainingCount } = deduplicateMutualAlternates(master);
   console.log(`去重合併: 移除 ${removedCount} 筆互為替代重複實體（剩餘 ${remainingCount} 筆規範實體）`);
 
+  // v7.10.8 磁碟掃描補遺：補齊 drawingFileName / revision 仍為空的品號（v7 extract 解析品號失敗所致）
+  const drawingsRoot = join(ROOT_DIR, 'rawdata', 'Drawings');
+  const repairDirs = ['零件', '組件', 'SET', '物料', '原料'].map((d) => join(drawingsRoot, d));
+  const { linked: repairLinked, revFilled: repairRevFilled } = repairMissingDrawingLinks(master, repairDirs);
+  console.log(`Repair drawing links: 補齊 drawingFileName ${repairLinked} / revision ${repairRevFilled}`);
+
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');
+
   console.log(`Successfully built master table to ${OUTPUT_PATH}!`);
   console.log(`Total Parts: ${master.parts.length}, Assemblies: ${Object.keys(master.bom.children).length}`);
 }
