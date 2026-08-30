@@ -1,13 +1,17 @@
-# PN-Lookup Drawing PDF Extractor — Skill v7.9.4
+# PN-Lookup Drawing PDF Extractor — Skill v7.9.6
 
 ## Overview
 
-自動化從 ICU/廠內/零件圖檔 PDF 提取結構化數據（品號、描述、材質、版本、BOM、分類）。
-支援文字層 PDF 與掃描圖檔兩種格式。
+自動化從 ICU/廠內/零件及組件圖檔 PDF 提取結構化數據（9 大核心欄位：圖檔檔名、圖號、版本、品號、品名、顏色、原料名稱、原料編碼、物料類別五分類，以及組件/SET 之結構化子件 BOM 明細）。
+支援文字層向量 PDF 與掃描圖檔兩種格式。
 
-**Base 路徑**: `rawdata/Drawings/零件`
-**輸出**: `data/drawings_extract_v7.json` + `data/drawings_extract_v7.xlsx`
-**人工查核清單**: `data/無材質檔案清單_人工查核.xlsx`（全量 71 筆已 100% 提取確認完畢）
+**Base 路徑**: 
+- 零件庫: `rawdata/Drawings/零件`（866 筆零件圖檔）
+- 組件庫: `rawdata/Drawings/組件`（357 筆組件圖檔，含 Amsino、Component、廠內 SA/SB/SC/SD 及 原零件移入組件）
+
+**輸出成果**: 
+- 零件圖檔 SSOT: `data/drawings_extract_v7.json` + `data/drawings_extract_v7.xlsx`
+- 組件圖檔 SSOT: `data/assembly_drawings_extract.json` + `data/assembly_drawings_extract.xlsx`
 
 ---
 
@@ -216,15 +220,16 @@ python scratch/apply_assembly_category_update.py
 
 | 檔案 | 內容與狀態 |
 |------|-----------|
-| `data/drawings_extract_v7.json` | 完整提取結果（967 筆圖檔，材質覆蓋率 100%，組件 101 筆 / 零件 866 筆） |
-| `data/drawings_extract_v7.xlsx` | Excel 報告（包含「圖面資料」、「組件BOM」、「掃描圖檔處理標記」三工作表） |
-| `data/無材質檔案清單_人工查核.xlsx` | 71 筆無材質圖檔重新提取後的人工查核清單（全數已確認） |
+| `data/drawings_extract_v7.json` | 零件庫圖檔完整提取結果（967 筆圖檔，材質覆蓋率 100%） |
+| `data/drawings_extract_v7.xlsx` | 零件庫 Excel 報告（包含「圖面資料」、「組件BOM」、「掃描圖檔(OCR提取清單)」） |
+| `data/assembly_drawings_extract.json` | 組件庫全量提取結果（357 筆圖檔，1133 行子零件展開，39 筆掃描圖檔） |
+| `data/assembly_drawings_extract.xlsx` | 組件庫專屬 Excel 報告（包含「組件圖面資料」、「組件與SET_BOM清單」、「掃描圖檔清單(待OCR)」） |
 
 ---
 
-## 品質基準（Quality Baseline v7.9.4）
+## 品質基準（Quality Baseline v7.9.6）
 
-- **材質覆蓋率**: **967 / 967 = 100.0%**（無材質殘留: **0 筆**）
-- **組件圖檔數**: **101 筆**（去重後實體組件品號 52 種）
-- **零件圖檔數**: **866 筆**
+- **零件庫圖檔**: **967 筆**（材質 100% 覆蓋、圖號 99.9%、版本 100%、顏色 90.1%）
+- **組件庫圖檔**: **357 筆**（品號 100%、圖號 100%、版本 100%、子零件清單 1,133 行明細）
+- **掃描圖檔標記**: **39 筆**（已獨立收錄於工作表 3，待專案後續 OCR 批次處理）
 - **確效狀態**: `verifyCoreLogic.js` 100% 通過，`npm run build` 零錯誤。

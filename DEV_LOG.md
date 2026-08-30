@@ -1,6 +1,39 @@
 # PN-Lookup 開發日誌
 
-## v7.9.6 — 9 大核心工程規格全面整合、組件/SET 結構化 BOM 明細構建與 UI 全面升級
+## v7.9.7 — 組件庫 357 筆圖檔全量結構化提取、1,133 行子零件 BOM 展開與掃描圖檔精準標記
+
+### 需求內容
+1. 遍歷 `rawdata\Drawings\組件` 及其所有子資料夾（含 Amsino、Component、原零件移入組件、廠內 SA/SB/SC/SD 等共 357 份 PDF 圖檔）。
+2. 提取 9 大核心規格資訊：
+   - 1. 圖檔檔名
+   - 2. 圖號 (Drawing number)
+   - 3. 版本 (REV.)
+   - 4. 品號 (Part number)
+   - 5. 品名 (Description)
+   - 6. 顏色 (Color)
+   - 7. 原料名稱 (Material)
+   - 8. 原料編碼 (Material Code)
+   - 9. 物料類別 (Category)：原料、物料、零件、組件、SET。
+3. 組件/SET 結構化子件展開：連帶記錄其組成零件的「單位用量」、「品號」、「品名」、「原料名稱」、「原料編號」。
+4. 掃描圖檔識別與隔離：對純掃描圖檔先標記記錄，留待最後以 OCR 處理。
+
+### 執行內容 (CAPA)
+1. **建立專屬組件提取管線 (`scripts/extract_assembly_drawings.py`)**：
+   - 支援 Mouldex KEY UNIT 表格、BD/外來 ITEM-QTY-PART 表格、MATERIALS: 區塊等多種版式解析。
+   - 提取 357 份組件圖檔，品號、圖號、版本達到 **100.0% 全覆蓋**。
+   - 識別展開 **1,133 行結構化子零件明細**，完整關聯用量、品號、品名、原料與編碼。
+   - 識別標記 **39 筆純掃描圖檔**，建立專屬待 OCR 處理清單。
+2. **生成 SSOT 成果檔案**：
+   - `data/assembly_drawings_extract.json`
+   - `data/assembly_drawings_extract.xlsx`（包含「組件圖面資料」、「組件與SET_BOM清單」、「掃描圖檔清單(待OCR)」三工作表）。
+3. **知識沉澱**：同步更新 `scripts/SKILL_DRAWING_EXTRACT_V7.md` 至 v7.9.6/v7.9.7。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 依據製造與工程規範全面整合 9 大核心欄位：
