@@ -1,6 +1,32 @@
 # PN-Lookup 開發日誌
 
-## v7.10.3 — 物料庫 139 份圖檔全量結構化提取、物料組成展開與 60 筆掃描圖檔精準標記
+## v7.10.4 — 60 筆物料掃描圖檔 OCR 全量解析與 139 筆物料成果深度整併 Master Table
+
+### 需求內容
+1. 對物料庫 60 筆純掃描圖檔啟動 OCR 批次辨識，解析文字、材質規格、顏色與物料組成。
+2. 將物料庫 139 份圖檔（含 60 筆 OCR 成果）全面整併入 Master Table (`pn-lookup-master.json` 與 `buildMaster.js`)。
+
+### 執行內容 (CAPA)
+1. **60 筆物料掃描圖檔批次 OCR (`scripts/batchOcr60Materials.mjs`)**：
+   - 60 / 60 筆全部 100% 成功提取出有效文字行，解析材質與顏色。
+   - 產出專屬 SSOT：`data/ocr_results_material_60.json` 與 `data/ocr_results_material_60.xlsx`。
+2. **Master Table 物料全量融合 (`scripts/buildMaster.js`)**：
+   - 新增 `mergeMaterialDrawingsIntoMaster` 融合階段：
+     - 關聯專屬物料圖檔：**135 筆**。
+     - 更新/補齊最新版本：**135 筆**。
+     - 補齊/精化原料材質：**129 筆**（如銅版紙、瓦楞紙板、透析紙滅菌袋、PE袋、PVC收縮膜）。
+     - 補齊顏色標註：**16 筆**。
+     - 物料類別鎖定：**135 筆** 100% 劃歸為「物料」。
+     - 擴充物料組成關聯：**53 筆**。
+3. **重新構建總表**：
+   - 更新 `data/pn-lookup-master.json` 與 `data/pn-lookup-master.xlsx`（BOM 總展開行數達到 1,788 行）。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 遍歷 `rawdata\Drawings\物料` 及其所有 10 個子資料夾（外箱標籤、包裝袋、內箱標籤、紙箱、包裝說明書、標籤、塑膠袋、收縮膜、標籤貼紙、說明書共 139 份 PDF 圖檔）。

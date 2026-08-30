@@ -56,8 +56,8 @@ def extract_from_filename(filename, folder_name):
     # 2. 提取品號與圖號
     part_no = ""
     dwg_no = ""
-    # 常見物料編號前綴: CL, ICL, PL, CTN, PN, PE, SF, BL, PI, MXXXX
-    m_pn = re.search(r'([A-Z]{2,4}-?\d{3,5}(?:-\d+)?)', base, re.I)
+    # 常見物料編號前綴: CL, ICL, PL, CTN, PN, PE, SF, BL, PI, MXXXX (如 M0022)
+    m_pn = re.search(r'(\bM\d{4}\b|[A-Z]{2,4}-?\d{3,5}(?:-\d+)?)', base, re.I)
     if m_pn:
         part_no = m_pn.group(1).upper()
         dwg_no = part_no
