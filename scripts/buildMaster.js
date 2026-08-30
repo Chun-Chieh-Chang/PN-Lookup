@@ -11,6 +11,7 @@ const SEMANTIC_PATH = join(ROOT_DIR, 'data', 'semantic-extract.json');
 const ICU_PATH = join(ROOT_DIR, 'data', 'icu-parts.json');
 const V7_DRAWINGS_PATH = join(ROOT_DIR, 'data', 'drawings_extract_v7.json');
 const ASSEMBLY_EXTRACT_PATH = join(ROOT_DIR, 'data', 'assembly_drawings_extract.json');
+const SET_EXTRACT_PATH = join(ROOT_DIR, 'data', 'set_drawings_extract.json');
 
 // 品號正規化（與前端 imageLibrary.normalize 一致）
 function norm(s) {
@@ -702,6 +703,95 @@ export function mergeAssemblyDrawingsIntoMaster(master, assyData) {
   return { fileUpdated, dwgUpdated, revUpdated, colUpdated, matUpdated, catUpdated, bomUpdated };
 }
 
+// v7.9.8 SET庫圖面全量融合：set_drawings_extract.json（113 筆圖檔、105 行子零件展開）
+export function mergeSetDrawingsIntoMaster(master, setData) {
+  const partsMap = new Map();
+  for (const p of master.parts) {
+    partsMap.set(norm(p.partNo), p);
+    for (const a of (p.alternates || [])) {
+      partsMap.set(norm(a), p);
+    }
+  }
+
+  let fileUpdated = 0, revUpdated = 0, colUpdated = 0, matUpdated = 0, catUpdated = 0, bomUpdated = 0;
+  const bomChildren = master.bom.children || {};
+  const bomParents = master.bom.parents || {};
+
+  for (const it of (setData.items || [])) {
+    const pnRaw = (it.partNo || '').trim().toUpperCase();
+    if (!pnRaw) continue;
+    const targetPn = pnRaw === 'X3299' ? 'X3299AAM' : pnRaw;
+    const p = partsMap.get(norm(targetPn));
+    if (!p) continue;
+
+    // 1. 關聯專屬圖檔
+    if (it.fileName && (!p.drawingFileName || !p.drawingFileName.endsWith('.pdf'))) {
+      p.drawingFileName = it.fileName;
+      fileUpdated++;
+    }
+
+    // 2. 版本更新
+    if (it.revision && (!p.revision || p.revision !== it.revision)) {
+      p.revision = it.revision;
+      revUpdated++;
+    }
+
+    // 3. 顏色補齊
+    if (it.color && !p.color) {
+      p.color = it.color;
+      colUpdated++;
+    }
+
+    // 4. 原料材質補齊
+    if (it.materialName && (!p.material || p.material === '零件' || p.material === '組件' || p.material === 'N/A' || p.material === 'NONE')) {
+      p.material = it.materialName;
+      matUpdated++;
+    }
+
+    // 5. 分類強制鎖定為 SET
+    if (p.category !== 'SET') {
+      p.category = 'SET';
+      catUpdated++;
+    }
+
+    // 6. 結構化 BOM 清單整合
+    const newBoms = it.bomDetails || [];
+    if (newBoms.length > 0) {
+      const curBoms = p.bomDetails || [];
+      const existingCpns = new Set(curBoms.map((b) => norm(b.partNo)));
+      const mergedBoms = [...curBoms];
+      let hasNew = false;
+
+      for (const nb of newBoms) {
+        const cpn = norm(nb.partNo);
+        if (!existingCpns.has(cpn) && cpn !== norm(p.partNo)) {
+          mergedBoms.push(nb);
+          existingCpns.add(cpn);
+          hasNew = true;
+        }
+      }
+
+      p.bomDetails = mergedBoms;
+      if (hasNew || curBoms.length === 0) bomUpdated++;
+
+      // 同步更新 master.bom.children / parents
+      const pNo = p.partNo;
+      if (!bomChildren[pNo]) bomChildren[pNo] = [];
+      for (const b of mergedBoms) {
+        const cNo = (b.partNo || '').trim();
+        if (!cNo || norm(cNo) === norm(pNo)) continue;
+        if (!bomChildren[pNo].includes(cNo)) bomChildren[pNo].push(cNo);
+        if (!bomParents[cNo]) bomParents[cNo] = [];
+        if (!bomParents[cNo].includes(pNo)) bomParents[cNo].push(pNo);
+      }
+    }
+  }
+
+  master.bom.children = bomChildren;
+  master.bom.parents = bomParents;
+  return { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, bomUpdated };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -755,6 +845,15 @@ function buildMaster() {
     console.log(`Merged assembly drawings: 關聯圖檔 ${fileUpdated} / 圖號 ${dwgUpdated} / 版本 ${revUpdated} / 顏色 ${colUpdated} / 原料 ${matUpdated} / 分類 ${catUpdated} / BOM富化 ${bomUpdated}`);
   } else {
     console.log(`ℹ️ 未找到 ${ASSEMBLY_EXTRACT_PATH}`);
+  }
+
+  // v7.9.8 SET庫圖面全量融合：set_drawings_extract.json（113 筆 SET 圖檔、105 行子零件展開）
+  if (existsSync(SET_EXTRACT_PATH)) {
+    const setData = JSON.parse(readFileSync(SET_EXTRACT_PATH, 'utf-8'));
+    const { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, bomUpdated } = mergeSetDrawingsIntoMaster(master, setData);
+    console.log(`Merged SET drawings: 關聯圖檔 ${fileUpdated} / 版本 ${revUpdated} / 顏色 ${colUpdated} / 原料 ${matUpdated} / 分類 ${catUpdated} / BOM富化 ${bomUpdated}`);
+  } else {
+    console.log(`ℹ️ 未找到 ${SET_EXTRACT_PATH}`);
   }
 
   // v7.8.15 物料類別三層體系 → v7.9.2 五分類：原料 / 物料 / 零件 / 組件 / SET

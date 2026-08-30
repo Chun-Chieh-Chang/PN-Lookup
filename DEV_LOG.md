@@ -1,6 +1,28 @@
 # PN-Lookup 開發日誌
 
-## v7.9.8 — SET庫 113 筆圖檔全量結構化提取、輸液管 BOM 展開與 102 筆掃描圖檔精準標記
+## v7.9.9 — SET 提取成果融入 Master Table 與 141 筆掃描圖檔批次 OCR 全量解析
+
+### 需求內容
+1. 將 SET 提取成果進一步整併入 master table (`pn-lookup-master.json` 與 `buildMaster.js`)。
+2. 對組件庫 (39 筆) 與 SET 庫 (102 筆) 共 141 筆掃描圖檔進行批次 OCR 辨識，提取圖面文字、材質與 BOM 結構化子零件。
+
+### 執行內容 (CAPA)
+1. **Master Table 管線整併 (`scripts/buildMaster.js`)**：
+   - 固化 `mergeSetDrawingsIntoMaster` 階段：補齊 111 筆專屬 SET 圖檔關聯、111 筆版本、84 筆輸液管材質與 11 筆結構化子零件 BOM 明細。
+2. **141 筆掃描圖檔批次 OCR 管線 (`scripts/batchOcr141Drawings.mjs`)**：
+   - 採用內建 `tesseract.js` + `@napi-rs/canvas` 高精度辨識，具備斷點快取續傳機制 (`ocr_cache_141.json`)。
+   - 141 / 141 筆圖檔 100% 全部成功萃取出文字層！
+   - 識別展開 **819 行 BOM 明細**（包含母件品號、用量、組成零件品號、品名與原料材質）。
+3. **生成專屬 SSOT 成果檔案**：
+   - `data/ocr_results_141.json`
+   - `data/ocr_results_141.xlsx`（包含「OCR圖面規格總表」、「OCR_BOM明細清單」、「OCR文字層全文摘要」三工作表）。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 遍歷 `rawdata\Drawings\SET` 及其所有子資料夾（含 MDX圖面、MPS(LSO)圖面 及根目錄共 113 份 PDF 圖檔）。
