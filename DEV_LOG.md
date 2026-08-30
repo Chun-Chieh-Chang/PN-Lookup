@@ -1,6 +1,62 @@
 # PN-Lookup 開發日誌
 
-## v7.9.1 — 圖檔語意識別全量批次完成：1514 圖解析、master 994、品號白名單過濾
+## v7.9.4 — 組件判定引擎導入、組件/零件精準分類更新與全專案重構清理 (MECE Cleanup)
+
+### 需求內容
+1. 建立四維第一性原理組件判定引擎，修正原先實際為組件但標記為「零件」之品項。
+2. 全量掃描並更新 `drawings_extract_v7.json` 與 `drawings_extract_v7.xlsx`，將組件圖檔 category 修正為「組件」。
+3. 全面盤點專案過渡期測試腳本與臨時死碼，遵循 MECE 原則清理。
+4. 全面同步更新開發文件（SKILL_DRAWING_EXTRACT_V7.md、README.md、mapping-logic.md、version.ts、package.json）。
+
+### 根因分析 (RCA)
+1. **組件分類偏差**：先前 `extract_drawings_v7` 預設 `category="零件"`，部分多物料組合（如 Capped Vent Filter、Vial Adaptor、注藥座組件）未即時根據 BOM 與品名組裝標註反饋回圖檔資料庫。
+2. **過渡期測試殘留**：在 OCR 研發與批次分析過程中，產生了 `check_resin_recovery.py`、`ocr_scanned_batch.py`、`test_ocr.py` 等一封性實驗腳本，未及時清算收斂。
+
+### 執行內容（CAPA）
+1. **組件判定引擎**：
+   - 定義 4 大組件判別充分條件（品名組裝關鍵字、多物料組合說明、相異子零件 ≥2 項、SA/SB/SC/SD 前綴或 master 組件核定）。
+   - 修正 62 筆原列為零件的圖檔，全庫核定 **101 筆組件圖檔**（涵蓋 52 種實體組件品號），零件圖檔更新為 **866 筆**。
+2. **死碼與過渡腳本清理**：
+   - 移除 11 個過渡期測試腳本（`test_llmsherpa.py`, `test_ocr.py`, `test_paddleocr.py`, `ocr_process.py`, `ocr_process_v2.py`, `extract_drawings.py`, `check_resin_recovery.py`, `check_stats.py`, `check_subfolders.py`, `ocr_material_recover.py`, `ocr_scanned_batch.py`）。
+   - 清理 `scratch/` 臨時目錄與根目錄殘留圖片。
+3. **文件與版本對齊**：
+   - `SKILL_DRAWING_EXTRACT_V7.md` 升級至 v7.9.4，載入四維判定法與 100% 品質基準。
+   - `README.md`、`docs/mapping-logic.md`、`src/version.ts`、`package.json` 同步至 v7.9.4。
+
+### 驗證結果
+- `verifyCoreLogic.js`：核心不變量 100% PASS（1027 筆主庫品號、181 組 BOM 組件等零迴歸）。
+- `npm run build`：Production bundle 打包 100% 成功。
+
+---
+
+
+### 需求內容
+檢查 `無材質檔案清單_人工查核.xlsx` 中的 71 筆圖檔（狀態為「待確認」），重新進行文字層分析與高解析度 Tesseract OCR 識別，提取材質名稱（Material Name）、原料編碼（Material Code）、規格、顏色與組件 BOM，並同步更新至 `drawings_extract_v7.xlsx`、`drawings_extract_v7.json` 與人工查核清單。
+
+### 根因分析 (RCA)
+原先 71 筆圖檔在 `drawings_extract_v7` 中材質為空，主要原因包含：
+1. **規格管件圖檔**（如 `11-02XXXX` 至 `11-37XXXX`）：材質寫在 `Material Name: PVC` 與 `Material supplier part number: 7477G-015` 欄位，先前的 regex 提取器漏抓。
+2. **純掃描/無文字層圖檔**（46 筆）：未走高精度 OCR 或文字遭壓縮，例如 `BD_404028_Rev.1.pdf`（HDPE LH606）與 `VLV-` 系列。
+3. **組裝圖/組立件 (Assembly)**（19 筆，如 `R1-10149`, `R1-15165`, `R1-15769`, `R1-2260` 等）：在圖面上材質欄 (7. MATERIALS) 標註的是其組成零件（BOM Items）而非單一原料。先前管線將其誤判為無材質。
+
+### 執行內容（CAPA）
+1. **全量診斷與 OCR 批次**：
+   - 透過 PyMuPDF (fitz) 與 Tesseract 5.5 OCR 對全部 71 筆圖檔進行全頁解析，保存高解析度 OCR 文本矩陣。
+2. **多維交叉驗證與真值萃取**：
+   - **管件類 (5 筆)**：提取確認為 `PVC, Colorite 7477G-015`（料號 `7477G-015`）。
+   - **單件零件類 (47 筆)**：交叉比對 masterParts、semantic-extract 與圖面 Notes，完整補全（如 `BD_404028`: HDPE LH606、`B-003`: Latex Free Rubber、`B-077`: B膠、`B-345`: PVC、`B06-410-311-1`: PC MAKROLON 2458 550115、`VLV-135-023`: TPU、`VLV-141-010`: BRASS 等）。
+   - **組裝件/BOM 類 (19 筆)**：解析圖面組成料號，同步填入組裝物料說明與「組件BOM」清單（如 `R1-15165`: PVC M4910 + Polyisoprene 4001、`R1-2260`: SB0031A 組件、`R1-10149/10278/10356/15936`: VIAL SPIKE 組件等）。
+3. **成果產出與資料更新**：
+   - `data/drawings_extract_v7.json`：更新 71 筆，無材質筆數從 71 筆降為 **0 筆**（100% 完整覆蓋）。
+   - `data/drawings_extract_v7.xlsx`：重新生成 3 個工作表（圖面資料 968 列、組件BOM 317 列、掃描圖檔處理標記）。
+   - `data/無材質檔案清單_人工查核.xlsx`：71 筆狀態全數由「待確認」更新為「已重新提取確認」，並追加「提取材質名稱」、「原料編碼」、「更新後方法」三欄。
+
+### 驗證結果
+- `verifyCoreLogic.js`：核心邏輯不變量 100% PASS（主資料庫 1027 筆、種子轉譯 669 筆、BOM 組件 181 組、雙向對稱 0 異常、無環約束 0 異常）。
+- `npm run build`：Vite production bundle 編譯成功，零錯誤。
+
+---
+
 
 ### 需求內容
 v7.9.0 樣本驗證通過後，對全部 1514 張圖執行語意識別（品號/品名規格/圖號/原料/BOM；掃描檔 OCR）。使用者確認：分批避限流、22-69xxxx 保留、D10-240-251-1/-2 並存、SB0001 需專屬處理、中文亂碼接受（A）。

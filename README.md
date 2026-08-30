@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.9.2)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.9.4)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與物料類別五分類管理平台**。
 
-![Version](https://img.shields.io/badge/version-v7.9.2-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.9.4-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -19,6 +19,9 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 - 🛡️ **數據固化與防迴歸確效門禁 (`verifyCoreLogic.js`)**：
   - 於 `npm run build` 時自動運行 12 項測試，鎖定 1027 筆品號、181 組 BOM 關聯階層、邊界防禦與本體約束。
   - 包含 CI 沙盒防禦模式（遵循 Zero Private Data 規範，跳過敏感離線檔測試）。
+- 📑 **圖檔材質 100% 提取覆蓋與組件判定引擎（v7.9.3~v7.9.4）**：
+  - `extract_drawings_v7.py`：圖面資料全面覆蓋 967 筆圖檔，**材質覆蓋率達 100.0%（0 筆遺漏）**。
+  - **組件判定引擎**：建立多維特徵識別，全庫識別出 101 筆組件圖檔（涵蓋 52 種實體組件品號），消除「組件誤標為零件」之分類偏差。
 - 🧠 **圖檔語意識別全量批次（v7.9.0~v7.9.1）**：
   - `semanticExtract.js`：1492 張工程圖全量多模型分工解析（agnes Gemini + laguna Claude + hy3 OpenAI），語意 BOM 提取 + JSON/Excel 雙檔輸出。
   - 語意 BOM 品號白名單過濾（`PN_RE` / `PN_JUNK_RE` / `PN_MOULDEX_RE` / `PN_MANUAL_BLACKLIST`），排除材質/模具號/尺寸雜訊。
