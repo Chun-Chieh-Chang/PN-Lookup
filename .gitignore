@@ -19,3 +19,4 @@ coverage/
 .vscode/
 
 data/tessdata/
+*.traineddata
