@@ -1,17 +1,19 @@
-# PN-Lookup Drawing PDF Extractor — Skill v7.9.6
+# PN-Lookup Drawing PDF Extractor — Skill v7.9.8
 
 ## Overview
 
-自動化從 ICU/廠內/零件及組件圖檔 PDF 提取結構化數據（9 大核心欄位：圖檔檔名、圖號、版本、品號、品名、顏色、原料名稱、原料編碼、物料類別五分類，以及組件/SET 之結構化子件 BOM 明細）。
+自動化從 ICU/廠內/零件、組件及 SET 圖檔 PDF 提取結構化數據（9 大核心欄位：圖檔檔名、圖號、版本、品號、品名、顏色、原料名稱、原料編碼、物料類別五分類，以及組件/SET 之結構化子件 BOM 明細）。
 支援文字層向量 PDF 與掃描圖檔兩種格式。
 
 **Base 路徑**: 
 - 零件庫: `rawdata/Drawings/零件`（866 筆零件圖檔）
 - 組件庫: `rawdata/Drawings/組件`（357 筆組件圖檔，含 Amsino、Component、廠內 SA/SB/SC/SD 及 原零件移入組件）
+- SET庫: `rawdata/Drawings/SET`（113 筆 SET 圖檔，含 MDX圖面、MPS(LSO)圖面 及 根目錄）
 
 **輸出成果**: 
 - 零件圖檔 SSOT: `data/drawings_extract_v7.json` + `data/drawings_extract_v7.xlsx`
 - 組件圖檔 SSOT: `data/assembly_drawings_extract.json` + `data/assembly_drawings_extract.xlsx`
+- SET圖檔 SSOT: `data/set_drawings_extract.json` + `data/set_drawings_extract.xlsx`
 
 ---
 
@@ -224,12 +226,15 @@ python scratch/apply_assembly_category_update.py
 | `data/drawings_extract_v7.xlsx` | 零件庫 Excel 報告（包含「圖面資料」、「組件BOM」、「掃描圖檔(OCR提取清單)」） |
 | `data/assembly_drawings_extract.json` | 組件庫全量提取結果（357 筆圖檔，1133 行子零件展開，39 筆掃描圖檔） |
 | `data/assembly_drawings_extract.xlsx` | 組件庫專屬 Excel 報告（包含「組件圖面資料」、「組件與SET_BOM清單」、「掃描圖檔清單(待OCR)」） |
+| `data/set_drawings_extract.json` | SET庫全量提取結果（113 筆圖檔，105 行子零件展開，102 筆掃描圖檔） |
+| `data/set_drawings_extract.xlsx` | SET庫專屬 Excel 報告（包含「SET圖面資料」、「SET_BOM清單」、「掃描圖檔清單(待OCR)」） |
 
 ---
 
-## 品質基準（Quality Baseline v7.9.6）
+## 品質基準（Quality Baseline v7.9.8）
 
 - **零件庫圖檔**: **967 筆**（材質 100% 覆蓋、圖號 99.9%、版本 100%、顏色 90.1%）
 - **組件庫圖檔**: **357 筆**（品號 100%、圖號 100%、版本 100%、子零件清單 1,133 行明細）
-- **掃描圖檔標記**: **39 筆**（已獨立收錄於工作表 3，待專案後續 OCR 批次處理）
+- **SET庫圖檔**: **113 筆**（品號 100%、圖號 100%、版本 100%、物料類別 100% SET、子零件清單 105 行明細）
+- **掃描圖檔標記**: 組件 39 筆 + SET 102 筆 = **共 141 筆**（已獨立收錄於各自工作表 3，待專案後續統一 OCR 批次處理）
 - **確效狀態**: `verifyCoreLogic.js` 100% 通過，`npm run build` 零錯誤。

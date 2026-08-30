@@ -1,6 +1,38 @@
 # PN-Lookup 開發日誌
 
-## v7.9.7 — 組件庫 357 筆圖檔全量結構化提取、1,133 行子零件 BOM 展開與掃描圖檔精準標記
+## v7.9.8 — SET庫 113 筆圖檔全量結構化提取、輸液管 BOM 展開與 102 筆掃描圖檔精準標記
+
+### 需求內容
+1. 遍歷 `rawdata\Drawings\SET` 及其所有子資料夾（含 MDX圖面、MPS(LSO)圖面 及根目錄共 113 份 PDF 圖檔）。
+2. 提取 9 大核心規格資訊：
+   - 1. 圖檔檔名
+   - 2. 圖號 (Drawing number)
+   - 3. 版本 (REV.)
+   - 4. 品號 (Part number)
+   - 5. 品名 (Description)
+   - 6. 顏色 (Color)
+   - 7. 原料名稱 (Material)
+   - 8. 原料編碼 (Material Code)
+   - 9. 物料類別 (Category)：嚴格鎖定為 SET（含有輸液管 tubing 之套件組件）。
+3. 組件/SET 結構化子件展開：連帶記錄組成零件的「單位用量」、「品號」、「品名」、「原料名稱」、「原料編號」。
+4. 掃描圖檔隔離：將純掃描圖檔（102 筆）先標記記錄，留待最後以 OCR 處理。
+
+### 執行內容 (CAPA)
+1. **建立專屬 SET 提取管線 (`scripts/extract_set_drawings.py`)**：
+   - 遍歷 113 筆圖檔，品號、圖號、版本達到 **100.0% 全覆蓋**，物料類別 **100.0% 標定為 SET**。
+   - 解析展開 **105 行結構化子零件 BOM 明細**（用量、品號、品名、原料名稱、原料編號）。
+   - 識別標記 **102 筆純掃描圖檔**，建立專屬待 OCR 處理清單。
+2. **生成 SSOT 成果檔案**：
+   - `data/set_drawings_extract.json`
+   - `data/set_drawings_extract.xlsx`（包含「SET圖面資料」、「SET_BOM清單」、「掃描圖檔清單(待OCR)」三工作表）。
+3. **知識沉澱**：更新 `scripts/SKILL_DRAWING_EXTRACT_V7.md` 至 v7.9.8。
+
+### 驗證結果
+- `verifyCoreLogic.js`：10 項核心數據邏輯不變量 100% PASS。
+- `npm run build`：Vite 生產環境打包編譯 100% 成功。
+
+---
+
 
 ### 需求內容
 1. 遍歷 `rawdata\Drawings\組件` 及其所有子資料夾（含 Amsino、Component、原零件移入組件、廠內 SA/SB/SC/SD 等共 357 份 PDF 圖檔）。
