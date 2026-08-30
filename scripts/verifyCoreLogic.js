@@ -49,7 +49,7 @@ if (existsSync(MASTER_PATH)) {
   );
   assert(
     parts.length >= 961,
-    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆，必須 >= 圖檔優先管線 963 筆（種子 669 + 圖檔提取 292 + E09 合併；669 = 693 + 24 scannedAssemblies − 8 MDXE − 40 互為別名雙實體合併 + 2 收縮膜物料（0.08*14mm / 0.08*14.5mm，v7.8.19 收錄）；v7.8.14 SPC 圖號註冊格式修正 −1：SPC0005450 圖號實體改為 RAW0000336）`
+    `主資料庫品號總數下限固化: 當前 ${parts.length} 筆（v7.10.0 移除 43 筆互為替代重複實體後為 984 筆，必須 >= 基線 961 筆；種子 669 + 圖檔提取 292 + E09 合併 − 43 替代品號去重）`
   );
 } else {
   console.log(`ℹ️ [CI 沙盒模式] 未檢測到本機私有資料庫 ${MASTER_PATH} (遵循 Zero-Private-Data .gitignore 規範)，略過本機檔案測試。`);

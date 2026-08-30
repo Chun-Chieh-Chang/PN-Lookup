@@ -871,6 +871,111 @@ export function mergeOcrResultsIntoMaster(master, ocrData) {
   return { matUpdated, colUpdated, bomUpdated };
 }
 
+// v7.10.0 互為替代品號識別與去重合併 (Mutual Alternates Deduplication & Merge)
+export function deduplicateMutualAlternates(master) {
+  const parts = master.parts;
+  const pnToPart = new Map(parts.map((p) => [norm(p.partNo), p]));
+
+  const pairs = [];
+  const seenPairs = new Set();
+
+  for (const p of parts) {
+    const pNoNorm = norm(p.partNo);
+    for (const a of (p.alternates || [])) {
+      const aNorm = norm(a);
+      if (pnToPart.has(aNorm) && aNorm !== pNoNorm) {
+        const pairKey = [pNoNorm, aNorm].sort().join(':::');
+        if (!seenPairs.has(pairKey)) {
+          seenPairs.add(pairKey);
+          pairs.push([pnToPart.get(pNoNorm), pnToPart.get(aNorm)]);
+        }
+      }
+    }
+  }
+
+  function pickCanonical(p1, p2) {
+    const pn1 = p1.partNo;
+    const pn2 = p2.partNo;
+    const isFac1 = /^[A-Z]\d{2}-\d{3}/i.test(pn1);
+    const isFac2 = /^[A-Z]\d{2}-\d{3}/i.test(pn2);
+    if (isFac1 && !isFac2) return [p1, p2];
+    if (isFac2 && !isFac1) return [p2, p1];
+    const hasFile1 = Boolean(p1.drawingFileName);
+    const hasFile2 = Boolean(p2.drawingFileName);
+    if (hasFile1 && !hasFile2) return [p1, p2];
+    if (hasFile2 && !hasFile1) return [p2, p1];
+    return [p1, p2];
+  }
+
+  const removedPns = new Set();
+  const aliasRedirect = new Map();
+
+  for (const [p1, p2] of pairs) {
+    const [mainP, subP] = pickCanonical(p1, p2);
+    const mainPn = mainP.partNo;
+    const subPn = subP.partNo;
+    removedPns.add(norm(subPn));
+    aliasRedirect.set(norm(subPn), mainPn);
+
+    // 1. 聯集 alternates
+    const alts = new Set(mainP.alternates || []);
+    alts.add(subPn);
+    for (const a of (subP.alternates || [])) {
+      if (norm(a) !== norm(mainPn)) alts.add(a);
+    }
+    mainP.alternates = Array.from(alts).sort();
+
+    // 2. 補缺屬性 (零資料遺失)
+    if (!mainP.drawingFileName && subP.drawingFileName) mainP.drawingFileName = subP.drawingFileName;
+    if (!mainP.dwgNo && subP.dwgNo) mainP.dwgNo = subP.dwgNo;
+    if (!mainP.revision && subP.revision) mainP.revision = subP.revision;
+    if (!mainP.material && subP.material) mainP.material = subP.material;
+    if (!mainP.color && subP.color) mainP.color = subP.color;
+
+    // 3. 合併 BOM 結構化清單
+    const mainBoms = mainP.bomDetails || [];
+    const subBoms = subP.bomDetails || [];
+    if (subBoms.length > 0 && mainBoms.length === 0) {
+      mainP.bomDetails = subBoms;
+    }
+  }
+
+  // 4. 重構 parts 列表
+  master.parts = parts.filter((p) => !removedPns.has(norm(p.partNo)));
+
+  // 5. 重構 BOM 關聯 (重定向至主品號)
+  const oldChildren = master.bom.children || {};
+  const newChildren = {};
+  for (const [parent, kids] of Object.entries(oldChildren)) {
+    const pTarget = aliasRedirect.get(norm(parent)) || parent;
+    if (!newChildren[pTarget]) newChildren[pTarget] = [];
+    for (const k of kids) {
+      const kTarget = aliasRedirect.get(norm(k)) || k;
+      if (norm(kTarget) !== norm(pTarget) && !newChildren[pTarget].includes(kTarget)) {
+        newChildren[pTarget].push(kTarget);
+      }
+    }
+  }
+
+  const oldParents = master.bom.parents || {};
+  const newParents = {};
+  for (const [child, parents] of Object.entries(oldParents)) {
+    const cTarget = aliasRedirect.get(norm(child)) || child;
+    if (!newParents[cTarget]) newParents[cTarget] = [];
+    for (const p of parents) {
+      const pTarget = aliasRedirect.get(norm(p)) || p;
+      if (norm(pTarget) !== norm(cTarget) && !newParents[cTarget].includes(pTarget)) {
+        newParents[cTarget].push(pTarget);
+      }
+    }
+  }
+
+  master.bom.children = newChildren;
+  master.bom.parents = newParents;
+
+  return { removedCount: removedPns.size, remainingCount: master.parts.length };
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -993,7 +1098,9 @@ function buildMaster() {
       setCount++;
     }
   }
-  if (setCount) console.log(`分類修正: ${setCount} 筆組件 → SET`);
+  // v7.10.0 互為替代品號去重與合併 (Mutual Alternates Deduplication)
+  const { removedCount, remainingCount } = deduplicateMutualAlternates(master);
+  console.log(`去重合併: 移除 ${removedCount} 筆互為替代重複實體（剩餘 ${remainingCount} 筆規範實體）`);
 
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');
