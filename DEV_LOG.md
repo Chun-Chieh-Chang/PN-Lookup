@@ -33,9 +33,12 @@
    - 現代化 `scanAssemblyImages.js`：修正歷史過時路徑，全量對齊 `rawdata/Drawings/` 五大目錄體系（零件/組件/SET/物料/原料）。
    - 在 `package.json` 建立自動化指令：`npm run sync:drawings`（全量圖檔重新掃描提取與構建）、`npm run build:master`（快速重構）、`npm run verify`（不變量確效）。
    - 確保專案具備完整水平擴充能力：未來研發新增圖檔或版次更新時，一鍵執行 `npm run sync:drawings` 即可完成全庫數據自動收錄與版次同步。
-3. **data/ 目錄 MECE 深度清理 (Data Directory Hygiene)**：
-   - 手術刀式清理 21 個過時無效冗餘檔案（包含歷史舊備份、搬移暫存、日誌 Dump 及 9 個二進制 Excel 衍生副本），安全釋放 1.73 MB 空間。
-   - `data/` 目錄嚴格收斂至 15 個核心資產與 1 個字典模型目錄，100% 符應 MECE 與單一真源原則。
+3. **全專案目錄 MECE 深度清理 (Full Project Directory Hygiene & Dead Code Removal)**：
+   - **data/ 目錄**：清理 21 個過時無效冗餘檔案（歷史備份、搬移暫存、日誌 Dump 及 9 個二進制 Excel 衍生副本），釋放 1.73 MB。
+   - **專案根目錄**：清理重複之 `chi_sim.traineddata` 與 `eng.traineddata`（`data/tessdata/` 已有完整副本），釋放 7.5 MB。
+   - **scripts/ 目錄**：清理 4 個歷史無引用輔助腳本（`find_assembly_candidates.py`、`gen_assembly_spreadsheet.py`、`generate_excel_v7.py`、`batchWatcher.mjs`），精煉為 15 個核心生產/提取工具。
+   - **scratch/ 目錄**：清理 19 個歷史調試渲染圖與單次排錯診斷腳本，釋放 14.4 MB。
+   - 全專案累計安全清除 **46 個過時、重複與除錯暫存檔案**，釋放磁碟空間 **22.04 MB**，專案架構 100% 符應 MECE 與單一真源原則。
 
 ### 驗證結果
 - **主資料庫總數**：**984 筆**（嚴格不變量）
