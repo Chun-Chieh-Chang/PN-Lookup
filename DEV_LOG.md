@@ -33,6 +33,9 @@
    - 現代化 `scanAssemblyImages.js`：修正歷史過時路徑，全量對齊 `rawdata/Drawings/` 五大目錄體系（零件/組件/SET/物料/原料）。
    - 在 `package.json` 建立自動化指令：`npm run sync:drawings`（全量圖檔重新掃描提取與構建）、`npm run build:master`（快速重構）、`npm run verify`（不變量確效）。
    - 確保專案具備完整水平擴充能力：未來研發新增圖檔或版次更新時，一鍵執行 `npm run sync:drawings` 即可完成全庫數據自動收錄與版次同步。
+3. **data/ 目錄 MECE 深度清理 (Data Directory Hygiene)**：
+   - 手術刀式清理 21 個過時無效冗餘檔案（包含歷史舊備份、搬移暫存、日誌 Dump 及 9 個二進制 Excel 衍生副本），安全釋放 1.73 MB 空間。
+   - `data/` 目錄嚴格收斂至 15 個核心資產與 1 個字典模型目錄，100% 符應 MECE 與單一真源原則。
 
 ### 驗證結果
 - **主資料庫總數**：**984 筆**（嚴格不變量）
