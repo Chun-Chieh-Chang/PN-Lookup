@@ -260,19 +260,17 @@ app.post('/api/images/save-config', (req, res) => {
   }
 });
 
-// Serve static files (supports both root and /PN-Lookup/ base path)
-app.use('/PN-Lookup', express.static(join(__dirname, 'dist')));
-app.use(express.static(join(__dirname, 'dist')));
-
-// SPA fallback — all non-API routes serve index.html
+// 統一單一入口防禦：非 /api 請求一律自動轉導至前端入口 (3000 端口)
 app.use((req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
   }
-  res.sendFile(join(__dirname, 'dist', 'index.html'));
+  // 若使用者在瀏覽器意外輸入 3001，自動重新導向至唯一的前端入口 3000
+  res.redirect('http://localhost:3000/PN-Lookup/');
 });
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`PN-Lookup server running on http://localhost:${PORT}`);
+  console.log(`[PN-Lookup API] 後端資料引擎運行中：http://localhost:${PORT}`);
+  console.log(`[PN-Lookup UI]  唯一的介面入口請訪問：http://localhost:3000/PN-Lookup/`);
 });

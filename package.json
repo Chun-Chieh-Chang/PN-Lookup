@@ -1,13 +1,15 @@
 {
   "name": "pn-lookup",
   "private": true,
-  "version": "7.10.7",
+  "version": "7.10.8",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev": "node scripts/dev.js",
+    "dev:frontend": "vite --port=3000 --host=0.0.0.0",
+    "dev:backend": "node server.js",
     "build": "node scripts/verifyCoreLogic.js && vite build",
     "serve": "node server.js",
-    "start": "npm run build && node server.js",
+    "start": "node scripts/dev.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

@@ -2777,15 +2777,25 @@ pn-lookup/
    * **CI 發布環境**：當私有資料檔被 `.gitignore` 排除時，印出 `ℹ️ [CI 沙盒模式]` 提示並自動切換至沙盒模式，跳過本機檔案依賴測試，保留純單元邏輯驗證（如 `isMatchedSegment`），確保 CI 建構 100% 綠燈成功。
 2. **驗證確效**：完成 `npx tsc --noEmit` 0 錯誤與 Vite `npm run build` 成功打包。
 
+---
 
+## v7.10.8 — 架構統一：確立 Port 3000 為唯一前端入口與 3001 自動重定向 (Unified Single Frontend Entry Portal on Port 3000 & Port 3001 Redirect)
 
+### 需求內容
+1. 解決 3001 (Express 後端) 與 3000 (Vite 前端) 介面不一致之問題（3001 原託管舊版靜態 build 產物，導致使用者看見舊畫面）。
+2. 使用者明確要求：**保留 Port 3000 為唯一前端介面入口**。
 
+### 根因分析 (RCA)
+- Express `server.js` 舊版設定了 `express.static('dist')` 託管打包後的靜態網頁。在開發過程中若未頻繁執行 `npm run build`，打開 3001 端口將讀取過期之 `dist` 產物，導致介面外觀、樣式與 3000 (即時編譯最新 React 原始碼) 產生視覺差異與混淆。
 
-
-
-
-
-
-
-
-
+### 矯正與預防措施 (CAPA)
+1. **Express 轉為純 API 引擎與自動重定向 (`server.js`)**：
+   - 移除 `dist` 靜態檔案託管邏輯。
+   - 所有非 `/api` 之網頁瀏覽請求，一律發送 302 自動重新導向至 `http://localhost:3000/PN-Lookup/`，徹底防止使用者看見舊版靜態畫面。
+2. **一鍵並行啟動腳本 (`scripts/dev.js`) 與 `package.json` 整合**：
+   - 建立零額外依賴的 `scripts/dev.js`，以 Node 原生 `child_process.spawn` 並行啟動後端 Express API (`:3001`) 與前端 Vite (`:3000`)。
+   - `package.json` 中的 `npm run dev` 與 `npm start` 均指向 `node scripts/dev.js`，實現一鍵雙開。
+3. **驗證確效**：
+   - 訪問 `http://localhost:3001/` 驗證返回 HTTP 302 重定向至 `http://localhost:3000/PN-Lookup/`。
+   - 訪問 `http://localhost:3001/api/master` 驗證後端 API 正常返回 984 筆料號。
+   - 執行 `node scripts/verifyCoreLogic.js` 與 `npm run build` 全數 PASS 通過。

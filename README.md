@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.10.6)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.10.8)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與物料類別五分類管理平台**。
 
-![Version](https://img.shields.io/badge/version-v7.10.6-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.10.8-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -43,6 +43,7 @@ PN-Lookup/
 ├── docs/                    # 技術規格文件（mapping-logic.md — 映射邏輯與品質數據）
 ├── scripts/                 # 資料處理與確效驗證腳本
 │   ├── buildMaster.js       # Master Table 建置腳本（種子 → master）
+│   ├── dev.js               # 一鍵並行啟動腳本 (Express API + Vite Dev Server)
 │   ├── importICU.js         # ICU 原料料號對照表解析 → icu-parts.json
 │   ├── scanAssemblyImages.js# 圖檔掃描增補 (--apply / --auto / --all / --parent-of)
 │   ├── semanticExtract.js   # 圖檔語意識別全量批次 (多模型分工 + JSON/Excel 雙檔)
@@ -82,7 +83,7 @@ PN-Lookup/
 ├── .github/workflows/       # GitHub Actions (Pages 部署)
 ├── DEV_LOG.md               # 開發日誌與版本變更歷史 (RCA & CAPA)
 ├── index.html               # Web 頁面載入點 (Google Fonts)
-├── server.js                # 本地 Express REST API 伺服器
+├── server.js                # 本地 Express REST API 伺服器 (提供 /api/*，非 API 自動轉導 3000)
 └── vite.config.ts           # Vite 建構設定檔
 ```
 
@@ -95,14 +96,16 @@ PN-Lookup/
 npm install
 ```
 
-### 2. 本地開發模式 (伺服器 + REST API)
+### 2. 本地一鍵啟動 (後端 API + 前端唯一入口)
 ```bash
 npm run dev
+# 或 npm start
 ```
+啟動後請直接訪問唯一的前端入口：**`http://localhost:3000/PN-Lookup/`**（後端 API 於 `http://localhost:3001` 運行，若意外訪問將自動轉址至 3000）。
 
-### 3. 一鍵建構與生產部署
+### 3. 核心確效驗證與靜態建構
 ```bash
-npm run start         # 自動建構 dist/ 並啟動 Express 伺服器 (http://localhost:3001)
+npm run build         # 自動運行 verifyCoreLogic.js 確效門禁並建置 dist/
 ```
 
 ---
