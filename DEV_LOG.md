@@ -1,5 +1,59 @@
 # PN-Lookup 開發日誌
 
+## v7.10.9 — 圖檔自動連結、懸停縮圖預覽與一鍵開圖功能復原
+
+### 需求內容
+- 找回先前系統具備的「自動連結圖檔、滑鼠懸停預覽圖檔 (PDF/圖片)、以及直接點選開啟圖檔」功能。
+
+### 原因與根因分析 (RCA)
+1. **前端預覽與開圖程式碼並未遺失**：
+   - `PartsTable.tsx` 內部仍完整保留 `hoverThumb` 狀態、120ms 防手震懸停縮圖（PDF iframe / 圖片標籤）、以及點擊呼叫 `openImage(url)` 的新分頁開圖邏輯。
+2. **失效根本原因**：
+   - 瀏覽器原生 File System Access API 出於安全性考量，每次重啟或重新整理時均無法在無使用者互動下直接取得本機資料夾讀取權限，導致 `restoreImageFolder()` 回傳 `null`。
+   - `App.tsx` 啟動流程中雖曾嘗試呼叫後端 `/api/images/detect-folder`，但**僅保存了設定路徑，未實際向後端請求圖檔清單並建立 `ImageLibrary` 物件**。
+   - 導致前端 `imageLib` 恆為 `null`，使得 `resolveAllImages` 直接返回空陣列，主表格因此隱藏所有「開啟圖檔」按鈕，品號無法點擊開圖，懸停預覽也無法觸發。
+3. **前後端斷鏈**：
+   - `server.js` 中已存在未提交的 `/api/images/list` 與 `/api/images/raw` 串流 API，磁碟 `rawdata/Drawings` 亦完整收錄 1,503 張 PDF 與圖面，但前端 `imageLibrary.ts` 缺乏遠端圖庫建構器與 URL 串接邏輯。
+
+### 矯正與預防措施 (CAPA)
+1. **後端服務強化 (`server.js`)**：
+   - 完善 `/api/images/list` 與 `/api/images/raw` 端點。
+   - `scanImageFolders` 增加大小寫不敏感辨識（容許 `Drawings`、`Drawing`、`圖檔`）。
+   - 加入 60 秒記憶體快取機制 (`getCachedMediaFiles`)，避免滑鼠頻繁懸停預覽造成磁碟重複走訪與 IO 負擔。
+   - 串流回應加入 `Content-Disposition: inline` 與正確 MIME 標頭（PDF 為 `application/pdf`）。
+2. **通用比對邏輯抽出與遠端圖庫建構 (`src/utils/imageLibrary.ts`)**：
+   - 將品號匹配邏輯抽出為通用純函式：`matchFileNames` 與 `matchAllFileNames`，確保本地 File 物件與後端 1,503 筆檔名陣列 100% 共享相同邊界防禦比對規則（嚴防 `B-003` 貪婪匹配 `B-0030`）。
+   - 新增 `buildRemoteLibrary(folderName, files)`，封裝 `urlForFile` 指向 `/api/images/raw?name=...`。
+3. **圖檔解析器支援精確欄位 (`src/utils/imageResolver.ts`)**：
+   - 在 `resolveAllImages` 中加入 `drawingFileName` 優先比對，並維持主品號與所有 `alternates` 別稱的完全比對約束。
+4. **前端自動掛載機制 (`src/App.tsx`)**：
+   - `autoDetectAndRestore` 在本地 Handle 失效時，自動呼叫後端 `/api/images/list` 建立遠端 `imageLib`，達到零點擊自動連結。
+5. **UI/UX 一致性與字級合規 (`PartsTable.tsx` & `PartDetailModal.tsx`)**：
+   - `PartsTable.tsx`：圖檔狀態列正確顯示「已載入圖檔資料夾：Drawings（1503 張）」，懸停縮圖正常渲染。
+   - `PartDetailModal.tsx`：於「圖檔檔名 (Drawing File)」欄位旁追加「開啟圖面」按鈕，保持跨組件體驗一致。
+   - 嚴格遵守 `<RULE[ui_minimum_font_size]>`，介面文字最小字級不低於 13px (`text-[0.8125rem]`)。
+6. **資訊架構瘦身與操作欄位移除 (`PartsTable.tsx` & `PartDetailModal.tsx`)**：
+   - 依據 AI 智囊團審查結論，移除表格最右側冗餘的「操作」欄位（原複製整列與眼睛圖示），為「品名規格」與「原料」釋放寶貴的水平視覺空間。
+   - 將「品名規格」升級為可點擊文字按鈕（`onViewDetail`），點擊品名規格即可直接開啟 BOM 與規格詳情彈窗。
+   - 在「品號詳細資訊彈窗」標頭加入「複製完整資訊」按鈕，確保三合一（客戶/品號/品名）複製動線依然完整保留。
+7. **React Hook 呼叫順序防禦 (Rules of Hooks Fix)**：
+   - **RCA**：在 PartDetailModal 中新增 `copiedFull` 狀態時，曾將 `useState` 放在 `if (!isOpen || !item) return null;` early return 之後，導致在關閉狀態呼叫 5 個 Hooks、開啟時呼叫 6 個 Hooks，觸發 React `Rendered more hooks than during the previous render` 錯誤。
+   - **CAPA**：將 `copiedFull` 的 `useState` 移至組件頂端無條件執行區域（與 `copiedPart` 同步宣告），徹底消除 Hook 呼叫順序動態變更之隱患。
+8. **全容器寬度擴展與橫向卷軸消除 (`Header`, `StatsBar`, `SearchControls`, `PartsTable`, `App footer`)**：
+   - 將全站 5 大區塊容器寬度上限由 `max-w-[112.5rem]` (1800px) 擴展至 `max-w-[128rem]` (2048px)。
+   - 在 1920px 標準寬度下徹底釋放水平空間，消除主表格底部因邊界限制產生的橫向卷軸，同時無任何按鈕、文字或彈窗組件遭遮擋截斷。
+
+### 驗證結果
+- **資料庫與數據不變量**：`node scripts/verifyCoreLogic.js` 10/10 PASS ✅
+- **型別與語法確效**：`npm run lint` 0 錯誤 ✅
+- **生產構建確效**：`npm run build` 成功建置 ✅
+- **全鏈路連線測試**：
+  - 後端 `Drawings` 圖檔收錄：**1,503 張**
+  - 主資料庫品號自動匹配覆蓋：**875 / 984 筆 (88.9%)**
+  - 串流讀取測試（以 `A01-200-111(Rev.A)-C.pdf` 為例）：HTTP 200 `application/pdf` 正常串流。
+
+---
+
 ## v7.10.8 — 磁碟掃描補遺：修復 drawingFileName / revision 欄位大量空缺問題
 
 ### 需求內容

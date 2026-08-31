@@ -69,45 +69,45 @@ function isMatchedSegment(sNorm: string, pnNorm: string): boolean {
   return false;
 }
 
-function findForCandidate(files: File[], candidate: string): File | null {
+function findNameForCandidate(fileNames: string[], candidate: string): string | null {
   const pn = candidate.trim().toUpperCase();
   if (!pn) return null;
   const pnNorm = normalize(pn);
   if (pnNorm.length < 3) return null;
 
-  for (const f of files) {
-    const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
+  for (const name of fileNames) {
+    const base = name.replace(/\.[^.]+$/, '').toUpperCase();
     const baseNorm = normalize(base);
 
-    if (base === pn || baseNorm === pnNorm || isMatchedSegment(baseNorm, pnNorm)) return f;
+    if (base === pn || baseNorm === pnNorm || isMatchedSegment(baseNorm, pnNorm)) return name;
 
     const segs = base.split(/[_\s()\[\],/]+/i);
     for (const s of segs) {
       const sNorm = normalize(s);
-      if (isMatchedSegment(sNorm, pnNorm)) return f;
+      if (isMatchedSegment(sNorm, pnNorm)) return name;
       // BD 客戶代稱前綴剝除：BD-8003875 → 8003875（BD 不屬品號）
       if (sNorm.length > 2 && sNorm.startsWith('BD')) {
         const stripped = sNorm.slice(2);
-        if (stripped.length >= 4 && isMatchedSegment(stripped, pnNorm)) return f;
+        if (stripped.length >= 4 && isMatchedSegment(stripped, pnNorm)) return name;
       }
     }
   }
   return null;
 }
 
-function findAllForCandidate(files: File[], candidate: string): File[] {
+function findAllNamesForCandidate(fileNames: string[], candidate: string): string[] {
   const pn = candidate.trim().toUpperCase();
   if (!pn) return [];
   const pnNorm = normalize(pn);
   if (pnNorm.length < 3) return [];
-  const result: File[] = [];
+  const result: string[] = [];
 
-  for (const f of files) {
-    const base = f.name.replace(/\.[^.]+$/, '').toUpperCase();
+  for (const name of fileNames) {
+    const base = name.replace(/\.[^.]+$/, '').toUpperCase();
     const baseNorm = normalize(base);
 
     if (base === pn || baseNorm === pnNorm || isMatchedSegment(baseNorm, pnNorm)) {
-      result.push(f);
+      result.push(name);
       continue;
     }
 
@@ -115,14 +115,14 @@ function findAllForCandidate(files: File[], candidate: string): File[] {
     for (const s of segs) {
       const sNorm = normalize(s);
       if (isMatchedSegment(sNorm, pnNorm)) {
-        result.push(f);
+        result.push(name);
         break;
       }
       // BD 客戶代稱前綴剝除：BD-8003875 → 8003875（BD 不屬品號）
       if (sNorm.length > 2 && sNorm.startsWith('BD')) {
         const stripped = sNorm.slice(2);
         if (stripped.length >= 4 && isMatchedSegment(stripped, pnNorm)) {
-          result.push(f);
+          result.push(name);
           break;
         }
       }
@@ -131,24 +131,23 @@ function findAllForCandidate(files: File[], candidate: string): File[] {
   return result;
 }
 
-// 依品號及其替代品號逐一比對
-function matchFile(files: File[], partNo: string, aliases?: string[]): File | null {
+export function matchFileNames(fileNames: string[], partNo: string, aliases?: string[]): string | null {
   for (const c of [partNo, ...(aliases ?? [])]) {
-    const hit = findForCandidate(files, c);
+    const hit = findNameForCandidate(fileNames, c);
     if (hit) return hit;
   }
   return null;
 }
 
-function matchAllFiles(files: File[], partNo: string, aliases?: string[]): File[] {
-  const fileMap = new Map<string, File>();
+export function matchAllFileNames(fileNames: string[], partNo: string, aliases?: string[]): string[] {
+  const fileSet = new Set<string>();
   for (const c of [partNo, ...(aliases ?? [])]) {
-    const hits = findAllForCandidate(files, c);
+    const hits = findAllNamesForCandidate(fileNames, c);
     for (const h of hits) {
-      fileMap.set(h.name, h);
+      fileSet.add(h);
     }
   }
-  return Array.from(fileMap.values());
+  return Array.from(fileSet);
 }
 
 function buildLibrary(files: File[], folderName: string, totalFiles: number): ImageLibrary {
@@ -164,12 +163,10 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
       return fileByName.get(fileName) ?? null;
     },
     match(partNo: string, aliases?: string[]): string | null {
-      const hit = matchFile(files, partNo, aliases);
-      return hit ? hit.name : null;
+      return matchFileNames(fileNames, partNo, aliases);
     },
     matchAll(partNo: string, aliases?: string[]): string[] {
-      const hits = matchAllFiles(files, partNo, aliases);
-      return hits.map((f) => f.name);
+      return matchAllFileNames(fileNames, partNo, aliases);
     },
     urlForFile(fileName: string): string | null {
       if (urlCache.has(fileName)) return urlCache.get(fileName) ?? null;
@@ -185,6 +182,50 @@ function buildLibrary(files: File[], folderName: string, totalFiles: number): Im
     debug: {
       totalFiles,
       sampleNames: files.slice(0, 10).map((f) => f.name),
+    },
+  };
+}
+
+export interface RemoteDrawingFile {
+  name: string;
+  relPath?: string;
+}
+
+export function buildRemoteLibrary(
+  folderName: string,
+  files: (string | RemoteDrawingFile)[],
+): ImageLibrary {
+  const fileNames = files.map((f) => (typeof f === 'string' ? f : f.name));
+  const relPathMap = new Map<string, string>();
+  for (const f of files) {
+    if (typeof f !== 'string' && f.relPath) {
+      relPathMap.set(f.name, f.relPath);
+    }
+  }
+
+  return {
+    folderName,
+    count: fileNames.length,
+    fileNames,
+    fileFor(_fileName: string): File | null {
+      return null;
+    },
+    match(partNo: string, aliases?: string[]): string | null {
+      return matchFileNames(fileNames, partNo, aliases);
+    },
+    matchAll(partNo: string, aliases?: string[]): string[] {
+      return matchAllFileNames(fileNames, partNo, aliases);
+    },
+    urlForFile(fileName: string): string | null {
+      const relPath = relPathMap.get(fileName);
+      if (relPath) {
+        return `/api/images/raw?path=${encodeURIComponent(relPath)}`;
+      }
+      return `/api/images/raw?name=${encodeURIComponent(fileName)}`;
+    },
+    debug: {
+      totalFiles: fileNames.length,
+      sampleNames: fileNames.slice(0, 10),
     },
   };
 }

@@ -55,6 +55,7 @@ export function resolveAllImages(
   bindings: Record<string, string>,
   ocrIndex: Map<string, string>,
   relatedParts?: string[],
+  drawingFileName?: string,
 ): ImageResolution[] {
   if (!lib) return [];
   const aliases = alternates ?? [];
@@ -62,12 +63,24 @@ export function resolveAllImages(
   const results: ImageResolution[] = [];
   const seenFiles = new Set<string>();
 
-  // 1. 檔名比對 (找出所有命中的圖檔檔名)
+  // 0. 主資料庫已登錄之工程圖檔 (drawingFileName) 優先命中
+  if (drawingFileName && lib.fileNames.includes(drawingFileName) && !seenFiles.has(drawingFileName)) {
+    const url = lib.urlForFile(drawingFileName);
+    if (url) {
+      seenFiles.add(drawingFileName);
+      results.push({ url, name: drawingFileName, via: 'file' });
+    }
+  }
+
+  // 1. 檔名比對 (找出所有命中的圖檔檔名，嚴格比對主品號與所有別稱)
   const matchedNames = lib.matchAll ? lib.matchAll(partNo, aliases) : [lib.match(partNo, aliases)].filter(Boolean) as string[];
   for (const fname of matchedNames) {
     if (fname && !seenFiles.has(fname)) {
-      seenFiles.add(fname);
-      results.push({ url: lib.urlForFile(fname) as string, name: fname, via: 'file' });
+      const url = lib.urlForFile(fname);
+      if (url) {
+        seenFiles.add(fname);
+        results.push({ url, name: fname, via: 'file' });
+      }
     }
   }
 
@@ -243,7 +256,7 @@ export function getOrphanFiles(
   const matchedFiles = new Set<string>();
 
   for (const part of parts) {
-    const allRes = resolveAllImages(part.partNo, part.alternates, lib, bindings, ocrIndex);
+    const allRes = resolveAllImages(part.partNo, part.alternates, lib, bindings, ocrIndex, undefined, part.drawingFileName);
     for (const res of allRes) {
       matchedFiles.add(res.name);
     }

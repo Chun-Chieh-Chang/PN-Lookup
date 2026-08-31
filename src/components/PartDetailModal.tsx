@@ -31,6 +31,7 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
   onBOMUpdated,
 }) => {
   const [copiedPart, setCopiedPart] = useState(false);
+  const [copiedFull, setCopiedFull] = useState(false);
   const [addingBom, setAddingBom] = useState<Set<string>>(new Set());
 
   // 由圖檔內容反向識別：此品號出現在哪些產品的圖面中
@@ -90,6 +91,15 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
     .filter((p) => p.partNo.startsWith(prefix) && p.id !== item.id)
     .slice(0, 5);
 
+  const handleCopyFullInfo = () => {
+    if (!item) return;
+    const alts = item.alternates && item.alternates.length > 0 ? ` (${item.alternates.join(' / ')})` : '';
+    const text = `客戶: ${item.customer} | 品號: ${item.partNo}${alts} | 品名: ${item.name}`;
+    navigator.clipboard.writeText(text);
+    setCopiedFull(true);
+    setTimeout(() => setCopiedFull(false), 1800);
+  };
+
   const handleCopyPartNo = () => {
     navigator.clipboard.writeText(item.partNo);
     setCopiedPart(true);
@@ -117,6 +127,14 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={handleCopyFullInfo}
+              className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 text-[0.8125rem] font-semibold text-slate-700 bg-white hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-colors cursor-pointer"
+              title="複製完整品項資訊 (客戶 | 品號 | 品名)"
+            >
+              {copiedFull ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
+              <span>{copiedFull ? '已複製' : '複製完整資訊'}</span>
+            </button>
             <button
               onClick={onClose}
               className="btn-tactile p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-200"
@@ -226,9 +244,23 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
             {item.drawingFileName && (
               <div className="pt-2.5 border-t border-slate-200/80">
                 <span className="text-[0.8125rem] text-slate-500 block mb-0.5 font-medium">圖檔檔名 (Drawing File)</span>
-                <span className="inline-block px-2 py-0.5 bg-slate-50 text-slate-700 font-mono text-[0.8125rem] rounded border border-slate-200 break-all">
-                  {item.drawingFileName}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className="inline-block px-2.5 py-1 bg-slate-50 text-slate-800 font-mono text-[0.8125rem] font-medium rounded border border-slate-200 break-all">
+                    {item.drawingFileName}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const url = (imageLib && imageLib.urlForFile(item.drawingFileName!))
+                        || `/api/images/raw?name=${encodeURIComponent(item.drawingFileName!)}`;
+                      window.open(url, '_blank', 'noopener');
+                    }}
+                    className="btn-tactile inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[0.8125rem] font-semibold bg-sky-50 text-sky-900 border border-sky-300 hover:bg-sky-100 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                    title={`在瀏覽器新分頁開啟圖檔：${item.drawingFileName}`}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-sky-700" />
+                    <span>開啟圖面</span>
+                  </button>
+                </div>
               </div>
             )}
 

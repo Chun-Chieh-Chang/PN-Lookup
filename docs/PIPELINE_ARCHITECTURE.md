@@ -1,8 +1,8 @@
 # PN-Lookup 核心管線架構文件
 # Drawing-to-Master Pipeline Architecture Reference
 
-> **版本**：v7.10.8
-> **更新日期**：2026-08-30
+> **版本**：v7.10.9
+> **更新日期**：2026-08-31
 > **文件性質**：🔒 核心資產存檔（關鍵開發知識，長期保存）
 > **說明**：本文件完整記錄從原始圖面 PDF 到 `pn-lookup-master.json` 的全量資料處理管線設計、演進歷史、核心決策邏輯與防禦機制，是本專案最重要的智識資產文件。
 
@@ -22,6 +22,7 @@
 10. [關鍵設計決策紀錄（ADR）](#10-關鍵設計決策紀錄adr)
 11. [已知限制與未修復空缺](#11-已知限制與未修復空缺)
 12. [管線演進歷史](#12-管線演進歷史)
+13. [圖檔串流與前端自動掛載架構 (v7.10.9)](#13-圖檔串流與前端自動掛載架構-v7109)
 
 ---
 
@@ -569,5 +570,28 @@ npm run build
 
 ---
 
-*本文件由 Antigravity AI 自動維護，反映截至 v7.10.8 的最新架構狀態。*
+## 13. 圖檔串流與前端自動掛載架構 (v7.10.9)
+
+```
+本地檔案系統: rawdata/Drawings/ (1,503 份 PDF / 圖片)
+                    │
+                    ▼
+Express 後端: server.js
+  ├── GET /api/images/list ──► 掃描 Drawings 目錄 (60s 快取) ──► 回傳檔名與相對路徑清單
+  └── GET /api/images/raw  ──► 安全路徑校驗 ──► inline 串流輸出 (application/pdf 等)
+                    │
+                    ▼
+前端: App.tsx autoDetectAndRestore()
+  ├── 呼叫 /api/images/list 取得清單
+  ├── 調用 buildRemoteLibrary() 封裝為 ImageLibrary 物件
+  └── 注入 PartsTable & PartDetailModal
+        ├── 表格品號/圖號自動匹配（覆蓋率 88.9%）
+        ├── 120ms 平滑懸停縮圖預覽 (hoverThumb: PDF FitH iframe / Image)
+        ├── 一鍵新分頁直開原圖
+        └── 容器自適應佈局 (max-w-[128rem] 消除 1920px 橫向卷軸)
+```
+
+---
+
+*本文件由 Antigravity AI 自動維護，反映截至 v7.10.9 的最新架構狀態。*
 *如有重大管線變更，應同步更新本文件並記入 DEV_LOG.md。*

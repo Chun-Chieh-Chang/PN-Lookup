@@ -25,7 +25,7 @@ export const StatsBar: React.FC<StatsBarProps> = ({
   prefixCount,
 }) => {
   return (
-    <div className="max-w-[112.5rem] mx-auto px-3 sm:px-4 lg:px-6 pt-3 pb-1 w-full">
+    <div className="max-w-[128rem] mx-auto px-3 sm:px-4 lg:px-6 pt-3 pb-1 w-full">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-[0.8125rem]">
 
         {/* Metric 1: Total Parts — primary cobalt accent card */}

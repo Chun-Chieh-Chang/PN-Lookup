@@ -1,7 +1,7 @@
 import express from 'express';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, basename } from 'path';
 import { convertUnifiedSeedToMaster } from './scripts/buildMaster.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -116,13 +116,30 @@ function scanImageFolders() {
 
   scanDir(RAWDATA_PATH, 0);
 
-  // Prioritize rawdata/圖檔, then Drawing, then first found
+  // 優先順序：rawdata/圖檔 -> Drawings/Drawing -> 候選清單第一項
   const result = candidates.find(p => p.endsWith('圖檔'))
-    ?? candidates.find(p => p.endsWith('Drawing'))
+    ?? candidates.find(p => p.toLowerCase().endsWith('drawings') || p.toLowerCase().endsWith('drawing'))
     ?? candidates[0]
     ?? null;
 
   return result;
+}
+
+// 記憶體快取：避免高頻縮圖請求造成磁碟過度重複遍歷
+let mediaFilesCache = null;
+let mediaCacheFolder = null;
+let mediaCacheTime = 0;
+
+function getCachedMediaFiles(folder) {
+  const now = Date.now();
+  if (mediaFilesCache && mediaCacheFolder === folder && (now - mediaCacheTime < 60000)) {
+    return mediaFilesCache;
+  }
+  const files = scanAllMediaFiles(folder);
+  mediaFilesCache = files;
+  mediaCacheFolder = folder;
+  mediaCacheTime = now;
+  return files;
 }
 
 // Serialize writes to avoid read-modify-write races between parts/bom updates
@@ -206,6 +223,110 @@ app.put('/api/parts', (req, res) => {
   });
 });
 
+// Helper: 深度掃描圖檔資料夾下所有支援的媒體圖檔
+function scanAllMediaFiles(folderPath) {
+  const IS_MEDIA = /\.(jpe?g|png|gif|webp|bmp|svg|tiff?|pdf)$/i;
+  const files = [];
+  function walk(dir, rel = '') {
+    if (!existsSync(dir)) return;
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const full = join(dir, entry.name);
+        const r = rel ? `${rel}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          walk(full, r);
+        } else if (IS_MEDIA.test(entry.name)) {
+          files.push({ name: entry.name, relPath: r });
+        }
+      }
+    } catch { /* ignore */ }
+  }
+  walk(folderPath);
+  return files;
+}
+
+// Images API — 列出資料庫中所有圖檔列表 (支援自動比對與即時連結)
+app.get('/api/images/list', (_req, res) => {
+  try {
+    const config = loadImageConfig();
+    const folder = (config.imageFolderPath && existsSync(config.imageFolderPath))
+      ? config.imageFolderPath
+      : scanImageFolders();
+
+    if (!folder || !existsSync(folder)) {
+      return res.json({ folderName: null, count: 0, files: [] });
+    }
+
+    const files = getCachedMediaFiles(folder);
+    res.json({
+      folderName: basename(folder) || 'Drawings',
+      folderPath: folder,
+      count: files.length,
+      files,
+    });
+  } catch (err) {
+    console.error('掃描圖檔清單失敗:', err);
+    res.status(500).json({ error: 'Failed to list images' });
+  }
+});
+
+// Images API — 串流 / 開啟單張圖檔 (支援 PDF/圖片於瀏覽器直接開啟檢視)
+app.get('/api/images/raw', (req, res) => {
+  try {
+    const config = loadImageConfig();
+    const folder = (config.imageFolderPath && existsSync(config.imageFolderPath))
+      ? config.imageFolderPath
+      : scanImageFolders();
+
+    if (!folder || !existsSync(folder)) {
+      return res.status(404).send('Image folder not found');
+    }
+
+    const relPath = req.query.path || '';
+    const fileName = req.query.name || '';
+
+    let targetPath = null;
+    if (relPath) {
+      const safeRel = String(relPath).replace(/^[/\\]+/, '');
+      const resolved = join(folder, safeRel);
+      if (resolved.startsWith(folder) && existsSync(resolved)) {
+        targetPath = resolved;
+      }
+    } else if (fileName) {
+      const allFiles = getCachedMediaFiles(folder);
+      const hit = allFiles.find((f) => f.name === fileName);
+      if (hit) {
+        targetPath = join(folder, hit.relPath);
+      }
+    }
+
+    if (!targetPath || !existsSync(targetPath)) {
+      return res.status(404).send('Drawing file not found');
+    }
+
+    const ext = targetPath.split('.').pop()?.toLowerCase();
+    const mimeMap = {
+      pdf: 'application/pdf',
+      png: 'image/png',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      webp: 'image/webp',
+      svg: 'image/svg+xml',
+      gif: 'image/gif',
+    };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+    const baseName = basename(targetPath);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(baseName)}"`);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.sendFile(targetPath);
+  } catch (err) {
+    console.error('讀取圖檔串流失敗:', err);
+    res.status(500).send('Failed to serve image');
+  }
+});
+
 // Images API — auto-detect folder and save config
 app.get('/api/images/detect-folder', (req, res) => {
   try {
@@ -242,10 +363,8 @@ app.post('/api/images/save-config', (req, res) => {
     return res.status(400).json({ error: 'folder path is required' });
   }
 
-  // Try to verify path exists (but continue if it fails due to encoding issues)
   try {
     if (!existsSync(folder)) {
-      // Log warning but don't block save (encoding issues may cause false negatives)
       console.warn('Warning: folder path does not verify:', folder);
     }
   } catch (err) {

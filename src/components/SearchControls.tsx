@@ -58,7 +58,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
     categoryFilter !== '';
 
   return (
-    <div className="max-w-[112.5rem] mx-auto px-3 sm:px-4 lg:px-6 py-2 w-full">
+    <div className="max-w-[128rem] mx-auto px-3 sm:px-4 lg:px-6 py-2 w-full">
       <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-3.5 shadow-sm">
         {/* Main Search Row */}
         <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2.5">

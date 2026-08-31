@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.10.8)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.10.9)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與物料類別五分類管理平台**。
 
-![Version](https://img.shields.io/badge/version-v7.10.8-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.10.9-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -12,6 +12,11 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 
 ## 🌟 核心功能亮點
 
+- 🖼️ **本機圖庫零點擊自動掛載與懸停預覽 (v7.10.9)**：
+  - **自動連線本機工程圖庫**：後端 Express 提供 `/api/images/list` 與 `/api/images/raw`，啟動即自動掛載 1,503 張工程圖檔（覆蓋率達 88.9%），無需手動重複授權。
+  - **120ms 平滑懸停預覽**：滑鼠懸停於圖檔按鈕即可即時檢視高清晰 PDF / 圖片縮圖，點擊一鍵於新分頁開啟原圖。
+  - **資訊架構瘦身**：移除表格冗餘「操作」欄位，升級「品名規格」為直覺開啟 BOM 彈窗入口，並於明細彈窗標頭新增「複製完整資訊」按鈕。
+  - **全容器寬度擴展 (128rem)**：全站容器擴展至 2048px，徹底消除 1920px 螢幕下橫向卷軸，確保無任何元素受遮擋。
 - 🔍 **極速全域與欄位比對**：支援品號 (Part No)、客戶名稱、中文品名規格、替代料號 (Alternates) 即時模糊與前綴檢索，提供鍵盤快捷鍵與全域排序。
 - 🧬 **知識本體論與 43 組替代料號去重 (v7.10.1)**：
   - **43 組互為替代品號去重整合**：嚴格消除內部廠編與客戶/廠商料號之雙實體冗餘，實體精煉為 **984 筆規範品號**，100% 繼承所有 BOM 關聯與替代別名。

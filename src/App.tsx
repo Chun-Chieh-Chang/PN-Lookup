@@ -18,6 +18,7 @@ import { getPartPrefix } from './utils/partNo';
 import { APP_VERSION } from './version';
 import {
   ImageLibrary,
+  buildRemoteLibrary,
   pickImageFolder,
   restoreImageFolder,
   clearImageFolderDismissed,
@@ -88,37 +89,32 @@ export default function App() {
     let cancelled = false;
 
     async function autoDetectAndRestore() {
-      // 1. Try restoring previously selected folder with File Handle (優先)
-      let lib = await restoreImageFolder();
-      if (!cancelled && lib) {
-        setImageLib(lib);
-        return;
-      }
-
-      // 2. Try auto-detecting folder via backend
-      // (後端掃描路徑並保存配置，下次啟動時優先讀取)
+      // 1. 優先嘗試還原先前手動授權之本機 File System Handle
       try {
-        const response = await fetch('/api/images/detect-folder');
-        if (!response.ok) throw new Error('Backend detection failed');
+        const lib = await restoreImageFolder();
+        if (!cancelled && lib) {
+          setImageLib(lib);
+          return;
+        }
+      } catch { /* ignore local handle restore error */ }
 
-        const { folder, isAutoDetected } = await response.json();
-        if (!folder) throw new Error('No image folder found');
-
-        // Save detected path to config (for next startup)
-        try {
-          await fetch('/api/images/save-config', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ folder }),
-          });
-        } catch { /* ignore config save error */ }
-
-        if (isAutoDetected) {
-          console.log('Auto-detected image folder:', folder);
-          console.log('Tip: 下次啟動時自動優先使用已保存路徑');
+      // 2. 自動連線後端圖檔 API (/api/images/list)
+      // 若後端服務運行中且掃描到 Drawings 目錄，自動掛載並建立遠端 ImageLibrary
+      try {
+        const res = await fetch('/api/images/list');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.files) && data.files.length > 0) {
+            const remoteLib = buildRemoteLibrary(data.folderName || 'Drawings', data.files);
+            if (!cancelled) {
+              setImageLib(remoteLib);
+              console.log(`[PN-Lookup] 已自動連結本機工程圖檔庫「${data.folderName}」，共收錄 ${data.count} 張圖面！`);
+              return;
+            }
+          }
         }
       } catch (error) {
-        console.warn('Auto-detection failed:', error);
+        console.warn('[PN-Lookup] 未偵測到後端圖檔 API（靜態部署或離線模式）:', error);
       }
     }
 
@@ -603,7 +599,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="mt-auto py-3 text-[0.8125rem] text-slate-500 border-t border-slate-200 bg-white">
-        <div className="max-w-[112.5rem] mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="max-w-[128rem] mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="font-semibold text-slate-700">凱益品號檢索系統 {APP_VERSION}</span>
           <span className="font-mono text-slate-500 font-medium">Developed by Wesley Chang, July-2026 @Mouldex.</span>
         </div>
