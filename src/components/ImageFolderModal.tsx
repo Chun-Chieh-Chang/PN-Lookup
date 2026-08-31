@@ -34,7 +34,7 @@ export const ImageFolderModal: React.FC<ImageFolderModalProps> = ({
         </div>
 
         <div className="px-5 py-5 space-y-4">
-          <div className="space-y-2 text-[13px] text-slate-600 leading-relaxed">
+          <div className="space-y-2 text-[0.8125rem] text-slate-600 leading-relaxed">
             <p>
               選擇存放品號圖檔的資料夾後，檢索結果中的品號將可直接點選開啟圖檔（新分頁顯示）。
             </p>
@@ -50,14 +50,14 @@ export const ImageFolderModal: React.FC<ImageFolderModalProps> = ({
           <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
             <button
               onClick={onClose}
-              className="btn-tactile px-3.5 py-1.5 rounded-lg text-[13px] font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
+              className="btn-tactile px-3.5 py-1.5 rounded-lg text-[0.8125rem] font-medium text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
             >
               略過
             </button>
             <button
               onClick={onConfirm}
               disabled={isPicking}
-              className="btn-tactile inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[13px] font-semibold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-60"
+              className="btn-tactile inline-flex items-center gap-2 px-4 py-1.5 rounded-lg text-[0.8125rem] font-semibold text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-colors shadow-2xs cursor-pointer disabled:opacity-60"
             >
               {isPicking ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />

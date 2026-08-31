@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { X, Plus, Trash2, Search, ArrowLeft, PackagePlus, Users, PenLine, Download, Upload, Building2, DatabaseBackup, Layers } from 'lucide-react';
 import { PartItem } from '../types';
 import { getBOMChildren, getBOMParents, updateBOMData, stripDerivedFields, computeParentsMap } from '../utils/bomEngine';
@@ -340,11 +340,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                     </button>
                     <span className="font-mono font-bold text-sky-700">{key}</span>
                     <span className="text-slate-500 truncate max-w-xs">{partName}</span>
-                    <span className="text-slate-400 text-[13px]">({comps.length} 個零件)</span>
+                    <span className="text-slate-400 text-[0.8125rem]">({comps.length} 個零件)</span>
                   </div>
                   <button
                     onClick={() => setEditingKey(editingKey === key ? null : key)}
-                    className="px-2 py-1 text-[13px] bg-sky-50 text-sky-700 border border-sky-200 rounded hover:bg-sky-100 cursor-pointer"
+                    className="px-2 py-1 text-[0.8125rem] bg-sky-50 text-sky-700 border border-sky-200 rounded hover:bg-sky-100 cursor-pointer"
                   >
                     {editingKey === key ? '取消' : '編輯零件'}
                   </button>
@@ -357,7 +357,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                       return (
                         <div key={ci} className="flex items-center justify-between py-0.5 px-2 rounded hover:bg-slate-100 group">
                           <div className="flex items-center space-x-2">
-                            <span className="text-slate-400 text-[13px]">{ci + 1}.</span>
+                            <span className="text-slate-400 text-[0.8125rem]">{ci + 1}.</span>
                             <span className="font-mono text-slate-700">{comp}</span>
                             <span className="text-slate-400 truncate max-w-[200px]">{compName !== comp ? compName : ''}</span>
                           </div>
@@ -460,7 +460,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                   <div className="flex items-center space-x-2 min-w-0">
                     <span className="font-mono text-sky-700">{p.partNo}</span>
                     <span className="text-slate-500 truncate">{p.name}</span>
-                    <span className="text-slate-400 text-[13px] truncate">{p.customer}</span>
+                    <span className="text-slate-400 text-[0.8125rem] truncate">{p.customer}</span>
                   </div>
                   <button
                     onClick={() => handleDeletePart(p)}
@@ -475,7 +475,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
           )}
 
           <div className="border-t border-slate-100 mt-4 pt-4">
-            <h3 className="text-[13px] font-bold text-slate-500 mb-2">新增品號</h3>
+            <h3 className="text-[0.8125rem] font-bold text-slate-500 mb-2">新增品號</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm text-slate-500 mb-1">客戶 *</label>
@@ -630,8 +630,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center space-x-2 min-w-0">
                       <span className="font-medium text-slate-800">{c.name}</span>
-                      <span className="text-[13px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full border border-slate-200">{c.count} 筆</span>
-                      <span className="text-slate-400 text-[13px] font-mono truncate hidden sm:inline">{c.samples.join(', ')}</span>
+                      <span className="text-[0.8125rem] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full border border-slate-200">{c.count} 筆</span>
+                      <span className="text-slate-400 text-[0.8125rem] font-mono truncate hidden sm:inline">{c.samples.join(', ')}</span>
                     </div>
                     <div className="flex items-center space-x-1 shrink-0">
                       <button
@@ -659,7 +659,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
           </div>
 
           <div className="border-t border-slate-100 mt-4 pt-4">
-            <h3 className="text-[13px] font-bold text-slate-500 mb-2 flex items-center space-x-1.5">
+            <h3 className="text-[0.8125rem] font-bold text-slate-500 mb-2 flex items-center space-x-1.5">
               <Building2 className="w-3.5 h-3.5 text-indigo-500" />
               <span>新增客戶（既有產品賣給新客戶時，品號可搜尋既有品號，品名自動帶入）</span>
             </h3>
@@ -704,7 +704,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
                       >
                         <span className="font-mono text-sky-700 shrink-0">{p.partNo}</span>
                         <span className="text-slate-500 truncate">{p.name}</span>
-                        <span className="text-slate-400 text-[13px] shrink-0">{p.customer}</span>
+                        <span className="text-slate-400 text-[0.8125rem] shrink-0">{p.customer}</span>
                       </button>
                     ))}
                   </div>
@@ -759,7 +759,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
             <h2 className="text-sm font-bold text-slate-700">BOM 階層維護（組立編號 → 零件）</h2>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
-            <h3 className="text-[13px] font-bold text-slate-500 mb-2">新增組立編號</h3>
+            <h3 className="text-[0.8125rem] font-bold text-slate-500 mb-2">新增組立編號</h3>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
@@ -815,7 +815,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ parts, serverOnline, onC
               <Download className="w-4 h-4" />
               <span>匯入完整備份</span>
             </button>
-            <span className="text-[13px] text-slate-400">
+            <span className="text-[0.8125rem] text-slate-400">
               格式等同伺服器唯一真源 data/pn-lookup-master.json；匯入會覆蓋現有品號與 BOM 資料
             </span>
           </div>

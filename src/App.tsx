@@ -86,12 +86,43 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    restoreImageFolder().then((lib) => {
-      if (cancelled) return;
-      if (lib) {
+
+    async function autoDetectAndRestore() {
+      // 1. Try restoring previously selected folder with File Handle (優先)
+      let lib = await restoreImageFolder();
+      if (!cancelled && lib) {
         setImageLib(lib);
+        return;
       }
-    });
+
+      // 2. Try auto-detecting folder via backend
+      // (後端掃描路徑並保存配置，下次啟動時優先讀取)
+      try {
+        const response = await fetch('/api/images/detect-folder');
+        if (!response.ok) throw new Error('Backend detection failed');
+
+        const { folder, isAutoDetected } = await response.json();
+        if (!folder) throw new Error('No image folder found');
+
+        // Save detected path to config (for next startup)
+        try {
+          await fetch('/api/images/save-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder }),
+          });
+        } catch { /* ignore config save error */ }
+
+        if (isAutoDetected) {
+          console.log('Auto-detected image folder:', folder);
+          console.log('Tip: 下次啟動時自動優先使用已保存路徑');
+        }
+      } catch (error) {
+        console.warn('Auto-detection failed:', error);
+      }
+    }
+
+    autoDetectAndRestore();
     return () => { cancelled = true; };
   }, []);
 
@@ -571,8 +602,8 @@ export default function App() {
 
 
       {/* Footer */}
-      <footer className="mt-auto py-3 text-[13px] text-slate-500 border-t border-slate-200 bg-white">
-        <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="mt-auto py-3 text-[0.8125rem] text-slate-500 border-t border-slate-200 bg-white">
+        <div className="max-w-[112.5rem] mx-auto px-3 sm:px-4 lg:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span className="font-semibold text-slate-700">凱益品號檢索系統 {APP_VERSION}</span>
           <span className="font-mono text-slate-500 font-medium">Developed by Wesley Chang, July-2026 @Mouldex.</span>
         </div>

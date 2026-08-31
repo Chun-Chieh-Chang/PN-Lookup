@@ -17,6 +17,7 @@ coverage/
 *.csv
 *.ffs_db
 .vscode/
+.image-config.local.json
 
 data/tessdata/
 *.traineddata

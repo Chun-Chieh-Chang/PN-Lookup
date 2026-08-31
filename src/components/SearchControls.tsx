@@ -25,7 +25,7 @@ interface SearchControlsProps {
   onClearFilters: () => void;
 }
 
-const labelCls = 'text-[13px] font-semibold text-slate-500 shrink-0';
+const labelCls = 'text-[0.8125rem] font-semibold text-slate-500 shrink-0';
 const inputCls =
   'bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-600 focus:bg-white focus:ring-2 focus:ring-sky-600/15 transition-all shadow-2xs font-sans font-medium';
 
@@ -58,8 +58,8 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
     categoryFilter !== '';
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 lg:px-6 py-2 w-full">
-      <div className="bg-white rounded-xl border border-slate-200/90 p-2.5 sm:p-3 shadow-2xs">
+    <div className="max-w-[112.5rem] mx-auto px-3 sm:px-4 lg:px-6 py-2 w-full">
+      <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-3.5 shadow-sm">
         {/* Main Search Row */}
         <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-2.5">
           <div className="relative flex-1 min-w-[240px]">
@@ -116,7 +116,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
 
           {/* 客戶名稱 */}
           <label className="flex items-center gap-1.5">
-            <span className={labelCls}>客戶名稱</span>
+            <span className={`${labelCls} whitespace-nowrap`}>客戶名稱</span>
             <select
               value={filterCustomer ?? ''}
               onChange={(e) => {
@@ -133,9 +133,9 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
             </select>
           </label>
 
-          {/* 品號 (Part No) */}
+          {/* 品號 */}
           <label className="flex items-center gap-1.5">
-            <span className={labelCls}>品號 (Part No)</span>
+            <span className={`${labelCls} whitespace-nowrap`}>品號</span>
             <input
               type="text"
               value={partNoFilter}
@@ -147,7 +147,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
 
           {/* 物料類別 */}
           <label className="flex items-center gap-1.5">
-            <span className={labelCls}>物料類別</span>
+            <span className={`${labelCls} whitespace-nowrap`}>物料類別</span>
             <select
               value={categoryFilter}
               onChange={(e) => onCategoryFilterChange(e.target.value)}
@@ -177,9 +177,9 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
             </select>
           </label>
 
-          {/* 品名規格 (Part Name) */}
+          {/* 品名規格 */}
           <label className="flex items-center gap-1.5">
-            <span className={labelCls}>品名規格 (Part Name)</span>
+            <span className={`${labelCls} whitespace-nowrap`}>品名規格</span>
             <input
               type="text"
               value={nameFilter}
@@ -193,7 +193,7 @@ export const SearchControls: React.FC<SearchControlsProps> = ({
             <button
               type="button"
               onClick={onClearFilters}
-              className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-[13px] text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors font-medium cursor-pointer"
+              className="ml-auto flex items-center gap-1 px-2.5 py-1.5 text-[0.8125rem] text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors font-medium cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
               清除篩選

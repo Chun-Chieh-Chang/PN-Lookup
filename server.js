@@ -1,5 +1,5 @@
 import express from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { convertUnifiedSeedToMaster } from './scripts/buildMaster.js';
@@ -9,6 +9,7 @@ const DATA_DIR = join(__dirname, 'data');
 const MASTER_PATH = join(DATA_DIR, 'pn-lookup-master.json');
 const LEGACY_MASTER_PATH = join(DATA_DIR, 'master.json');
 const RAW_SEED_PATH = join(__dirname, 'rawdata', 'master_table_unified.json');
+const IMAGE_CONFIG_PATH = join(__dirname, '.image-config.local.json');
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -68,6 +69,60 @@ function saveMaster(data) {
   if (!next.bom.parents) next.bom.parents = {};
   mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(MASTER_PATH, JSON.stringify(next, null, 2), 'utf-8');
+}
+
+// Image folder configuration management
+function loadImageConfig() {
+  try {
+    if (existsSync(IMAGE_CONFIG_PATH)) {
+      return JSON.parse(readFileSync(IMAGE_CONFIG_PATH, 'utf-8'));
+    }
+  } catch { /* ignore */ }
+  return { imageFolderPath: null };
+}
+
+function saveImageConfig(config) {
+  try {
+    mkdirSync(dirname(IMAGE_CONFIG_PATH), { recursive: true });
+    writeFileSync(IMAGE_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Scan rawdata directory for image folders (圖檔 or Drawing)
+function scanImageFolders() {
+  const RAWDATA_PATH = join(__dirname, 'rawdata');
+  const candidates = [];
+
+  function scanDir(dir, depth) {
+    if (depth > 3 || !existsSync(dir)) return;
+    try {
+      const entries = readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) {
+          const name = entry.name.toLowerCase();
+          if (name === '圖檔' || name === 'drawing' || name === 'drawings') {
+            candidates.push(join(dir, entry.name));
+          }
+          if (depth < 3) {
+            scanDir(join(dir, entry.name), depth + 1);
+          }
+        }
+      }
+    } catch { /* ignore scan errors */ }
+  }
+
+  scanDir(RAWDATA_PATH, 0);
+
+  // Prioritize rawdata/圖檔, then Drawing, then first found
+  const result = candidates.find(p => p.endsWith('圖檔'))
+    ?? candidates.find(p => p.endsWith('Drawing'))
+    ?? candidates[0]
+    ?? null;
+
+  return result;
 }
 
 // Serialize writes to avoid read-modify-write races between parts/bom updates
@@ -149,6 +204,60 @@ app.put('/api/parts', (req, res) => {
   }).catch(() => {
     res.status(500).json({ error: 'Failed to save parts data' });
   });
+});
+
+// Images API — auto-detect folder and save config
+app.get('/api/images/detect-folder', (req, res) => {
+  try {
+    const config = loadImageConfig();
+    // 優先返回已保存配置
+    if (config.imageFolderPath && existsSync(config.imageFolderPath)) {
+      return res.json({
+        folder: config.imageFolderPath,
+        isAutoDetected: false,
+        source: 'config'
+      });
+    }
+
+    // 執行掃描
+    const folder = scanImageFolders();
+    res.json({
+      folder,
+      isAutoDetected: !!folder,
+      source: folder ? 'scan' : 'not-found'
+    });
+  } catch (error) {
+    console.error('掃描圖檔資料夾失敗:', error);
+    res.status(500).json({
+      folder: null,
+      error: error.message,
+      source: 'error'
+    });
+  }
+});
+
+app.post('/api/images/save-config', (req, res) => {
+  const { folder } = req.body || {};
+  if (!folder || typeof folder !== 'string') {
+    return res.status(400).json({ error: 'folder path is required' });
+  }
+
+  // Try to verify path exists (but continue if it fails due to encoding issues)
+  try {
+    if (!existsSync(folder)) {
+      // Log warning but don't block save (encoding issues may cause false negatives)
+      console.warn('Warning: folder path does not verify:', folder);
+    }
+  } catch (err) {
+    console.warn('Warning: could not verify folder path:', folder, err.message);
+  }
+
+  const success = saveImageConfig({ imageFolderPath: folder });
+  if (success) {
+    res.json({ ok: true, folder });
+  } else {
+    res.status(500).json({ error: 'Failed to save configuration' });
+  }
 });
 
 // Serve static files (supports both root and /PN-Lookup/ base path)
