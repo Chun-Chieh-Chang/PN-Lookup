@@ -1,7 +1,7 @@
 # PN-Lookup 核心管線架構文件
 # Drawing-to-Master Pipeline Architecture Reference
 
-> **版本**：v7.10.9
+> **版本**：v7.11.0
 > **更新日期**：2026-08-31
 > **文件性質**：🔒 核心資產存檔（關鍵開發知識，長期保存）
 > **說明**：本文件完整記錄從原始圖面 PDF 到 `pn-lookup-master.json` 的全量資料處理管線設計、演進歷史、核心決策邏輯與防禦機制，是本專案最重要的智識資產文件。
@@ -585,7 +585,11 @@ Express 後端: server.js
   ├── 呼叫 /api/images/list 取得清單
   ├── 調用 buildRemoteLibrary() 封裝為 ImageLibrary 物件
   └── 注入 PartsTable & PartDetailModal
-        ├── 表格品號/圖號自動匹配（覆蓋率 88.9%）
+        ├── 表格品號/圖號自動匹配（覆蓋率 89.1%）
+        ├── 圖檔為唯一真實數據來源 (Drawing as SSOT v7.11.0: 修正 51 筆圖號筆誤 / 裁決 6 項材料矛盾)
+        ├── 版本號 100% 全覆蓋（877/877 筆有圖檔品號均收錄精確版次）
+        ├── 零件原料名稱 100% 全覆蓋（455/455 筆單品零件均具備精確原料材質）
+        ├── 零件顏色資訊 100% 全覆蓋（455/455 筆單品零件均具備精確外觀顏色）
         ├── 120ms 平滑懸停縮圖預覽 (hoverThumb: PDF FitH iframe / Image)
         ├── 一鍵新分頁直開原圖
         └── 容器自適應佈局 (max-w-[128rem] 消除 1920px 橫向卷軸)
@@ -593,5 +597,5 @@ Express 後端: server.js
 
 ---
 
-*本文件由 Antigravity AI 自動維護，反映截至 v7.10.9 的最新架構狀態。*
+*本文件由 Antigravity AI 自動維護，反映截至 v7.11.0 的最新架構狀態。*
 *如有重大管線變更，應同步更新本文件並記入 DEV_LOG.md。*

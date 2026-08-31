@@ -41,11 +41,10 @@ globalThis.DOMPoint = class {};
 
 // 組件圖資料夾（相對 ROOT_DIR）
 const ASSEMBLY_DIRS = [
-  join('rawdata', '圖檔', '客戶圖面', 'Sub-Assembly'),
-  join('rawdata', '圖檔', '產品資料', '廠內組件圖面'),
-  join('rawdata', '圖檔', '產品資料', '綜合圖面'),
+  join('rawdata', 'Drawings', '組件'),
+  join('rawdata', 'Drawings', 'SET'),
 ];
-const ALL_IMAGE_DIR = join('rawdata', '圖檔');
+const ALL_IMAGE_DIR = join('rawdata', 'Drawings');
 
 // 命令列參數
 const argv = process.argv.slice(2);
@@ -53,13 +52,13 @@ const scanAll = argv.includes('--all');
 const extractMode = argv.includes('--extract');
 const parentOfArg = argv.includes('--parent-of') ? argv[argv.indexOf('--parent-of') + 1] : null;
 
-// 圖檔角色（v7.8.11）：物料資料夾 → 物料；其餘以圖內文證據判定
-// 組件 = 內文零件清單（BOM 表/組立字樣）可建立 BOM；零件 = 檔名即自身品號，不建立 BOM
-// v7.8.10 瑕疵：僅依目錄判定，客戶圖面/綜合圖面下的零件圖被誤歸「組件」（組件圖候補 125 個無 BOM）
+// 圖檔角色（v7.11.0）：依五大目錄 (零件/組件/SET/物料/原料) 與圖內文證據判定
 function roleOf(rel, text = '', known = [], parents = null, assemblyId = '', childrenMap = null) {
   const p = rel.replace(/\\/g, '/');
-  if (/物料資料\//.test(p)) return '物料';
-  if (/廠內零件圖面/.test(p) || /ICU原料圖面/.test(p)) return '零件';
+  if (/Drawings\/物料\//i.test(p) || /Drawings\/原料\//i.test(p)) return '物料';
+  if (/Drawings\/零件\//i.test(p)) return '零件';
+  if (/Drawings\/SET\//i.test(p)) return 'SET';
+  if (/Drawings\/組件\//i.test(p)) return '組件';
   if (text) {
     // 內文證據：零件清單表（KEY UNIT 表頭常為多空格分隔，如 KEY   UNIT   PART NO.）
     if (/KEY\s*UNIT/i.test(text)) return '組件';

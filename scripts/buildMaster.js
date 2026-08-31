@@ -603,15 +603,46 @@ export function mergeV7DrawingsIntoMaster(master, v7Data) {
   return { matCnt, colCnt, dwgCnt, descCnt, catCnt, bomDetailCnt };
 }
 
-// v7.10.8 磁碟掃描補遺：對 drawingFileName / revision 仍為空的品號，直接掃描 Drawings 子資料夾
-// 進行 PDF 檔名正規化比對，補齊缺失欄位。
-// 解決根因：drawings_extract_v7.json 只收錄了 478 筆 partNo 有效解析的品號，
-// 而有 75 筆零件圖檔（A01/B06/C09/D09/D10 等）的圖面 partNo 欄位在 v7 萃取時解析失敗，
-// 導致 mergeV7DrawingsIntoMaster 無法比對，造成 drawingFileName 與 revision 空白。
+// v7.10.10 圖檔版本號全覆蓋提取器：支援多種業界命名慣例與 fallback
+export function extractRevision(fn, name, desc) {
+  if (fn) {
+    const base = fn.replace(/\.(pdf|png|jpe?g|webp)$/i, '');
+    // 1. (Rev.A) or [Rev.A] or (Rev.01)
+    let m = base.match(/[([\[]\s*[Rr][Ee][Vv][.\s]*([A-Z0-9]+)\s*[)\]]/);
+    if (m) return 'Rev.' + m[1].toUpperCase();
+
+    // 2. _Rev.A or -Rev.A or _Rev_A or _Rev-A
+    m = base.match(/[_\-\s][Rr][Ee][Vv][._\-\s]*([A-Z0-9]+)(?:[_\-\s.]|$)/);
+    if (m) return 'Rev.' + m[1].toUpperCase();
+
+    // 3. SPC0005450_04_RAW0000336
+    m = base.match(/SPC\d+_(\d{2})_/i);
+    if (m) return 'Rev.' + m[1];
+
+    // 4. MC_08_mdx or -MC_08
+    m = base.match(/MC_(\d{2})(?:_mdx|$)/i);
+    if (m) return 'Rev.' + m[1];
+
+    // 5. _A02-signed or _A021-signed
+    m = base.match(/_([A-Z]\d{2,3})(?:-signed|\.|$)/i);
+    if (m) return 'Rev.' + m[1].toUpperCase();
+
+    // 6. Holder_2
+    m = base.match(/Holder_(\d+)/i);
+    if (m) return 'Rev.' + m[1];
+  }
+
+  // 7. Fallback: 品名規格原文中之版次字串 (如 "Boot, CA ASM, Rev.07")
+  const text = (name || '') + ' ' + (desc || '');
+  let mText = text.match(/[Rr][Ee][Vv][.\s]*([A-Z0-9]+)/);
+  if (mText) return 'Rev.' + mText[1].toUpperCase();
+
+  return null;
+}
+
+// v7.10.10 磁碟掃描補遺：對 drawingFileName / revision 缺失的品號進行深度關聯與版本補齊
 export function repairMissingDrawingLinks(master, drawingDirs) {
-  // 構建 pdf 檔名索引 — 對指定子資料夾遞迴掃描
-  const pdfIndex = new Map(); // norm(base) → { fileName, revision }
-  const revRe = /[([\[]\s*[Rr][Ee][Vv][.\s]*([A-Z0-9]+)\s*[)\]]/;
+  const pdfList = []; // { fileName, normClean, fullNorm }
 
   function scanDir(dir) {
     let entries;
@@ -620,39 +651,290 @@ export function repairMissingDrawingLinks(master, drawingDirs) {
       if (ent.isDirectory()) { scanDir(dir + '/' + ent.name); continue; }
       if (!ent.name.toLowerCase().endsWith('.pdf')) continue;
       const base = ent.name.replace(/\.pdf$/i, '');
-      const mRev = base.match(/[([\[]\s*[Rr][Ee][Vv][.\s]*([A-Z0-9]+)\s*[)\]]/);
-      const rev = mRev ? `Rev.${mRev[1].toUpperCase()}` : '';
       const clean = base.replace(/\s*[([\[].*?[)\]]/g, '').trim();
-      const k = clean.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-      if (k && !pdfIndex.has(k)) pdfIndex.set(k, { fileName: ent.name, revision: rev });
+      const normClean = clean.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      pdfList.push({ fileName: ent.name, normClean, fullNorm: norm(base) });
     }
   }
 
   for (const dir of (drawingDirs || [])) scanDir(dir.replace(/\\/g, '/'));
 
   let linked = 0, revFilled = 0;
+
   for (const p of master.parts) {
-    if (p.drawingFileName && p.drawingFileName.endsWith('.pdf')) continue;
-    const k = p.partNo.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-    let hit = pdfIndex.get(k);
-    if (!hit) {
-      for (const [mapK, mapV] of pdfIndex) {
-        const minLen = Math.min(k.length, mapK.length, 14);
-        if (minLen >= 8 && mapK.startsWith(k.substring(0, minLen)) && k.startsWith(mapK.substring(0, minLen))) {
-          hit = mapV; break;
+    const candidates = [p.partNo, ...(p.alternates || [])].filter(Boolean);
+
+    // 1. 如果已有 drawingFileName，但缺少 revision，強制重新提取 revision
+    if (p.drawingFileName) {
+      if (!p.revision || String(p.revision).trim() === '' || p.revision === '-' || p.revision === 'N/A') {
+        const rev = extractRevision(p.drawingFileName, p.name, p.description);
+        if (rev) {
+          p.revision = rev;
+          revFilled++;
+        }
+      }
+      continue;
+    }
+
+    // 2. 針對尚無 drawingFileName 者，比對 partNo 與 alternates
+    let matchedFile = null;
+    for (const c of candidates) {
+      const cn = norm(c);
+      if (cn.length < 3) continue;
+
+      const exact = pdfList.find((f) => f.normClean === cn || f.fullNorm.includes(cn));
+      if (exact) {
+        matchedFile = exact.fileName;
+        break;
+      }
+    }
+
+    // 前綴模糊比對 (長度 >= 8)
+    if (!matchedFile) {
+      for (const c of candidates) {
+        const cn = norm(c);
+        if (cn.length >= 8) {
+          const prefixHit = pdfList.find((f) => {
+            const minLen = Math.min(cn.length, f.normClean.length, 14);
+            return minLen >= 8 && f.normClean.startsWith(cn.substring(0, minLen));
+          });
+          if (prefixHit) {
+            matchedFile = prefixHit.fileName;
+            break;
+          }
         }
       }
     }
-    if (hit) {
-      p.drawingFileName = hit.fileName;
+
+    if (matchedFile) {
+      p.drawingFileName = matchedFile;
       linked++;
-      if (hit.revision && (!p.revision || p.revision === 'N/A' || p.revision === '-')) {
-        p.revision = hit.revision;
-        revFilled++;
+      if (!p.revision || String(p.revision).trim() === '' || p.revision === '-' || p.revision === 'N/A') {
+        const rev = extractRevision(matchedFile, p.name, p.description);
+        if (rev) {
+          p.revision = rev;
+          revFilled++;
+        }
       }
     }
   }
+
   return { linked, revFilled };
+}
+
+// v7.10.12 零件原料名稱與顏色全覆蓋富化器：根據原廠工程圖面、Mouldex 輸液管編碼規範 (cx-******) 與客戶 BOM 完整補齊
+export function enrichPartMaterialsAndColors(master) {
+  const PART_MATERIALS = {
+    '8013945': 'HDPE UNITHENE LH606, BLUE',
+    'RMS-341920': 'PP BORMED HD810MO, WHITE',
+    'KORU-341976': 'HDPE UNITHENE LH606, WHITE',
+    'VLV-145-057': 'Polypropylene, BORMED HD810MO, Natural',
+    '4500Standard': 'PP Pro-Fax 6331, LAVENDER',
+    '245204024': 'PC MAKROLON 1805 451118 IA',
+    'HLK-005-NFV': 'PC / Silicone',
+    'B05-240-111': 'ABS TOYOLAC 900',
+    'D09-410-131': 'ABS TERLUX 2802',
+    'H00-111-131-1': 'ABS TERLUX 2802',
+    'A02-200-131': 'ABS TERLUX 2802',
+    'E11-000-412': 'HDPE UNITHENE LH606, WHITE',
+    'E10-001-618': 'PP GLOBALENE 6331',
+    'TA161BEPTG002B00': 'PVDF FORTEX MEMBRANE / PP',
+    'CP96020': 'ABS TOYOLAC 900',
+    'B-081': 'PC MAKROLON RX2530 / Silicone',
+    '11-021525': 'COLORITE PVC 7477G-015',
+    '11-022032': 'COLORITE PVC 7477G-015',
+    '11-080273': 'COLORITE PVC 7477G-015',
+    '11-082032': 'COLORITE PVC 7477G-015',
+    '11-352032': 'COLORITE PVC 7477G-015',
+    '11-220290N': 'PVC 7477G-015 (Non-DEHP)',
+    '11-221250N': 'PVC 7477G-015 (Non-DEHP)',
+    '16-680035': 'NAN-YA PVC 3MSA048P3X000',
+    '16-680040': 'NAN-YA PVC 3MSA048P3X000',
+    '16-680058': 'NAN-YA PVC 3MSA048P3X000',
+    '16-680085': 'NAN-YA PVC 3MSA048P3X000',
+    'R1-7762': 'Polyethylene (PE)',
+    'R1-2536': 'Silicone Rubber',
+    'R1-2535': 'Stainless Steel 302',
+    'R1-8390': 'Silicone Rubber',
+    'AMSINO-SDW140111': 'ABS TERLUX 2802 / B膠',
+    'AMSINO-SDW140112': 'PVC Geon M4910 / B膠',
+    'BC00611SA': 'PVC Tubing / PC Connectors',
+    'AF07001': 'PVC Tubing / PC Connectors',
+    'DB00801': 'PVC Tubing / PC Connectors',
+    'DB00803': 'PVC Tubing / PC Connectors',
+    'DC00601': 'PVC Tubing / PC Connectors',
+    'EF01601': 'PVC Tubing / PC Connectors'
+  };
+
+  const PART_COLORS = {
+    // 1. 有圖檔品項 (29 筆)
+    '8013945': 'Blue (藍)',
+    'RMS-341920': 'White (白)',
+    'RMS-341950': 'White (白)',
+    'RMS-342303': '本',
+    'KORU-341976': 'White (白)',
+    'VLV-145-057': 'Natural (本色)',
+    '4500Standard': 'Lavender (薰衣草紫)',
+    'MS0151694': 'Lavender (薰衣草紫)',
+    'H00-111-131-1': '本',
+    'H00-111-341': '本',
+    'H00-111-1': '本',
+    'D09-279-1': '本',
+    'N20-208-13': '本',
+    '11-350075': '本',
+    '11-350100': '本',
+    '11-080900': '本',
+    '11-110130': '本',
+    '11-353050': '本',
+    '11-610160': '本',
+    '12-110130': '本',
+    '1L-370100': '本',
+    'VLV-135-015': 'Natural (本色)',
+    'VLV-138-003': 'Clear / Blue Hue (透明帶藍)',
+    'VLV-141-004': 'Natural (本色)',
+    'VLV-141-007': 'Natural (本色)',
+    'VLV-141-010': '黃銅色 (Brass)',
+    'R1-15356': '本',
+    'R1-15466': 'White (白)',
+    'R1-2384': 'Clear (透明)',
+
+    // 2. 無獨立圖檔品項 (39 筆)
+    '22-690250': 'Tea Color (茶色)',
+    '22-691000': 'Tea Color (茶色)',
+    '22-690300': 'Tea Color (茶色)',
+    '22-690200': 'Tea Color (茶色)',
+    '22-690100': 'Tea Color (茶色)',
+    '22-690150': 'Tea Color (茶色)',
+    'R1-3152': 'Blue (藍)',
+    'TA161BEPTG002B00': 'White (白)',
+    'E11-000-412': 'White (白)',
+    'A01-350-112': 'White (白)',
+    '11-021525': '本',
+    '11-022032': '本',
+    '11-080273': '本',
+    '11-082032': '本',
+    '11-352032': '本',
+    '11-220290N': '本',
+    '11-221250N': '本',
+    '16-680035': '本',
+    '16-680040': '本',
+    '16-680058': '本',
+    '16-680085': '本',
+    'B05-240-111': '本',
+    'D09-410-131': '本',
+    'A02-200-131': '本',
+    'H01-240-111': '本',
+    'A01-111-131-5': '本',
+    'H000-111-131': '本',
+    'H00-111-251': '本',
+    'CP96020': '本',
+    'CI1-111-251': '本',
+    'R1-2535': '金屬原色 (Metallic)',
+    'R1-2536': '半透明 (Translucent)',
+    'R1-8390': '半透明 (Translucent)',
+    'R1-7762': '本',
+    '245204024': 'Clear (透明)',
+    '451118': 'Clear (透明)',
+    'HLK-005-NFV': 'Clear (透明)',
+    'B-081': 'Clear (透明)',
+    'E10-001-618': '本'
+  };
+
+  const CATEGORY_CORRECTIONS = {
+    'BC00611SA': '其他組件',
+    'AF07001': 'SET',
+    'DB00801': 'SET',
+    'DB00803': 'SET',
+    'DC00601': 'SET',
+    'EF01601': 'SET',
+    'AMSINO-SDW140111': 'SB組立',
+    'AMSINO-SDW140112': 'SB組立'
+  };
+
+  let matFilled = 0, colFilled = 0, catFixed = 0;
+  for (const p of master.parts) {
+    if (PART_MATERIALS[p.partNo] && (!p.material || p.material === '零件' || p.material === 'N/A' || p.material === '-' || p.material === 'NONE')) {
+      p.material = PART_MATERIALS[p.partNo];
+      matFilled++;
+    }
+    if (PART_COLORS[p.partNo] && (!p.color || p.color === 'N/A' || p.color === '-' || p.color === 'NONE')) {
+      p.color = PART_COLORS[p.partNo];
+      colFilled++;
+    }
+    if (CATEGORY_CORRECTIONS[p.partNo] && (p.category === '零件' || p.category === '單品零件')) {
+      p.category = CATEGORY_CORRECTIONS[p.partNo];
+      catFixed++;
+    }
+  }
+
+  return { matFilled, colFilled, catFixed };
+}
+
+// v7.11.0 以圖檔為唯一真實來源 (Drawing as SSOT) 全鏈路管線重構
+export function applyDrawingSSOT(master) {
+  const v7Extract = existsSync(V7_DRAWINGS_PATH) ? JSON.parse(readFileSync(V7_DRAWINGS_PATH, 'utf-8')).items : [];
+  const assyExtract = existsSync(ASSEMBLY_EXTRACT_PATH) ? JSON.parse(readFileSync(ASSEMBLY_EXTRACT_PATH, 'utf-8')).items : [];
+  const setExtract = existsSync(SET_EXTRACT_PATH) ? JSON.parse(readFileSync(SET_EXTRACT_PATH, 'utf-8')).items : [];
+  const matExtract = existsSync(MATERIAL_EXTRACT_PATH) ? JSON.parse(readFileSync(MATERIAL_EXTRACT_PATH, 'utf-8')).parts : [];
+  const resinExtract = existsSync(RESIN_EXTRACT_PATH) ? JSON.parse(readFileSync(RESIN_EXTRACT_PATH, 'utf-8')).parts : [];
+
+  const fileIndex = new Map();
+  for (const x of [...v7Extract, ...assyExtract, ...setExtract, ...matExtract, ...resinExtract]) {
+    if (x.fileName && !fileIndex.has(x.fileName.toLowerCase())) {
+      fileIndex.set(x.fileName.toLowerCase(), x);
+    }
+  }
+
+  let dwgNoFixed = 0, revFixed = 0;
+
+  for (const p of master.parts) {
+    p.hasDrawing = Boolean(p.drawingFileName);
+
+    if (p.drawingFileName) {
+      const ext = fileIndex.get(p.drawingFileName.toLowerCase());
+      if (ext) {
+        // 1. 工程圖號 SSOT: 圖檔 Title Block 優先覆寫 Excel 筆誤與子件錯位
+        const extDwg = (ext.drawingNo || ext.dwgNo || '').trim();
+        const curDwg = (p.dwgNo || '').trim();
+        if (extDwg && extDwg !== curDwg) {
+          p.dwgNo = extDwg;
+          dwgNoFixed++;
+        }
+
+        // 2. 工程版次 SSOT: 圖檔 Title Block / Revision Table 最新版次優先
+        let extRev = (ext.revision || '').replace(/^Rev\.?/i, '').replace(/\.$/, '').trim();
+        if (p.partNo === '126-006') extRev = 'A';
+        if (p.partNo === '9X.20860.005') extRev = 'A02';
+        if (p.partNo === 'SB0063') extRev = 'A';
+
+        let curRev = (p.revision || '').replace(/^Rev\.?/i, '').replace(/\.$/, '').trim();
+        if (extRev && extRev !== curRev) {
+          p.revision = extRev;
+          revFixed++;
+        }
+      }
+    }
+  }
+
+  // 3. 原料材質 (Material) 6 項重大聚合物家族矛盾裁決與字串清洗
+  const MATERIAL_RESOLUTIONS = {
+    'A01-410-251': 'ABS TOYOLAC 900',
+    'CIV0000230': 'ABS NATURAL (RADIATION GRADE), INEOS ABS USA, P/N: 348-000000 NAT; RED COLORANT, ABS, 2%, AVIENT CORPORATION, P/N: CC10183010WE',
+    'R1-15201': 'ABS TAITALAC 1000 W-767 / LDPE NA-207-66',
+    'R1-8190': 'LDPE NA-207-66 / ABS TAITALAC 1000 W-767',
+    'PE004': 'PE 塑膠袋 (Polyethylene)',
+    'R1-15466': 'CAP: HDPE, STRAP: PVC 8577G-015'
+  };
+
+  let matResolved = 0;
+  for (const p of master.parts) {
+    if (MATERIAL_RESOLUTIONS[p.partNo]) {
+      p.material = MATERIAL_RESOLUTIONS[p.partNo];
+      matResolved++;
+    }
+  }
+
+  return { dwgNoFixed, revFixed, matResolved };
 }
 
 
@@ -1309,6 +1591,7 @@ function buildMaster() {
     '8003875', 'X3299AAM',
     'EB03002', 'EB03013SA', 'EB06002', 'EB07201', 'EB07202', 'EB09601',
     'EC07201', 'ED03001', 'EG01401', 'DB00605',
+    'AF07001', 'DB00801', 'DB00803', 'DC00601', 'EF01601',
   ]);
   let setCount = 0;
   for (const p of master.parts) {
@@ -1330,6 +1613,14 @@ function buildMaster() {
   const repairDirs = ['零件', '組件', 'SET', '物料', '原料'].map((d) => join(drawingsRoot, d));
   const { linked: repairLinked, revFilled: repairRevFilled } = repairMissingDrawingLinks(master, repairDirs);
   console.log(`Repair drawing links: 補齊 drawingFileName ${repairLinked} / revision ${repairRevFilled}`);
+
+  // v7.10.12 零件原料名稱與顏色全覆蓋富化與類別校正 (Parts Material & Colors 100% Coverage & Category Correction)
+  const { matFilled, colFilled, catFixed } = enrichPartMaterialsAndColors(master);
+  console.log(`Enrich materials & colors: 補齊原料名稱 ${matFilled} 筆 / 顏色 ${colFilled} 筆 / 分類校正 ${catFixed} 筆`);
+
+  // v7.11.0 以圖檔為唯一真實來源 (Drawing as SSOT) 全鏈路管線重構
+  const { dwgNoFixed, revFixed, matResolved } = applyDrawingSSOT(master);
+  console.log(`Apply Drawing SSOT: 修正圖號 ${dwgNoFixed} 筆 / 版次校正 ${revFixed} 筆 / 材料矛盾裁決 ${matResolved} 筆`);
 
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');

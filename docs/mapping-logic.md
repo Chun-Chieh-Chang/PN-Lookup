@@ -1,6 +1,6 @@
 # PN-Lookup 品號 ↔ 圖檔 ↔ BOM 完整映射邏輯
 
-> 版本：v7.10.9 ｜ 最後整理：2026-08-31
+> 版本：v7.11.0 ｜ 最後整理：2026-08-31
 > 本文從資料源頭開始，完整說明「品號資料庫（master）」、「圖檔」、「BOM 階層」三者之間的所有映射規則與資料流，作為日後維護與除錯的單一參考文件。
 
 ---
@@ -13,7 +13,7 @@ rawdata/圖檔（1503 張，品號第一事實來源）
         ▼
 data/drawings-extract.json（filePartNo + titleBlock 欄位 + bomLinks）
         │                rawdata/master_table_unified.json（種子：4 張來源表 + BOM 階層 + scannedAssemblies + pnAliases）
-        │                │  buildMaster.js（mergeDrawingsIntoMaster：圖檔優先、seed 補欄位）
+        │                │  buildMaster.js（applyDrawingSSOT：圖檔真源優先覆寫、種子中文品名保護）
         │                ▼
         └───────────► data/pn-lookup-master.json（唯一真源：parts + bom.children/parents）
                         │  server.js API (/api/images/list & /api/images/raw) 或 瀏覽器匯入
@@ -24,7 +24,7 @@ data/drawings-extract.json（filePartNo + titleBlock 欄位 + bomLinks）
                 PartDetailModal：圖檔顯示 + 懸停縮圖預覽 + 「本零件可組成的組件」
 ```
 
-> v7.8.7 管線反轉：圖檔品號提取為第一事實來源（孤兒圖歸零），種子檔（產品一覽表.xlsm 轉譯）負責補欄位（品名/客戶/材料）與 BOM 階層基底，兩者經 `mergeDrawingsIntoMaster` 合併為唯一真源。v7.10.1 依本體論完成 43 組互為替代品號去重，主資料庫精煉為 **984 筆規範品號**，固化 **181 組 BOM 關聯**。v7.10.9 建立後端 Express 零點擊自動掛載本機圖庫、120ms 平滑懸停縮圖預覽、品名規格點擊開明細與全寬 128rem 自適應佈局。目前 master：**984 規範品號 / 181 組 BOM / 1,503 份工程圖檔**（詳細品質數據見第 9 節）。
+> v7.8.7 管線反轉：圖檔品號提取為第一事實來源（孤兒圖歸零），種子檔（產品一覽表.xlsm 轉譯）負責補欄位（品名/客戶/材料）與 BOM 階層基底，兩者經 `mergeDrawingsIntoMaster` 合併為唯一真源。v7.10.1 依本體論完成 43 組互為替代品號去重，主資料庫精煉為 **984 筆規範品號**，固化 **181 組 BOM 關聯**。v7.10.9 建立後端 Express 零點擊自動掛載本機圖庫、120ms 平滑懸停縮圖預覽、品名規格點擊開明細與全寬 128rem 自適應佈局。v7.10.10 升級磁碟掃描補遺與多元版次正則，達成所有具備圖檔之品號（877 筆）**版本號 100% 完整收錄（0 筆遺失）**。v7.10.11 與 v7.10.12 分別達成零件原料與顏色 100% 全覆蓋。v7.11.0 確立「圖檔為唯一真實數據來源 (Drawing as SSOT)」，三層式資料治理全面修正 51 筆歷史 Excel 圖號筆誤、裁決 6 項聚合物家族材料矛盾，並確效 107 筆無圖檔品號之 BOM SSOT 衍生合法性。目前 master：**984 規範品號 / 181 組 BOM / 1,503 份工程圖檔**（詳細品質數據見第 9 節）。
 
 ---
 

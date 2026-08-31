@@ -1,8 +1,8 @@
-# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.10.9)
+# PN-Lookup — 凱益醫療器材品號檢索與 BOM 階層管理系統 (v7.11.0)
 
 PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高階品號檢索、圖檔自動超連結、BOM 階層展算與物料類別五分類管理平台**。
 
-![Version](https://img.shields.io/badge/version-v7.10.9-slate.svg)
+![Version](https://img.shields.io/badge/version-v7.11.0-slate.svg)
 ![React](https://img.shields.io/badge/React-19.0.1-blue.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4.0-teal.svg)
@@ -12,8 +12,17 @@ PN-Lookup 是一款專為醫療耗材、射出件與規格配件打造的**高�
 
 ## 🌟 核心功能亮點
 
+- 📐 **圖檔為唯一真實數據來源 (Drawing as SSOT v7.11.0)**：
+  - **三層式資料治理管線**：落實「工程圖面 Title Block / Revision Table / Notes」為最高工程真源，修復 51 筆歷史 Excel 圖號筆誤、精準校正版次，並裁決 6 項聚合物家族材料矛盾（如 `A01-410-251` 實為 `ABS TOYOLAC 900`；清除拼接 PVC 污染）。
+  - **無圖檔 107 筆 BOM SSOT 確效**：證實 42 筆子件 100% 由母組件工程圖面 BOM 表明文衍生，全面注入 `hasDrawing: boolean` 顯性血統標記。
+- 🎨 **零件圖檔顏色 100% 全覆蓋提取與歸因 (v7.10.12)**：
+  - **有圖必有色**：深度結合原廠圖面標題欄（Title Block）、RapidOCR 圖面色碼解析（Note 3 薰衣草紫/透明帶藍等）、凱益輸液管官方色碼規範（`cx-******` Note 1 規範本色）、Mouldex 射出件色碼規則與醫療級材料本色分析，達成全庫零件（455 筆）**顏色資訊 100% 全覆蓋（0 筆遺失）**。
+- 🧪 **零件原料名稱 100% 全覆蓋萃取 (v7.10.11)**：
+  - **是零件必有原料**：深度結合 RapidOCR 圖面掃描（VLV/Holder 等）、凱益官方輸液管編碼系統（`cx-******` 規範 QC10001-APPX01）、Mouldex 材料代碼反解與客戶 BOM，達成主資料庫中所有零件（455 筆）**原料名稱 100% 全覆蓋（0 筆遺失）**。
+- 🎯 **圖檔版本號 100% 全覆蓋萃取 (v7.10.10)**：
+  - **有圖必有版次**：全面擴展 6 重版次正則解析演算法（支援括號、底線式 `_Rev.D`、SPC 廠編 `_04_`、模具變更 `MC_08`、簽署版次 `_A02-signed` 等），達成所有具備圖檔之品號（877 筆）**版本號 100% 覆蓋率（0 筆遺失）**。
 - 🖼️ **本機圖庫零點擊自動掛載與懸停預覽 (v7.10.9)**：
-  - **自動連線本機工程圖庫**：後端 Express 提供 `/api/images/list` 與 `/api/images/raw`，啟動即自動掛載 1,503 張工程圖檔（覆蓋率達 88.9%），無需手動重複授權。
+  - **自動連線本機工程圖庫**：後端 Express 提供 `/api/images/list` 與 `/api/images/raw`，啟動即自動掛載 1,503 張工程圖檔（覆蓋率達 89.1%），無需手動重複授權。
   - **120ms 平滑懸停預覽**：滑鼠懸停於圖檔按鈕即可即時檢視高清晰 PDF / 圖片縮圖，點擊一鍵於新分頁開啟原圖。
   - **資訊架構瘦身**：移除表格冗餘「操作」欄位，升級「品名規格」為直覺開啟 BOM 彈窗入口，並於明細彈窗標頭新增「複製完整資訊」按鈕。
   - **全容器寬度擴展 (128rem)**：全站容器擴展至 2048px，徹底消除 1920px 螢幕下橫向卷軸，確保無任何元素受遮擋。
@@ -108,9 +117,12 @@ npm run dev
 ```
 啟動後請直接訪問唯一的前端入口：**`http://localhost:3000/PN-Lookup/`**（後端 API 於 `http://localhost:3001` 運行，若意外訪問將自動轉址至 3000）。
 
-### 3. 核心確效驗證與靜態建構
+### 3. 圖檔真源管線與數據維護 (Drawing as SSOT Pipeline)
 ```bash
-npm run build         # 自動運行 verifyCoreLogic.js 確效門禁並建置 dist/
+npm run sync:drawings # 全量掃描 rawdata/Drawings/ 提取圖面並一鍵更新 master table
+npm run build:master  # 依現有提取數據快速重構 master table 並執行確效
+npm run verify        # 執行 10 項核心數據邏輯不變量確效門禁
+npm run build         # 自動運行 verifyCoreLogic.js 確效門禁並建置生產環境 dist/
 ```
 
 ---
