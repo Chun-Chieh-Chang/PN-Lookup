@@ -39,6 +39,8 @@
    - **scripts/ 目錄**：清理 4 個歷史無引用輔助腳本（`find_assembly_candidates.py`、`gen_assembly_spreadsheet.py`、`generate_excel_v7.py`、`batchWatcher.mjs`），精煉為 15 個核心生產/提取工具。
    - **scratch/ 目錄**：清理 19 個歷史調試渲染圖與單次排錯診斷腳本，釋放 14.4 MB。
    - 全專案累計安全清除 **46 個過時、重複與除錯暫存檔案**，釋放磁碟空間 **22.04 MB**，專案架構 100% 符應 MECE 與單一真源原則。
+4. **專案標題規格優化 (Project Title Generalization)**：
+   - 調整 `README.md` 標題為「PN-Lookup — 品號檢索與 BOM 階層管理系統 (v7.11.0)」，進一步確立通用產品化定位。
 
 ### 驗證結果
 - **主資料庫總數**：**984 筆**（嚴格不變量）
