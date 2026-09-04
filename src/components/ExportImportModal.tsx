@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Download, Upload, FileSpreadsheet, Check, RefreshCw, FileJson, Table2, Tags } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PartItem } from '../types';
-import { generateExcelWorkbook, parseExcelToParts, FULL_DATA_HEADERS } from '../utils/excelExport';
+import { generateExcelWorkbook, parseExcelToParts, generateErpSheet, FULL_DATA_HEADERS } from '../utils/excelExport';
 import { generateJsonLdOntology } from '../utils/jsonLdExport';
 import { ALTERNATE_SPLIT_RE } from '../utils/alternates';
 import { parseCustomerSheet, applyCustomerRows, CustomerImportReport } from '../utils/customerPartImport';
@@ -123,7 +123,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 }) => {
   const [importMode, setImportMode] = useState<'append' | 'replace'>('append');
   const [copiedData, setCopiedData] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'xlsx' | 'jsonld'>('csv');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'json' | 'xlsx' | 'jsonld' | 'erp'>('csv');
 
   if (!isOpen) return null;
 
@@ -135,17 +135,21 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
 
   const getMimeType = () => {
     if (exportFormat === 'csv') return 'text/csv;charset=utf-8;';
-    if (exportFormat === 'xlsx') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (exportFormat === 'xlsx' || exportFormat === 'erp') return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     if (exportFormat === 'jsonld') return 'application/ld+json;charset=utf-8;';
     return 'application/json;charset=utf-8;';
   };
   const getExtension = () => {
     if (exportFormat === 'csv') return '.csv';
-    if (exportFormat === 'xlsx') return '.xlsx';
+    if (exportFormat === 'xlsx' || exportFormat === 'erp') return '.xlsx';
     if (exportFormat === 'jsonld') return '.jsonld';
     return '.json';
   };
-  const getFileName = () => `品號知識本體_${new Date().toISOString().slice(0, 10)}${getExtension()}`;
+  const getFileName = () => {
+    const date = new Date().toISOString().slice(0, 10);
+    if (exportFormat === 'erp') return `ERP品項清單_${date}.xlsx`;
+    return `品號知識本體_${date}${getExtension()}`;
+  };
   const getIcon = () => {
     if (exportFormat === 'csv') return <FileSpreadsheet className="w-5 h-5" />;
     if (exportFormat === 'xlsx') return <Table2 className="w-5 h-5" />;
@@ -179,8 +183,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
         });
         const writable = await handle.createWritable();
 
-        if (exportFormat === 'xlsx') {
-          const wb = generateExcelWorkbook(parts);
+        if (exportFormat === 'xlsx' || exportFormat === 'erp') {
+          const wb = exportFormat === 'erp'
+            ? (() => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, generateErpSheet(parts), 'ERP品項清單'); return w; })()
+            : generateExcelWorkbook(parts);
           const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
           await writable.write(buf);
         } else {
@@ -197,8 +203,10 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
     }
 
     // 瀏覽器降級下載處理
-    if (exportFormat === 'xlsx') {
-      const wb = generateExcelWorkbook(parts);
+    if (exportFormat === 'xlsx' || exportFormat === 'erp') {
+      const wb = exportFormat === 'erp'
+        ? (() => { const w = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(w, generateErpSheet(parts), 'ERP品項清單'); return w; })()
+        : generateExcelWorkbook(parts);
       XLSX.writeFile(wb, fileName);
       return;
     }
@@ -361,6 +369,12 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             <h3 className="font-bold text-sky-900 flex items-center space-x-2 text-[0.8125rem]">
               <Download className="w-4 h-4 text-sky-700" />
               <span>匯入自訂資料</span>
+              <span
+                className="ml-auto text-[0.75rem] font-mono font-normal text-sky-600 bg-sky-100 border border-sky-200 rounded px-1.5 py-0.5 cursor-default select-all"
+                title="第二階 SSOT — 伺服器唯一真源 (由 buildMaster pipeline 生成)"
+              >
+                data/pn-lookup-master.json
+              </span>
             </h3>
 
             <div className="flex items-center space-x-4 text-[0.8125rem]">
@@ -472,14 +486,27 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 <FileJson className="w-3.5 h-3.5 text-sky-700" />
                 <span className="text-slate-800 font-semibold">JSON-LD 知識本體 (@Schema.org)</span>
               </label>
+              <label className="flex items-center space-x-1.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportFormat"
+                  checked={exportFormat === 'erp'}
+                  onChange={() => setExportFormat('erp')}
+                  className="text-emerald-700 focus:ring-emerald-500"
+                />
+                <Table2 className="w-3.5 h-3.5 text-emerald-800" />
+                <span className="text-slate-800 font-semibold">ERP 品項清單 (.xlsx)</span>
+              </label>
             </div>
             <p className="text-slate-500 text-[0.8125rem] leading-relaxed">
               {exportFormat === 'xlsx'
-                ? '匯出為 Excel (.xlsx) 格式，包含 6 個工作表：客戶產品對照表（客戶/品號/品名/物料類別/備註）、SA/SB/SC/SD 組立、完整資料（匯入回寫用）。'
+                ? '匯出為 Excel (.xlsx) 格式，包含 7 個工作表：客戶產品對照表、SA/SB/SC/SD 組立、ERP品項清單、完整資料（匯入回寫用）。'
                 : exportFormat === 'csv'
                 ? '匯出包含所有欄位（id, customer, partNo, name, category, color, material, notes, alternates, itemType 等）。'
                 : exportFormat === 'jsonld'
                 ? '匯出為 Schema.org JSON-LD 語義化格式，適合搜尋引擎與知識圖譜整合。'
+                : exportFormat === 'erp'
+                ? '匯出 ERP 品項清單（第二階 SSOT）：品號、品名中英、ERP物料分類、計量單位、採購方式、材質、版次、模具號碼、BOM子件等 19 欄，直接供 ERP 系統匯入參照。'
                 : '匯出完整 JSON 陣列，保留所有 PartItem 欄位與資料型別（陣列、選填欄位等）。'}
             </p>
             <div className="flex items-center space-x-2.5 pt-1">

@@ -54,6 +54,49 @@ function buildAssemblySheet(
 
 export const FULL_DATA_HEADERS = ['id', 'customer', 'partNo', 'name', 'category', 'color', 'material', 'notes', 'alternates', 'itemType', 'components', 'usedInAssemblies', 'createdAt', 'description', 'dwgNo'];
 
+export const ERP_SHEET_HEADERS = [
+  '品號', '品名(中)', '品名(英)', 'ERP物料分類', '計量單位', '採購方式', '是否啟用',
+  '材質', '顏色', '版次', '客戶', '客戶料號',
+  '模具號碼', '穴數', '圖號', '圖面檔名',
+  'BOM子件', '替代品號', '備註',
+];
+
+export function generateErpSheet(parts: PartItem[]): XLSX.WorkSheet {
+  const rows = parts.map(p => {
+    const bomChildren = (p.components ?? []).join('、');
+    const alts = (p.alternates ?? []).join('、');
+    return {
+      '品號':        p.partNo,
+      '品名(中)':    p.name,
+      '品名(英)':    p.description ?? '',
+      'ERP物料分類': (p as any).erpItemClass ?? '',
+      '計量單位':    (p as any).uom ?? 'PCS',
+      '採購方式':    (p as any).procurementType ?? '',
+      '是否啟用':    (p as any).isActive === false ? '停用' : '啟用',
+      '材質':        p.material ?? '',
+      '顏色':        p.color ?? '',
+      '版次':        p.revision ?? '',
+      '客戶':        p.customer ?? '',
+      '客戶料號':    '',
+      '模具號碼':    (p as any).moldNo ?? '',
+      '穴數':        (p as any).cavity ?? '',
+      '圖號':        p.dwgNo ?? '',
+      '圖面檔名':    p.drawingFileName ?? '',
+      'BOM子件':     bomChildren,
+      '替代品號':    alts,
+      '備註':        p.notes ?? '',
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows, { header: ERP_SHEET_HEADERS });
+  ws['!cols'] = [
+    { wch: 20 }, { wch: 28 }, { wch: 30 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
+    { wch: 22 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 16 },
+    { wch: 14 }, { wch: 6 }, { wch: 20 }, { wch: 28 },
+    { wch: 40 }, { wch: 30 }, { wch: 30 },
+  ];
+  return ws;
+}
+
 export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
   const partsLookup = new Map<string, PartItem>();
@@ -95,6 +138,10 @@ export function generateExcelWorkbook(parts: PartItem[]): XLSX.WorkBook {
     const ws = buildAssemblySheet(s.prefix, s.label, partsLookup);
     if (ws) XLSX.utils.book_append_sheet(wb, ws, s.name);
   }
+
+  // ERP 品項清單 sheet — 第二階 SSOT 計算欄位完整輸出
+  const wsErp = generateErpSheet(parts);
+  XLSX.utils.book_append_sheet(wb, wsErp, 'ERP品項清單');
 
   // Last sheet: 完整資料 — full PartItem fields for round-trip import fidelity
   const fullData: Record<string, string>[] = parts.map(p => ({

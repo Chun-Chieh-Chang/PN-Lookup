@@ -3032,3 +3032,107 @@ pn-lookup/
    - 訪問 `http://localhost:3001/` 驗證返回 HTTP 302 重定向至 `http://localhost:3000/PN-Lookup/`。
    - 訪問 `http://localhost:3001/api/master` 驗證後端 API 正常返回 984 筆料號。
    - 執行 `node scripts/verifyCoreLogic.js` 與 `npm run build` 全數 PASS 通過。
+
+---
+
+## v7.10.9 — UI 強化：圖檔自動掛載、懸停縮圖預覽、操作欄瘦身與全寬佈局優化 (Auto Drawing Mount, Hover Thumbnail Preview & Full-Width Layout)
+
+### 需求內容
+1. 品號詳情視窗中的工程圖檔應能自動掛載並展示，無需手動操作。
+2. 表格列中的品號應能懸停顯示縮圖預覽，提升瀏覽效率。
+3. 操作欄過寬導致主內容擠壓，需瘦身以釋放水平空間。
+4. 整體佈局應採全寬模式，充分利用螢幕面積。
+
+### 矯正與預防措施 (CAPA)
+1. **圖檔自動掛載**：`buildMaster.js` pipeline 掃描組立圖目錄後，將 `drawingFileName` 寫入 `pn-lookup-master.json`；前端 `imageResolver.ts` 根據此欄位直接解析完整圖檔路徑，零手動步驟。
+2. **懸停縮圖預覽**：`PartsTable.tsx` 列上懸停時觸發縮圖浮層，使用 CSS `position:fixed` 避免表格遮擋。
+3. **操作欄瘦身**：將操作欄按鈕合併為圖示群，欄寬從 ~160px 縮減至 ~72px，主內容欄比例提升。
+4. **全寬佈局**：App 根容器移除 `max-width` 限制，改用 `w-full` 充滿視窗寬度。
+5. **驗證確效**：`npx tsc --noEmit` 0 錯誤；`node scripts/verifyCoreLogic.js` 全數 PASS。
+
+---
+
+## v7.11.0 — 圖檔 SSOT 管線升級：Drawing SSOT Pipeline、可擴展提取架構與 MECE 目錄清理 (Drawing SSOT Pipeline, Extensible Extraction & MECE Directory Cleanup)
+
+### 需求內容
+1. 建立以圖檔為第一階真源（SSOT）的自動化 pipeline，取代手動維護 BOM 覆寫清單的舊流程。
+2. 重構提取架構使其可擴展，支援未來新增圖庫或新格式圖檔。
+3. 清理 MECE 違規的冗餘資源目錄（25 個過時檔案，釋放 ~20 MB 磁碟空間）。
+
+### 根因分析 (RCA)
+- 舊版 `buildMaster.js` 依賴大量手工維護的 `bomOverrides` 種子陣列，每次新增組立圖均需人工更新兩處（圖檔目錄 + 種子 JSON），易漏且無法自動驗證一致性。
+- 累積開發中產生的中間產物目錄（`rawdata/v*/`、`scripts/legacy/`）違反 MECE 原則，造成後續開發者困惑。
+
+### 矯正與預防措施 (CAPA)
+1. **Drawing SSOT Pipeline (`scripts/scanAssemblyImages.js`)**：
+   - 以 `sync:drawings` NPM 腳本一鍵執行：掃描所有組立圖目錄 → 提取 BOM 資訊 → 呼叫 `buildMaster.js` 重建主資料庫。
+   - `buildMaster.js` 透過 `mergeDrawings()` 函數將圖檔掃描結果增量合併至種子，圖檔資訊不再需要手工同步。
+2. **可擴展提取架構**：提取模組採用策略模式，每個圖庫對應獨立 extractor，新增圖庫時只需新增對應策略檔。
+3. **MECE 目錄清理**：移除 25 個過時中間產物目錄與檔案；更新 README，更新專案標題為「PN-Lookup — 品號檢索與 BOM 階層管理系統」。
+4. **驗證確效**：`node scripts/verifyCoreLogic.js` 10 項全數 PASS；`npm run build` 打包成功。
+
+---
+
+## v7.11.1 — ERP 第二階 SSOT 升級、舊版標記、BOM 引擎修正與審計閉合 (ERP Second-Tier SSOT, Legacy Marking, BOM Engine Fix & Audit Closure)
+
+### 需求內容
+1. 將 `data/pn-lookup-master.json` 升級為繼圖檔之後的**第二階 SSOT**，作為未來 ERP 系統匯入的參照檔案。
+2. 標記客戶組件版本清單（2026-08-05）未列入的舊版組件，於 UI 中提示使用者。
+3. 修正 BOM 引擎將包材類零件（物料/原料）誤判為組件的缺陷。
+4. 閉合本輪 BOM 材質資料稽核（管材、舊零件、組立圖面、多組 BOM 閉環）。
+
+### 根因分析 (RCA)
+- **ERP SSOT 缺口**：master JSON 原本僅儲存品名/料號/BOM 結構等基礎欄位，缺乏 ERP 系統所需的物料分類、計量單位、採購方式與啟用狀態，無法直接作為 ERP 匯入來源。
+- **BOM 引擎誤判**：`bomEngine.ts` 的 `isAssemblyPartNo()` 純依品號前綴判斷，導致品號如 `0.08*14mm`（收縮膜物料）因前綴不符合任何組件格式而被誤判；然而反向亦有問題：品號規則正確但 category 為「物料/原料」的品項仍被標記為組件。加入 `LEAF_CATEGORIES` 防護後，優先以 category 覆寫前綴判斷。
+- **Legacy 標記缺失**：v7.11.0 之前，已知 62 件不在客戶現行版本清單的舊版組件在資料庫中與現行組件並列，UI 無任何視覺區分。
+
+### 矯正與預防措施 (CAPA)
+
+#### 1. ERP 第二階 SSOT 計算欄位（`scripts/buildMaster.js`）
+新增 `computeErpFields(master)` 函數，每次 `build:master` 後自動寫入 `pn-lookup-master.json`：
+- `erpItemClass`：成品 (SET) / 半成品 (SA/SB/SC/SD/其他組件) / 零件 / 原料 (物料/原料/包材)
+- `uom`：`"PCS"`（全品項預設，後續可按品項覆寫）
+- `procurementType`：自製（`moldNo` 存在）/ 外購
+- `isActive`：`!legacy`
+
+資料分布（build 後）：
+| 分類 | 成品 | 半成品 | 零件 | 原料 | 自製 | 外購 | 啟用 | 停用 |
+|------|------|--------|------|------|------|------|------|------|
+| 數量 | 145  | 213    | 572  | 171  | 381  | 720  | 1039 | 62   |
+
+#### 2. 材質填補（`PART_FIELD_CORRECTIONS`，共 14 筆）
+本次新增 6 筆（圖面 PyMuPDF 直讀確認）：
+- `N20-208-13` → `ABS TERLUX-2812`（Rev.A 圖面確認）
+- `D09-279-1` → `ABS TOYOLAC 900`（Rev.E 圖面確認）
+- `0.08*14mm` / `0.08*14.5mm` / `9X.20860.003120mm` / `9X.20860.005` → `PE`（收縮膜/包材標準材質）
+
+#### 3. BOM 引擎 LEAF_CATEGORIES 防護（`src/utils/bomEngine.ts`）
+新增 `LEAF_CATEGORIES = new Set(['零件','物料','原料'])`；`isAssemblyItem()` 優先以 `category` 判斷，category 屬 LEAF_CATEGORIES 則直接返回 `false`（非組件），防止包材品項被誤列為 BOM 父節點。
+
+#### 4. ERP 匯出 UI（`src/utils/excelExport.ts` + `src/components/ExportImportModal.tsx`）
+- `generateErpSheet()` 生成 19 欄 ERP 品項清單（品號/品名/ERP物料分類/計量單位/採購方式…等）。
+- xlsx 匯出新增 `ERP品項清單` 工作表（現共 7 個 Tab）。
+- `ExportImportModal.tsx` 新增「ERP 品項清單(.xlsx)」匯出選項，匯出檔名 `ERP品項清單_YYYYMMDD.xlsx`。
+- 匯入區塊標題列加入 `data/pn-lookup-master.json` 懸浮提示 Badge，明示第二階 SSOT 來源。
+
+#### 5. 舊版組件標記（`src/components/PartsTable.tsx` + `src/components/PartDetailModal.tsx`）
+62 件 `legacy:true` 組件（依據客戶組件版本清單 2026-08-05）：
+- 表格列品號旁顯示琥珀色「**舊版**」Badge。
+- 詳情視窗顯示琥珀色「**舊版組件**」徽章。
+
+#### 6. 新增 ERP 欄位型別定義（`src/types.ts`）
+`PartItem` 介面新增：`moldNo?`、`cavity?`、`erpItemClass?`、`uom?`、`procurementType?`、`isActive?`
+
+#### 7. 稽核閉合（Audit Ledger 2026-09-04）
+| 批次 | 項目 | 結論 |
+|------|------|------|
+| A1-A13 | 管材材質（PVC，無等級） | 接受現狀，閉合 |
+| B1-B7  | 舊名稱零件，材質無法查考 | 接受空白，閉合 |
+| D1-D9  | SA0072/SA0101/SA0102/SA0118/SA0144/SA0149/SA0177/SA0193 BOM 圖面 | PyMuPDF 直讀確認，與 master 100% 一致，閉合 |
+| E1     | SA0183 螺帽 H00-111-131-5 版次 | 圖面確認 Rev.C，master 已記錄，閉合 |
+| F1     | R1-15023 / R1-3528 BOM 組成 | 使用者截圖確認正確，閉合 |
+
+#### 8. 驗證確效
+- `node scripts/verifyCoreLogic.js`：全 10 項 PASS（convParts baseline 795）
+- `npx tsc --noEmit`：0 錯誤
+- `.gitignore` 新增：`.claude/`（Claude Code session 記憶體）、3 支一次性分析 Python 腳本

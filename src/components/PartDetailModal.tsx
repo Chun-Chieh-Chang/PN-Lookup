@@ -124,6 +124,11 @@ export const PartDetailModal: React.FC<PartDetailModalProps> = ({
               {isAssembly ? <Boxes className="w-3.5 h-3.5" /> : <Component className="w-3.5 h-3.5" />}
               <span>{isAssembly ? '組合配件 / 組立 (Assembly)' : '單一零件 (Single Part)'}</span>
             </span>
+            {item.legacy && (
+              <span className="px-2.5 py-0.5 rounded-full text-[0.8125rem] font-bold tracking-wide text-amber-800 bg-amber-100 border border-amber-400 shadow-2xs">
+                舊版組件
+              </span>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">

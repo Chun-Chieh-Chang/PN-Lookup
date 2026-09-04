@@ -217,7 +217,7 @@ export function convertUnifiedSeedToMaster(seedData) {
   // 別稱只接受品號格式（排除備註/說明文字被誤錄為別稱），且不得為自身品號
   function sanitizeAlternates(alts, selfPartNo = '') {
     if (!Array.isArray(alts)) return [];
-    return Array.from(new Set(alts.filter((a) => typeof a === 'string' && /^[A-Z0-9][A-Z0-9-]*$/i.test(a) && a !== selfPartNo)));
+    return Array.from(new Set(alts.filter((a) => typeof a === 'string' && /^[A-Z0-9][A-Z0-9.\-]*$/i.test(a) && a !== selfPartNo)));
   }
 
   function addPart(p) {
@@ -1461,6 +1461,307 @@ export function mergeResinDrawingsIntoMaster(master, resinData, ocrData) {
   return { fileUpdated, revUpdated, colUpdated, matUpdated, catUpdated, codeUpdated };
 }
 
+// 套用策展的「材料用途關聯」：seed.materialUsageLinks = [{ product, material, note? }]
+// 建為 BOM 產品(parent) → 物料(child)。品號經 alternates 正規化；防自我參照與環路；
+// 產品/物料任一不存在於 master 則略過（避免建出孤兒關係）。
+function applyMaterialUsageLinks(master, links) {
+  if (!Array.isArray(links) || links.length === 0) return 0;
+  const canon = new Map();
+  for (const p of master.parts) {
+    canon.set(norm(p.partNo), p.partNo);
+    for (const a of (p.alternates || [])) if (!canon.has(norm(a))) canon.set(norm(a), p.partNo);
+  }
+  // 判斷 anc 是否為 desc 的祖先（沿 children 下行找得到 desc）→ 防環
+  const isAncestor = (anc, desc) => {
+    const seen = new Set();
+    const stack = [...(master.bom.children[anc] || [])];
+    while (stack.length) {
+      const cur = stack.pop();
+      if (norm(cur) === norm(desc)) return true;
+      if (seen.has(cur)) continue;
+      seen.add(cur);
+      stack.push(...(master.bom.children[cur] || []));
+    }
+    return false;
+  };
+  let added = 0;
+  for (const link of links) {
+    const product = canon.get(norm(link.product));
+    const material = canon.get(norm(link.material));
+    if (!product || !material || product === material) continue;
+    // 防環：material 已是 product 的祖先時不可再讓 product 成為其父
+    if (isAncestor(material, product)) continue;
+    if (!master.bom.children[product]) master.bom.children[product] = [];
+    if (!master.bom.children[product].includes(material)) {
+      master.bom.children[product].push(material);
+      added++;
+    }
+    if (!master.bom.parents[material]) master.bom.parents[material] = [];
+    if (!master.bom.parents[material].includes(product)) master.bom.parents[material].push(product);
+  }
+  return added;
+}
+
+// BOM 子件清理 (BOM Child Sanitization)：修復萃取階段（組件圖 OCR/文字）產生的子件亂碼與雜訊。
+//   ① 別稱子件 → 規範品號（透過 alternates 索引）
+//   ② OCR 亂碼子件 → 登錄品號（O/0、I/1、L/1、S/5、B/8、Z/2、G/6 折疊後「唯一命中」才對映）
+//   ③ 明確雜訊子件（日期/電話/ISO 標準碼/純數字/模號）→ 移除
+//   ④ 真品號格式但 master 查無者 → 保留（反向檢視可見供查核）並列冊至 data/bom-orphan-report.json
+// 僅對「resolve 失敗」的子件套用雜訊移除 → 絕不誤刪任何登錄/別稱/可 OCR 對映的真品號。
+function sanitizeBomLinks(master) {
+  const ocrCanon = (s) => norm(s).replace(/O/g, '0').replace(/[IL]/g, '1').replace(/S/g, '5').replace(/B/g, '8').replace(/Z/g, '2').replace(/G/g, '6');
+  // 逐一人工驗證（2026-09，A 類 48 筆比對）：亂碼/截斷子件 → 既有 master 品號（前綴字母贅生或末碼截斷，OCR 折疊無法涵蓋）
+  const CURATED_REMAP = new Map(Object.entries({
+    'DI10-210-251-1': 'D10-210-251-1', 'DI10-210-2512': 'D10-210-251-2',
+    'FD10-240-251': 'D10-240-251', 'IFD10-210-251': 'D10-210-251', 'RD10-210-251': 'D10-210-251',
+    'Cl11-111-251': 'C11-111-251', 'E20-000-13': 'E20-000-131',
+    // 人工看圖確認（2026-09）：截斷子件 → 原圖 KEY UNIT 表判定之精確變體
+    'A02-200': 'A02-200-251', 'C09-200-2': 'C09-200-211', 'E09-000-4': 'E09-000-412-4',
+    'E09-000-412': 'E09-000-412-1', 'E10-002': 'E10-002-416', 'E20-000': 'E20-000-131',
+    'F17-000': 'F17-000-412',
+    // 人工確認為識別錯誤 → 修正
+    'A02-700-131': 'A02-200-131', 'p10-279-211': 'D10-279-211',
+    // MDXE-123-01 原圖 BOM 核對（2026-09）：OCR 亂碼子件 → 原圖零件編號
+    'Cro6001': 'CP96001', '009-279-211': 'C09-279-211', 'ER2258': 'CP96023',
+  }).map(([k, v]) => [norm(k), v]));
+  // 逐一人工驗證：PN 格式但實為文件/程序編號或圖框檔號的 OCR 誤讀（bomDetails 品名佐證）→ 非零件，移除
+  //   SET00xx = 圖框「MOULDEX M05003-R01 FILE NO.」誤讀；QP/P = Quality Procedure 品質程序號；R1-1148/3522 = 文件參照
+  const CONFIRMED_NOISE = new Set([
+    'SET0011', 'SET0025', 'SET0029', 'SET0031', 'SET0033', 'SET0065', 'SET0066', 'SET0072',
+    'SET0083', 'SET0089', 'SET0097', 'SET0098', 'SET0102', 'SET0103', 'SET0108',
+    'QP00-00013', 'QP00-00017', 'QP00-00030', 'QP00-00033', 'P00-00030', 'P00-00033', 'Br00-00033',
+    'R1-1148', 'R1-3522', 's86-3', 'o16-03',
+  ].map(norm));
+  const regNorm = new Map();
+  const regOcr = new Map();
+  for (const p of master.parts) {
+    for (const k of [p.partNo, ...(p.alternates || [])]) {
+      if (!regNorm.has(norm(k))) regNorm.set(norm(k), p.partNo);
+      const o = ocrCanon(k);
+      if (!regOcr.has(o)) regOcr.set(o, new Set());
+      regOcr.get(o).add(p.partNo);
+    }
+  }
+  const SHRINK = /^0\.08\*14(?:\.5)?mm$/i; // 收縮膜物料（白名單保留，非雜訊）
+  const isNoise = (c) =>
+    /^(19|20)\d{2}-?\d{2}/.test(c) ||                                   // 日期 1999-11-02 / 20230721
+    /^\d{8,}$/.test(c) ||                                                // 8+ 位純數字（日期/巨數）
+    /^886-?\d/.test(c) || /^\d{2,3}-\d-\d{6,}$/.test(c) || /^0\d-?\d{6,}$/.test(c) || // 電話（含台灣區碼）
+    /^(ISO|IEC|EN)\d/i.test(c) ||                                        // 標準碼
+    /^\d{3,5}-\d{1,2}$/.test(c) ||                                       // ISO 尾號 80369-7
+    /^\d{5,7}$/.test(c) ||                                               // 純數字 5-7 位（模號/碎片）
+    /^[MW]O?\d{4,}$/i.test(c);                                           // 模號 MO5003 / WO5003
+  const resolve = (c) => {
+    const n = norm(c);
+    if (regNorm.has(n)) return regNorm.get(n);       // 規範品號或別稱→規範
+    if (CURATED_REMAP.has(n)) {                        // 人工驗證亂碼→既有品號
+      const t = CURATED_REMAP.get(n);
+      if (regNorm.has(norm(t))) return regNorm.get(norm(t));
+    }
+    const hit = regOcr.get(ocrCanon(c));
+    if (hit && hit.size === 1) return [...hit][0];    // OCR 折疊後唯一命中
+    return null;
+  };
+  let remapAlias = 0, remapOcr = 0, dropped = 0;
+  const orphanReport = [];
+  const newChildren = {};
+  for (const [parent, kids] of Object.entries(master.bom.children)) {
+    const pc = resolve(parent) || parent;
+    if (!newChildren[pc]) newChildren[pc] = [];
+    const seen = new Set(newChildren[pc].map(norm));
+    for (const k of kids) {
+      if (SHRINK.test(k)) {
+        if (!seen.has(norm(k))) { newChildren[pc].push(k); seen.add(norm(k)); }
+        continue;
+      }
+      const r = resolve(k);
+      if (r) {
+        if (norm(r) !== norm(k)) { if (regNorm.has(norm(k))) remapAlias++; else remapOcr++; }
+        if (norm(r) !== norm(pc) && !seen.has(norm(r))) { newChildren[pc].push(r); seen.add(norm(r)); }
+      } else if (isNoise(k) || CONFIRMED_NOISE.has(norm(k))) {
+        dropped++;
+      } else {
+        if (!seen.has(norm(k))) { newChildren[pc].push(k); seen.add(norm(k)); }
+        orphanReport.push({ parent: pc, child: k });
+      }
+    }
+    if (newChildren[pc].length === 0) delete newChildren[pc];
+  }
+  // 重建 parents（保證雙向對稱）
+  const newParents = {};
+  for (const [par, kids] of Object.entries(newChildren)) {
+    for (const kid of kids) {
+      if (!newParents[kid]) newParents[kid] = [];
+      if (!newParents[kid].includes(par)) newParents[kid].push(par);
+    }
+  }
+  master.bom.children = newChildren;
+  master.bom.parents = newParents;
+  // 列冊分類：協助人工判斷保留孤兒的後續處置
+  const classify = (c) => {
+    if (/x14(?:\.0)?mm$/i.test(c) || /\*14/.test(c)) return 'size-收縮膜尺寸變體';
+    if (/^[A-Z]{1,3}\d{2,}-\d/i.test(c) || /^R1-\d/i.test(c) || /^SET\d/i.test(c) || /^\d{2,3}M\d/i.test(c)) return 'A-疑真品號(建議登錄)';
+    if (/^(QP|P|OP|BR)O?0?0-\d/i.test(c)) return 'B-客戶號族群(QP00 等)';
+    if (/^\d{2}-\d{6}$/.test(c)) return 'C-管材料號族群(NN-NNNNNN)';
+    if (/^\d{2,4}-\d/.test(c)) return 'D-截斷品號(缺前綴)';
+    if (/^\d{1,4}$/.test(c)) return 'E-短碼數字碎片';
+    return 'F-其他';
+  };
+  const grouped = {};
+  const uniqChildren = new Map();
+  for (const it of orphanReport) {
+    if (!uniqChildren.has(it.child)) uniqChildren.set(it.child, []);
+    uniqChildren.get(it.child).push(it.parent);
+  }
+  const catalog = [...uniqChildren.entries()].map(([child, parents]) => ({ child, category: classify(child), usedInAssemblies: parents }))
+    .sort((a, b) => a.category.localeCompare(b.category) || a.child.localeCompare(b.child));
+  for (const row of catalog) grouped[row.category] = (grouped[row.category] || 0) + 1;
+  writeFileSync(join(ROOT_DIR, 'data', 'bom-orphan-report.json'), JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    note: '真品號格式但 master 查無的 BOM 子件（已保留於 BOM，反向檢視可見）；依分類人工判斷：A 建議登錄 master、B/C 需確認料號族群、D/E/F 多為萃取碎片可忽略',
+    uniqueChildren: catalog.length,
+    occurrences: orphanReport.length,
+    byCategory: grouped,
+    items: catalog,
+  }, null, 2), 'utf-8');
+  return { remapAlias, remapOcr, dropped, keptOrphans: catalog.length };
+}
+
+// 權威 BOM 覆寫：對已用原圖 KEY UNIT 表逐一核對的組件，以 seed.bomOverrides 設定其確切子件清單，
+// 覆蓋圖檔 OCR 萃取的雜訊/缺漏/多餘。同步更新 bom.children 與該組件的 bomDetails（前端優先顯示 bomDetails），
+// 品號解析為規範品號（經別稱），品名/原料取自登錄品項；最後重建 parents 確保雙向對稱。
+// 權威品項欄位修正：針對人工確認的錯誤資料強制覆寫品名/原料/顏色（不論來源，最後定稿）
+const PART_FIELD_CORRECTIONS = {
+  // B膠 / D膠 為材質 IR2200 的膠塞（橡膠塞子），非膠水；品名維持「B膠」/「D膠」，修正材質（原「B glue」誤譯）
+  // 2026-09 使用者確認：膠塞為消耗性物料（非零件），category 改為物料
+  'B-077': { name: 'B膠', material: 'IR2200', category: '物料' },
+  'B-003': { name: 'D膠', material: 'IR2200', category: '物料' },
+  // SC0006 進版至 Rev.C（舊 Rev.B 圖檔已刪）；extract 仍殘留舊版 → 強制更新版次與圖檔連結
+  'SC0006': { revision: 'C', drawingFileName: 'SC0006(Rev.C)-C.pdf' },
+  // R1-8065 單一射出件（圖面 Note-7 單一樹脂 75-2568 WHITE ABS），被 drawings scan 誤分為「其他組件」；
+  // 修正 category 為零件（避開組件材質清空），並強制設定圖面確認材質（2026-09 人工審計確認）
+  'R1-8065': { category: '零件', material: '75-2568 WHITE ABS' },
+  // PE007 藍色包裝袋：internalParts 預設 category 為零件，強制修正為物料（非結構件）
+  'PE007': { category: '物料' },
+  // 雙圖並存：廠內圖與客戶圖版次不同，兩圖合法並存（2026-09 人工確認）
+  // master 版次以圖檔資料夾內較新之圖檔為準；備註說明另一版次來源
+  'R1-2392': { notes: '廠內圖 Rev.A（客戶組件版本清單）；客戶圖 Rev.6（兩圖並存）' },
+  'R1-3529': { notes: '廠內圖 Rev.A（客戶組件版本清單）；客戶圖 Rev.05（兩圖並存）' },
+  'SB0063':  { notes: '廠內圖 Rev.C（客戶組件版本清單）；客戶圖 Rev.A（兩圖並存）' },
+  // 圖面確認材質填補（2026-09-04 PyMuPDF 圖面解析確認）
+  'N20-208-13':        { material: 'ABS TERLUX-2812' },
+  'D09-279-1':         { material: 'ABS TOYOLAC 900' },
+  // 收縮膜與包裝袋材質（PE 標準材質，物料類）
+  '0.08*14mm':         { material: 'PE' },
+  '0.08*14.5mm':       { material: 'PE' },
+  '9X.20860.003120mm': { material: 'PE' },
+  '9X.20860.005':      { material: 'PE' },
+};
+function applyPartFieldCorrections(master) {
+  let n = 0;
+  for (const p of master.parts) {
+    const fix = PART_FIELD_CORRECTIONS[p.partNo];
+    if (!fix) continue;
+    if (fix.name) p.name = fix.name;
+    if (fix.material !== undefined) p.material = fix.material;
+    if (fix.color !== undefined) p.color = fix.color;
+    if (fix.revision !== undefined) p.revision = fix.revision;
+    if (fix.drawingFileName !== undefined) p.drawingFileName = fix.drawingFileName;
+    if (fix.category !== undefined) p.category = fix.category;
+    if (fix.notes !== undefined) p.notes = fix.notes;
+    if (fix.description !== undefined) p.description = fix.description;
+    n++;
+  }
+  return n;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERP 計算欄位：第二階 SSOT，在所有欄位定稿後統一計算，不改動現有欄位
+// erpItemClass: 成品 / 半成品 / 零件 / 原料
+// uom: 計量單位（預設 PCS）
+// procurementType: 自製（有 moldNo） / 外購
+// isActive: 啟用狀態（!legacy）
+// ─────────────────────────────────────────────────────────────────────────────
+function computeErpFields(master) {
+  const SET_CATS      = new Set(['SET']);
+  const HALF_CATS     = new Set(['組件', '組件圖候補', '其他組件', 'SA組立', 'SB組立', 'SC組立', 'SD組立']);
+  const MATERIAL_CATS = new Set(['原料', '物料', '包材']);
+  for (const p of master.parts) {
+    if      (SET_CATS.has(p.category))      p.erpItemClass = '成品';
+    else if (HALF_CATS.has(p.category))     p.erpItemClass = '半成品';
+    else if (MATERIAL_CATS.has(p.category)) p.erpItemClass = '原料';
+    else                                     p.erpItemClass = '零件';
+    p.uom             = 'PCS';
+    p.procurementType = p.moldNo ? '自製' : '外購';
+    p.isActive        = !p.legacy;
+  }
+  console.log(`Compute ERP fields: ${master.parts.length} 筆 erpItemClass / uom / procurementType / isActive 計算完成`);
+}
+
+// 刷新 bomDetails：已登錄子件的品名/原料/品號一律以 master 記錄為準（SSOT），
+// 取代萃取階段凍結的 OCR 文字（如「B glue」、「1 [1 [MLL Cap」等亂碼）；未登錄子件保留原字串。
+function refreshBomDetailsFromParts(master) {
+  const byN = new Map();
+  for (const p of master.parts) {
+    byN.set(norm(p.partNo), p);
+    for (const a of (p.alternates || [])) if (!byN.has(norm(a))) byN.set(norm(a), p);
+  }
+  let refreshed = 0;
+  for (const p of master.parts) {
+    if (!Array.isArray(p.bomDetails)) continue;
+    for (const b of p.bomDetails) {
+      const cp = byN.get(norm(b.partNo));
+      if (!cp) continue; // 未登錄子件：保留萃取文字
+      if (b.partNo !== cp.partNo) b.partNo = cp.partNo; // 正規化為規範品號
+      if (cp.name && b.name !== cp.name) { b.name = cp.name; refreshed++; }
+      b.material = cp.material || '';
+      b.materialCode = cp.materialCode || '';
+    }
+  }
+  return refreshed;
+}
+
+function applyBomOverrides(master, overrides) {
+  if (!overrides || typeof overrides !== 'object') return 0;
+  const byN = new Map();
+  for (const p of master.parts) {
+    byN.set(norm(p.partNo), p);
+    for (const a of (p.alternates || [])) if (!byN.has(norm(a))) byN.set(norm(a), p);
+  }
+  let count = 0;
+  for (const [asm, rows] of Object.entries(overrides)) {
+    if (!Array.isArray(rows)) continue;
+    const asmPart = byN.get(norm(asm));
+    const children = [];
+    const details = [];
+    for (const row of rows) {
+      const p = byN.get(norm(row.partNo));
+      const canonical = p ? p.partNo : row.partNo; // 收縮膜等非登錄物料保留原字串
+      if (!children.some((c) => norm(c) === norm(canonical))) children.push(canonical);
+      details.push({
+        qty: row.qty || '1',
+        partNo: canonical,
+        name: p ? p.name : (row.name || row.partNo),
+        material: p ? (p.material || '') : (row.material || ''),
+        materialCode: p ? (p.materialCode || '') : '',
+      });
+    }
+    master.bom.children[asm] = children;
+    if (asmPart) asmPart.bomDetails = details;
+    count++;
+  }
+  // 重建 parents（雙向對稱）
+  const newParents = {};
+  for (const [par, kids] of Object.entries(master.bom.children)) {
+    for (const kid of kids) {
+      if (!newParents[kid]) newParents[kid] = [];
+      if (!newParents[kid].includes(par)) newParents[kid].push(par);
+    }
+  }
+  master.bom.parents = newParents;
+  return count;
+}
+
 function buildMaster() {
   if (!existsSync(RAW_SEED_PATH)) {
     console.error(`Error: Seed file not found at ${RAW_SEED_PATH}`);
@@ -1573,6 +1874,7 @@ function buildMaster() {
     '90-9634', 'R1-1000', 'R1-1034', 'R1-1036', 'R1-1073', 'R1-1092', 'R1-1176',
     'R1-1203', 'R1-8328', 'R1-8329', 'R1-8337', 'R1-8959', 'R1-9066', 'R1-10002',
     'R1-10046', 'R1-10143', 'R1-15157', 'R1-16132',
+    'NA207-66', // LDPE Paxothene 樹脂料（BOM 孤兒比對登錄，非 ICU 但同為原料類）
   ]);
   let rawMatCount = 0;
   for (const p of master.parts) {
@@ -1621,6 +1923,56 @@ function buildMaster() {
   // v7.11.0 以圖檔為唯一真實來源 (Drawing as SSOT) 全鏈路管線重構
   const { dwgNoFixed, revFixed, matResolved } = applyDrawingSSOT(master);
   console.log(`Apply Drawing SSOT: 修正圖號 ${dwgNoFixed} 筆 / 版次校正 ${revFixed} 筆 / 材料矛盾裁決 ${matResolved} 筆`);
+
+  // 權威品項欄位修正（人工確認之錯誤）：B膠/D膠 為 IR2200 膠塞，非膠水
+  const fieldFixed = applyPartFieldCorrections(master);
+  if (fieldFixed) console.log(`Apply part field corrections: ${fieldFixed} 筆品項欄位權威修正（B-077/B-003 膠塞 IR2200）`);
+
+  // 材料用途關聯 (Material Usage Links)：包裝/標籤等物料「用於」某產品，
+  // 建為 BOM 關係 產品(parent) → 物料(child)，使產品 BOM 樹顯示其包裝物料、
+  // 物料反向檢視顯示「用於 ⭢ 產品」。純疊加，不改 category（與別稱合併互補：
+  // 別稱＝同一物；用途＝不同物但材料用在該產品上）。
+  const usageLinked = applyMaterialUsageLinks(master, rawSeed.materialUsageLinks);
+  console.log(`Apply material usage links: 建立 ${usageLinked} 條「產品→物料」用途關聯`);
+
+  // 組件/SET 原料欄清空 (Assembly Material Suppression)：組件由零件組成、本身無單一原料，
+  // 且圖面提取常誤抓「MATERIAL/材質」表頭或 durometer 規格碎片。原料資訊改由 BOM 子零件
+  // （bomDetails / bom.children 各零件之 material）查得。清空 material 與 materialCode。
+  const ASSEMBLY_CATS = new Set(['組件', '組件圖候補', '其他組件', 'SA組立', 'SB組立', 'SC組立', 'SD組立', 'SET']);
+  let asmMatCleared = 0;
+  for (const p of master.parts) {
+    if (!ASSEMBLY_CATS.has(p.category)) continue;
+    let touched = false;
+    if (p.material && String(p.material).trim()) { p.material = ''; touched = true; }
+    if (p.materialCode && String(p.materialCode).trim()) { p.materialCode = ''; touched = true; }
+    if (touched) asmMatCleared++;
+  }
+  console.log(`Clear assembly material: 清空 ${asmMatCleared} 筆組件/SET 的原料欄（原料改由 BOM 子零件查得）`);
+
+  // BOM 子件清理：修復 OCR 亂碼/別稱子件、移除萃取雜訊、真缺漏列冊（管線末端，最後定稿 BOM）
+  const bomSan = sanitizeBomLinks(master);
+  console.log(`Sanitize BOM links: OCR 對映 ${bomSan.remapOcr} / 別稱正規化 ${bomSan.remapAlias} / 移除雜訊子件 ${bomSan.dropped} / 保留真缺漏 ${bomSan.keptOrphans}（列冊 data/bom-orphan-report.json）`);
+
+  // 權威 BOM 覆寫（原圖核對之組件）：最後定稿，覆蓋萃取雜訊
+  const ovrCount = applyBomOverrides(master, rawSeed.bomOverrides);
+  if (ovrCount) console.log(`Apply BOM overrides: ${ovrCount} 個組件套用原圖核對之權威 BOM`);
+
+  // 刷新 bomDetails 子件品名/原料為 master SSOT（修正 B glue 等凍結 OCR 文字）
+  const bdRefreshed = refreshBomDetailsFromParts(master);
+  console.log(`Refresh bomDetails from parts: ${bdRefreshed} 筆子件品名以 master 為準刷新`);
+
+  // 舊版組件標示 (Legacy Assembly Marking)：出現在 master 但未列入客戶組件版本清單 (2026-08-05)
+  if (Array.isArray(rawSeed.legacyAssemblies)) {
+    const legacySet = new Set(rawSeed.legacyAssemblies.map(norm));
+    let legacyCount = 0;
+    for (const p of master.parts) {
+      if (legacySet.has(norm(p.partNo))) { p.legacy = true; legacyCount++; }
+    }
+    if (legacyCount) console.log(`Mark legacy assemblies: ${legacyCount} 筆舊版組件（未列入客戶組件版本清單 2026-08-05）`);
+  }
+
+  // 第二階 SSOT ERP 計算欄位（所有欄位定稿後，最後計算）
+  computeErpFields(master);
 
   mkdirSync(join(ROOT_DIR, 'data'), { recursive: true });
   writeFileSync(OUTPUT_PATH, JSON.stringify(master, null, 2), 'utf-8');

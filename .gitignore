@@ -23,3 +23,11 @@ data/tessdata/
 *.traineddata
 scratch/
 upload_*
+
+# Claude Code session memory — local AI assistant state, not part of source
+.claude/
+
+# One-off analysis scripts (depend on stale intermediate files, not part of build pipeline)
+scripts/find_assembly_candidates.py
+scripts/gen_assembly_spreadsheet.py
+scripts/generate_excel_v7.py

@@ -10,10 +10,20 @@ let initPromise: Promise<void> | null = null;
 // 字首規則：以這些開頭的品號一律視為組件（不需在 BOM 階層登記）
 const ASSEMBLY_PART_NO_PREFIXES = ['MDXE'];
 
+// 明確的「零件/材料」類別：這些品項本質為 BOM 葉節點，即使因用途關聯（如包裝物料掛於其下）
+// 而成為 children 鍵，也不得被歸類為組件——否則 PartDetailModal 會誤走組件分支、隱藏其「用於組件」反向清單。
+const LEAF_CATEGORIES = new Set(['零件', '物料', '原料']);
+
 function isAssemblyPartNo(partNo: string): boolean {
   const upper = partNo.toUpperCase();
   if (assemblySet.has(upper) || assemblySet.has(partNo)) return true;
   return ASSEMBLY_PART_NO_PREFIXES.some((p) => upper.startsWith(p));
+}
+
+// 品項層級的組件判定：明確的零件/材料類別一律為零件（葉節點），其餘沿用 BOM 階層/字首規則。
+function isAssemblyItem(item: PartItem): boolean {
+  if (item.category && LEAF_CATEGORIES.has(item.category)) return false;
+  return isAssemblyPartNo(item.partNo);
 }
 
 export function initBOM(): Promise<void> {
@@ -36,7 +46,7 @@ export function updateBOMData(children: Record<string, string[]>, parents: Recor
 
 export function enrichParts(parts: PartItem[]): PartItem[] {
   return parts.map((p) => {
-    const isAssembly = isAssemblyPartNo(p.partNo);
+    const isAssembly = isAssemblyItem(p);
     const children = childrenMap[p.partNo] || childrenMap[p.partNo.toUpperCase()];
     const parents = parentsMap[p.partNo] || parentsMap[p.partNo.toUpperCase()];
     return {
@@ -96,7 +106,7 @@ export interface BOMRelation {
 }
 
 export function getItemType(item: PartItem): ItemType {
-  return isAssemblyPartNo(item.partNo) ? 'assembly' : 'part';
+  return isAssemblyItem(item) ? 'assembly' : 'part';
 }
 
 export function getBOMChildren(): Record<string, string[]> {

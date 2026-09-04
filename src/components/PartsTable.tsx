@@ -453,6 +453,11 @@ export const PartsTable: React.FC<PartsTableProps> = ({
                         >
                           {highlightText(item.partNo, searchKeyword)}
                         </span>
+                        {item.legacy && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.75rem] font-bold tracking-wide text-amber-800 bg-amber-100 border border-amber-300 whitespace-nowrap">
+                            舊版
+                          </span>
+                        )}
                         <button
                           onClick={() => handleCopyPartNo(item.id, item.partNo)}
                           className={`btn-tactile p-1 rounded transition-colors cursor-pointer border ${
