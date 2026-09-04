@@ -1,5 +1,19 @@
 export type ItemType = 'part' | 'assembly';
 
+export interface MoldSpec {
+  moldNo:           string;
+  variantSuffix?:   string;   // 模具品號後綴字母 (e.g. "A" from R1-9035A)
+  designCavity?:    number;
+  effectiveCavity?: number;
+  moldWeight?:      number;   // g，整模重量（不含流道）
+  runnerWeight?:    number;   // g
+  weightPerCavity?: number;   // g，單穴克重（含流道）
+  cycleTime?:       number;   // 秒
+  dailyCapacity?:   number;   // 件/天
+  materialSpec?:    string;   // PDF 原料品號欄原文
+  ppovVerified?:    boolean;
+}
+
 export interface BomComponentDetail {
   partNo: string;
   name: string;
@@ -43,6 +57,10 @@ export interface PartItem {
   uom?: string;              // 計量單位 (Unit of Measure), 預設 PCS
   procurementType?: string;  // 採購方式: 自製 / 外購
   isActive?: boolean;        // 是否啟用 (!legacy)
+  // 模具規格（來自成型週期與重量 PDF，由 parseMoldPdf.py + mergeMoldSpecs 合併）
+  moldSpecs?:    MoldSpec[];  // 所有模具規格，含多模具品號
+  materialType?: string;      // 原料大類: ABS / PVC / PC / HDPE / PP / LDPE / PBT / TPE / SBC / PETG
+  ppovVerified?: boolean;     // 任一模具已完成 PPOV 驗證
 }
 
 export type SearchField = 'all' | 'partNo' | 'customer' | 'name';

@@ -6,8 +6,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = join(__dirname, '..');
 const RAW_SEED_PATH = join(ROOT_DIR, 'rawdata', 'master_table_unified.json');
 const OUTPUT_PATH = join(ROOT_DIR, 'data', 'pn-lookup-master.json');
-const EXTRACT_PATH = join(ROOT_DIR, 'data', 'drawings-extract.json');
-const SEMANTIC_PATH = join(ROOT_DIR, 'data', 'semantic-extract.json');
+const EXTRACT_PATH    = join(ROOT_DIR, 'data', 'drawings-extract.json');
+const SEMANTIC_PATH   = join(ROOT_DIR, 'data', 'semantic-extract.json');
+const MOLD_SPECS_PATH = join(ROOT_DIR, 'rawdata', '內網資訊', 'mold-specs-parsed.json');
 const ICU_PATH = join(ROOT_DIR, 'data', 'icu-parts.json');
 const V7_DRAWINGS_PATH = join(ROOT_DIR, 'data', 'drawings_extract_v7.json');
 const ASSEMBLY_EXTRACT_PATH = join(ROOT_DIR, 'data', 'assembly_drawings_extract.json');
@@ -1682,6 +1683,62 @@ function applyPartFieldCorrections(master) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 模具規格合併：讀取 parseMoldPdf.py 輸出的 JSON，將多模具規格掛載到品項
+// 每筆品項可有多副模具 (moldSpecs[])；多模具品號如 R1-9035A/B/D 合併至 R1-9035
+// ─────────────────────────────────────────────────────────────────────────────
+function mergeMoldSpecs(master) {
+  if (!existsSync(MOLD_SPECS_PATH)) {
+    console.log('ℹ️  mold-specs-parsed.json 不存在，跳過模具規格合併（執行 python scripts/parseMoldPdf.py 生成）');
+    return;
+  }
+  const rows = JSON.parse(readFileSync(MOLD_SPECS_PATH, 'utf-8'));
+  const partMap = new Map(master.parts.map(p => [p.partNo, p]));
+
+  // 解析 canonical PN：R1-9035A → R1-9035（若去後綴後品號存在 master）
+  function resolveCanonical(rawPn, variantSuffix) {
+    if (partMap.has(rawPn)) return { canonical: rawPn, suffix: null };
+    if (variantSuffix) {
+      const stripped = rawPn.slice(0, -1);
+      if (partMap.has(stripped)) return { canonical: stripped, suffix: variantSuffix };
+    }
+    return { canonical: rawPn, suffix: variantSuffix ?? null };
+  }
+
+  // 分組：canonical PN → MoldSpec[]
+  const specsByPn = new Map();
+  for (const row of rows) {
+    const { canonical, suffix } = resolveCanonical(row.rawPartNo, row.variantSuffix);
+    if (!specsByPn.has(canonical)) specsByPn.set(canonical, []);
+    const spec = { moldNo: row.moldNo };
+    if (suffix)                   spec.variantSuffix   = suffix;
+    if (row.designCavity != null) spec.designCavity    = row.designCavity;
+    if (row.effectiveCavity != null) spec.effectiveCavity = row.effectiveCavity;
+    if (row.moldWeight != null)   spec.moldWeight      = row.moldWeight;
+    if (row.runnerWeight != null) spec.runnerWeight    = row.runnerWeight;
+    if (row.weightPerCavity != null) spec.weightPerCavity = row.weightPerCavity;
+    if (row.cycleTime != null)    spec.cycleTime       = row.cycleTime;
+    if (row.dailyCapacity != null) spec.dailyCapacity  = row.dailyCapacity;
+    if (row.materialSpec)         spec.materialSpec    = row.materialSpec;
+    if (row.ppovVerified)         spec.ppovVerified    = true;
+    specsByPn.get(canonical).push(spec);
+  }
+
+  let merged = 0;
+  for (const [pn, specs] of specsByPn) {
+    const part = partMap.get(pn);
+    if (!part) continue;   // 不在 master 的 PN 暫時略過
+    part.moldSpecs = specs;
+    // 任一模具已完成 PPOV 驗證 → 品項標記
+    if (specs.some(s => s.ppovVerified)) part.ppovVerified = true;
+    // 原料大類：取第一筆有值的列
+    const row0 = rows.find(r => resolveCanonical(r.rawPartNo, r.variantSuffix).canonical === pn);
+    if (row0?.materialType) part.materialType = row0.materialType;
+    merged++;
+  }
+  console.log(`Merge mold specs: ${rows.length} 列 → ${merged} 個品項掛載 moldSpecs[]（多模具品號已合併）`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ERP 計算欄位：第二階 SSOT，在所有欄位定稿後統一計算，不改動現有欄位
 // erpItemClass: 成品 / 半成品 / 零件 / 原料
 // uom: 計量單位（預設 PCS）
@@ -1976,6 +2033,9 @@ function buildMaster() {
     }
     if (legacyCount) console.log(`Mark legacy assemblies: ${legacyCount} 筆舊版組件（未列入客戶組件版本清單 2026-08-05）`);
   }
+
+  // 模具規格合併（parseMoldPdf.py 輸出的 JSON → moldSpecs[] + materialType + ppovVerified）
+  mergeMoldSpecs(master);
 
   // 第二階 SSOT ERP 計算欄位（所有欄位定稿後，最後計算）
   computeErpFields(master);
