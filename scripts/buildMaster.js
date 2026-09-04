@@ -1694,12 +1694,22 @@ function mergeMoldSpecs(master) {
   const rows = JSON.parse(readFileSync(MOLD_SPECS_PATH, 'utf-8'));
   const partMap = new Map(master.parts.map(p => [p.partNo, p]));
 
-  // 解析 canonical PN：R1-9035A → R1-9035（若去後綴後品號存在 master）
+  // alternates 反查：mold PDF 可能用客戶 PN（ICU R1-xxxxx）登記，而非 MOULDEX canonical
+  const altMap = new Map();
+  for (const p of master.parts) {
+    for (const alt of (p.alternates || [])) {
+      if (!altMap.has(alt)) altMap.set(alt, p.partNo);
+    }
+  }
+
+  // 解析 canonical PN：直接查 → alternates 反查 → 去後綴（mold 版次變體）
   function resolveCanonical(rawPn, variantSuffix) {
     if (partMap.has(rawPn)) return { canonical: rawPn, suffix: null };
+    if (altMap.has(rawPn))  return { canonical: altMap.get(rawPn), suffix: null };
     if (variantSuffix) {
       const stripped = rawPn.slice(0, -1);
       if (partMap.has(stripped)) return { canonical: stripped, suffix: variantSuffix };
+      if (altMap.has(stripped))  return { canonical: altMap.get(stripped), suffix: variantSuffix };
     }
     return { canonical: rawPn, suffix: variantSuffix ?? null };
   }
