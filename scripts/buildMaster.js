@@ -1656,6 +1656,9 @@ const PART_FIELD_CORRECTIONS = {
   '0.08*14.5mm':       { material: 'PE' },
   '9X.20860.003120mm': { material: 'PE' },
   '9X.20860.005':      { material: 'PE' },
+  // R1-15080/81 為客戶指定供應商外購零件（非組件組立）；category 修正為零件，moldNo 清除（種子誤設 "N/A"）
+  'R1-15080': { category: '零件', moldNo: '' },
+  'R1-15081': { category: '零件', moldNo: '' },
 };
 function applyPartFieldCorrections(master) {
   let n = 0;
@@ -1670,6 +1673,7 @@ function applyPartFieldCorrections(master) {
     if (fix.category !== undefined) p.category = fix.category;
     if (fix.notes !== undefined) p.notes = fix.notes;
     if (fix.description !== undefined) p.description = fix.description;
+    if (fix.moldNo !== undefined) p.moldNo = fix.moldNo;
     n++;
   }
   return n;
@@ -1692,7 +1696,7 @@ function computeErpFields(master) {
     else if (MATERIAL_CATS.has(p.category)) p.erpItemClass = '原料';
     else                                     p.erpItemClass = '零件';
     p.uom             = 'PCS';
-    p.procurementType = p.moldNo ? '自製' : '外購';
+    p.procurementType = (p.moldNo && p.moldNo !== 'N/A') ? '自製' : '外購';
     p.isActive        = !p.legacy;
   }
   console.log(`Compute ERP fields: ${master.parts.length} 筆 erpItemClass / uom / procurementType / isActive 計算完成`);
