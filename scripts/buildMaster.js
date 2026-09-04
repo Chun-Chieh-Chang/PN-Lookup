@@ -1656,6 +1656,8 @@ const PART_FIELD_CORRECTIONS = {
   '0.08*14.5mm':       { material: 'PE' },
   '9X.20860.003120mm': { material: 'PE' },
   '9X.20860.005':      { material: 'PE' },
+  // A01-410-251：圖面 Rev.B 確認材質為 PVC（種子誤記為 ABS TOYOLAC 900）
+  'A01-410-251': { material: 'PVC Geon M4910 TRANS 9494' },
   // R1-15080/81 為客戶指定供應商外購零件（非組件組立）；category 修正為零件，moldNo 清除（種子誤設 "N/A"）
   'R1-15080': { category: '零件', moldNo: '' },
   'R1-15081': { category: '零件', moldNo: '' },
